@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: resumatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-resumatch_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-resumatch_password}
+      POSTGRES_DB: ${POSTGRES_DB:-resumatch_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-resumatch_user} -d ${POSTGRES_DB:-resumatch_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - resumatch-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: resumatch-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - resumatch-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: resumatch-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - resumatch-network
+
+  minio-setup:
+    image: minio/mc:latest
+    container_name: resumatch-minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin}; do
+        echo 'Waiting for MinIO...';
+        sleep 1;
+      done;
+      /usr/bin/mc mb --ignore-existing myminio/${MINIO_BUCKET_NAME:-resumes};
+      /usr/bin/mc anonymous set download myminio/${MINIO_BUCKET_NAME:-resumes};
+      echo 'MinIO bucket initialization complete.';
+      exit 0;
+      "
+    networks:
+      - resumatch-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: resumatch-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-resumes}
+      ML_SERVICE_URL: http://ml:8000
+    ports:
+      - "4000:4000"
+    networks:
+      - resumatch-network
+
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: resumatch-ml
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      HOST: 0.0.0.0
+      EMBEDDING_DIMENSION: 384
+    ports:
+      - "8000:8000"
+    networks:
+      - resumatch-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: resumatch-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:4000
+    ports:
+      - "5173:5173"
+    networks:
+      - resumatch-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  resumatch-network:
+    driver: bridge

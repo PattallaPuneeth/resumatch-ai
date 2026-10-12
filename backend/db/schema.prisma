@@ -1,0 +1,183 @@
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String?
+  fullName     String?
+  role         String     @default("CANDIDATE")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  resumes      Resume[]
+  jobs         Job[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Resume {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename     String
+  s3Key        String
+  mimeType     String
+  sizeBytes    Int
+  status       String        @default("UPLOADED") // UPLOADED, PROCESSING, PARSED, FAILED
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  parsedResume ParsedResume?
+  chunks       ResumeChunk[]
+  analyses     Analysis[]
+  matches      Match[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("resumes")
+}
+
+model ParsedResume {
+  id              String   @id @default(uuid())
+  resumeId        String   @unique
+  resume          Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  rawText         String   @db.Text
+  candidateName   String?
+  contactInfo     Json?
+  summary         String?  @db.Text
+  skills          Json?
+  experience      Json?
+  education       Json?
+  certifications  Json?
+  atsScore        Float?
+  parsingMetadata Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("parsed_resumes")
+}
+
+model ResumeChunk {
+  id          String                     @id @default(uuid())
+  resumeId    String
+  resume      Resume                     @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  chunkIndex  Int
+  sectionType String                     // EXPERIENCE, EDUCATION, SKILLS, SUMMARY, OTHER
+  content     String                     @db.Text
+  embedding   Unsupported("vector(384)")?
+  tokenCount  Int?
+  metadata    Json?
+  createdAt   DateTime                   @default(now())
+
+  @@index([resumeId])
+  @@map("resume_chunks")
+}
+
+model Job {
+  id              String      @id @default(uuid())
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title           String
+  company         String
+  location        String?
+  jobType         String?     // FULL_TIME, PART_TIME, CONTRACT, REMOTE
+  rawDescription  String      @db.Text
+  requiredSkills  Json?
+  preferredSkills Json?
+  experienceLevel String?
+  status          String      @default("ACTIVE") // ACTIVE, ARCHIVED, DRAFT
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  chunks          JobChunk[]
+  analyses        Analysis[]
+  matches         Match[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("jobs")
+}
+
+model JobChunk {
+  id          String                     @id @default(uuid())
+  jobId       String
+  job         Job                        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  chunkIndex  Int
+  sectionType String                     // RESPONSIBILITIES, QUALIFICATIONS, BENEFITS, OVERVIEW
+  content     String                     @db.Text
+  embedding   Unsupported("vector(384)")?
+  tokenCount  Int?
+  metadata    Json?
+  createdAt   DateTime                   @default(now())
+
+  @@index([jobId])
+  @@map("job_chunks")
+}
+
+model Analysis {
+  id             String   @id @default(uuid())
+  resumeId       String
+  resume         Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobId          String?
+  job            Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  score          Float?
+  skillGap       Json?
+  atsFindings    Json?
+  bulletRewrites Json?
+  status         String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([resumeId])
+  @@index([jobId])
+  @@map("analyses")
+}
+
+model Match {
+  id                String   @id @default(uuid())
+  resumeId          String
+  resume            Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobId             String
+  job               Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  bm25Score         Float?
+  vectorScore       Float?
+  rrfScore          Float?
+  crossEncoderScore Float?
+  finalScore        Float
+  explanation       Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([resumeId, jobId])
+  @@index([resumeId])
+  @@index([jobId])
+  @@map("matches")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String   // RESUME_UPLOAD, RESUME_DELETE, ANALYSIS_TRIGGERED, JOB_CREATED, MATCH_CALCULATED
+  entityType String
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
