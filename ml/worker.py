@@ -3,7 +3,6 @@ import signal
 import sys
 import time
 from types import FrameType
-from typing import Any
 
 logging.basicConfig(
     level=logging.INFO,
