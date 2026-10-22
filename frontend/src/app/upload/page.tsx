@@ -16,11 +16,13 @@ export default function UploadPage() {
     try {
       await api.getResumes();
       setStubStatus('Unexpected: Endpoint responded with 200');
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof ApiException) {
         setStubStatus(`Contract Verified: HTTP ${err.statusCode} (${err.errorName}) - "${err.message}"`);
+      } else if (err instanceof Error) {
+        setStubStatus(`Network Error: ${err.message}`);
       } else {
-        setStubStatus(`Network Error: ${err instanceof Error ? err.message : 'Unknown'}`);
+        setStubStatus(`Network Error: ${typeof err === 'string' ? err : 'Unknown'}`);
       }
     } finally {
       setIsCallingStub(false);
