@@ -36,5 +36,12 @@ class Settings(BaseSettings):
         alias="EMBEDDING_DIMENSION",
     )
 
+    # S3 Object Storage Configuration
+    s3_endpoint: str = Field(default="http://localhost:9000", alias="S3_ENDPOINT")
+    s3_region: str = Field(default="us-east-1", alias="S3_REGION")
+    s3_bucket: str = Field(default="resumes", alias="S3_BUCKET")
+    s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
+
 
 settings = Settings()

@@ -23,7 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl curl &&
 ENV NODE_ENV=production
 
 COPY package*.json ./
+COPY tsconfig.json ./
 COPY db ./db
+COPY src ./src
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 

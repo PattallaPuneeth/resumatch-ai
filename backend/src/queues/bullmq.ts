@@ -8,9 +8,13 @@ export const redisConnectionOptions = {
 };
 
 export interface ResumeParsingJobPayload {
+  type: 'PARSE_DOCUMENT';
   resumeId: string;
-  s3Key: string;
+  bucket: string;
+  storageKey: string;
   mimeType: string;
+  sha256?: string;
+  s3Key?: string; // Optional backwards-compatible alias
 }
 
 export interface EmbeddingJobPayload {
@@ -26,6 +30,7 @@ export interface MatchScoringJobPayload {
 
 export const resumeParsingQueue = new Queue<ResumeParsingJobPayload>('resume-parsing-queue', {
   connection: redisConnectionOptions,
+  prefix: 'bull',
   defaultJobOptions: {
     attempts: 3,
     backoff: {

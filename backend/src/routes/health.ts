@@ -26,6 +26,7 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
         postgres: postgresHealth,
         redis: redisHealth,
         minio: minioHealth,
+        s3: minioHealth,
       },
     });
   });

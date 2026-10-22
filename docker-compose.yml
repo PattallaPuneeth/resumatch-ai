@@ -23,7 +23,7 @@ services:
     image: redis:7-alpine
     container_name: resumatch-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --maxmemory-policy noeviction --appendonly yes
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -44,6 +44,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_API_CORS_ALLOW_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,*"
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
@@ -70,10 +71,25 @@ services:
         sleep 1;
       done;
       /usr/bin/mc mb --ignore-existing myminio/${MINIO_BUCKET_NAME:-resumes};
-      /usr/bin/mc anonymous set download myminio/${MINIO_BUCKET_NAME:-resumes};
-      echo 'MinIO bucket initialization complete.';
+      /usr/bin/mc anonymous set none myminio/${MINIO_BUCKET_NAME:-resumes};
+      echo 'MinIO private bucket initialization complete.';
       exit 0;
       "
+    networks:
+      - resumatch-network
+
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: resumatch-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}?schema=public
+    command: ["npx", "prisma", "migrate", "deploy"]
     networks:
       - resumatch-network
 
@@ -86,6 +102,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       minio:
@@ -100,6 +118,13 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: ${MINIO_BUCKET_NAME:-resumes}
+      S3_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      S3_FORCE_PATH_STYLE: "true"
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_USE_SSL: "false"
@@ -133,6 +158,11 @@ services:
       EMBEDDING_DIMENSION: 384
       DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}
       REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: ${MINIO_BUCKET_NAME:-resumes}
+      S3_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
     ports:
       - "8000:8000"
     healthcheck:
@@ -141,6 +171,35 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    networks:
+      - resumatch-network
+
+  ml-worker:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: resumatch-ml-worker
+    restart: unless-stopped
+    command: ["python", "-m", "ml.worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: ${MINIO_BUCKET_NAME:-resumes}
+      S3_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import sys; sys.exit(0)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     networks:
       - resumatch-network
 

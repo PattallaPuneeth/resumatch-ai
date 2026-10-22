@@ -9,26 +9,10 @@ export const minioClient = new Minio.Client({
   secretKey: env.MINIO_SECRET_KEY,
 });
 
+import { checkS3Health } from './s3.js';
+
+export { checkS3Health };
+
 export async function checkMinioHealth(): Promise<{ status: 'healthy' | 'unhealthy'; latencyMs: number; error?: string }> {
-  const start = Date.now();
-  try {
-    const exists = await minioClient.bucketExists(env.MINIO_BUCKET_NAME);
-    if (!exists) {
-      return {
-        status: 'unhealthy',
-        latencyMs: Date.now() - start,
-        error: `MinIO bucket "${env.MINIO_BUCKET_NAME}" does not exist`,
-      };
-    }
-    return {
-      status: 'healthy',
-      latencyMs: Date.now() - start,
-    };
-  } catch (error) {
-    return {
-      status: 'unhealthy',
-      latencyMs: Date.now() - start,
-      error: error instanceof Error ? error.message : 'MinIO connection failed',
-    };
-  }
+  return checkS3Health();
 }

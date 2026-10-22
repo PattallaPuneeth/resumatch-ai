@@ -26,22 +26,42 @@ model User {
   @@map("users")
 }
 
-model Resume {
-  id           String        @id @default(uuid())
-  userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  filename     String
-  s3Key        String
-  mimeType     String
-  sizeBytes    Int
-  status       String        @default("UPLOADED") // UPLOADED, PROCESSING, PARSED, FAILED
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+enum ResumeStatus {
+  UPLOAD_PENDING
+  UPLOADED
+  EXTRACTING
+  NEEDS_OCR
+  OCR_PROCESSING
+  PARSED
+  FAILED
+}
 
-  parsedResume ParsedResume?
-  chunks       ResumeChunk[]
-  analyses     Analysis[]
-  matches      Match[]
+enum ExtractionMethod {
+  TEXT_LAYER
+  OCR
+  DOCX
+}
+
+model Resume {
+  id               String            @id @default(uuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalFilename String
+  storageKey       String            @unique
+  mimeType         String
+  sizeBytes        Int
+  sha256           String?
+  extractionMethod ExtractionMethod?
+  errorCode        String?
+  errorMessage     String?
+  status           ResumeStatus      @default(UPLOADED)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  parsedResume     ParsedResume?
+  chunks           ResumeChunk[]
+  analyses         Analysis[]
+  matches          Match[]
 
   @@index([userId])
   @@index([status])
@@ -60,7 +80,9 @@ model ParsedResume {
   experience      Json?
   education       Json?
   certifications  Json?
+  pageCount       Int?
   atsScore        Float?
+  atsHazards      Json?
   parsingMetadata Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
