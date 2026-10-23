@@ -55,6 +55,12 @@ export const EnvSchema = z.object({
   PRESIGN_PUT_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   PRESIGN_GET_TTL_SECONDS: z.coerce.number().int().positive().default(300),
 
+  // Auth
+  JWT_SECRET: z.string().min(16).default('local-dev-secret-change-in-production'),
+
+  // Per-user resume upload cap
+  RESUME_CAP_PER_USER: z.coerce.number().int().positive().default(50),
+
   // Python ML Service
   ML_SERVICE_URL: z.string().url().default('http://localhost:8000'),
   EMBEDDING_DIMENSION: z.coerce.number().int().positive().default(384),

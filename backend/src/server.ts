@@ -1,7 +1,9 @@
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import Fastify, { FastifyInstance } from 'fastify';
 import { env } from './config/env.js';
 import { registerErrorHandler } from './plugins/errorHandler.js';
+import authPlugin from './plugins/auth.js';
 import { analysesRoutes } from './routes/analyses.js';
 import { healthRoutes } from './routes/health.js';
 import { jobsRoutes } from './routes/jobs.js';
@@ -33,6 +35,16 @@ export function buildServer(): FastifyInstance {
     origin: true,
     credentials: true,
   });
+
+  // Rate limiting (required by spec for upload-url endpoint)
+  app.register(rateLimit, {
+    global: false, // Only apply to routes that opt in via config.rateLimit
+    max: 100,
+    timeWindow: '1 minute',
+  });
+
+  // JWT authentication
+  app.register(authPlugin);
 
   // Central Error Handler
   registerErrorHandler(app);

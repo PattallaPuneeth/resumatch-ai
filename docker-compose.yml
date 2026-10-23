@@ -132,6 +132,8 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-resumes}
       ML_SERVICE_URL: http://ml:8000
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-in-production}
+      RESUME_CAP_PER_USER: ${RESUME_CAP_PER_USER:-50}
     ports:
       - "4000:4000"
     healthcheck:
