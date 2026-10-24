@@ -43,5 +43,12 @@ class Settings(BaseSettings):
     s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
 
+    # Document Parsing & OCR Configuration (Phase 2C)
+    ocr_dpi: int = Field(default=300, alias="OCR_DPI")
+    ocr_max_pages: int = Field(default=5, alias="OCR_MAX_PAGES")
+    ocr_min_chars: int = Field(default=200, alias="OCR_MIN_CHARS")
+    ocr_alphanumeric_threshold: float = Field(default=0.50, alias="OCR_ALPHANUMERIC_THRESHOLD")
+    max_resume_pages: int = Field(default=20, alias="MAX_RESUME_PAGES")
+
 
 settings = Settings()
