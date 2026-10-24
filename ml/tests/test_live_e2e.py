@@ -39,11 +39,28 @@ def _b64url(data: bytes) -> str:
 def get_demo_user() -> tuple[str, str]:
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, email FROM users LIMIT 1;")
+            cur.execute("""
+                SELECT u.id, u.email
+                FROM users u
+                WHERE (SELECT COUNT(*) FROM resumes r WHERE r."userId" = u.id) < 45
+                ORDER BY u."createdAt" DESC
+                LIMIT 1;
+            """)
             row = cur.fetchone()
-            if not row:
-                raise RuntimeError("No users found in database")
-            return str(row[0]), str(row[1])
+            if row:
+                return str(row[0]), str(row[1])
+            import uuid
+            uid = str(uuid.uuid4())
+            email = f"e2e-{uid[:8]}@example.com"
+            cur.execute(
+                """
+                INSERT INTO users (id, email, role, "createdAt", "updatedAt")
+                VALUES (%s, %s, 'CANDIDATE', NOW(), NOW());
+                """,
+                (uid, email),
+            )
+            conn.commit()
+            return uid, email
 
 
 def make_dev_token() -> str:

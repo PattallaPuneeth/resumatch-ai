@@ -5,9 +5,16 @@ import signal
 from types import FrameType
 from typing import Any
 
-from bullmq import Job, Worker
+from bullmq import Job, Queue, Worker  # type: ignore[import-untyped]
 
 from ml.config import settings
+from ml.pipelines.embeddings.chunker import chunk_resume_text
+from ml.pipelines.embeddings.embedder import generate_chunk_embeddings
+from ml.pipelines.embeddings.repository import (
+    get_parsed_resume_data,
+    persist_resume_chunks,
+    record_embedding_error,
+)
 from ml.pipelines.intake.exceptions import (
     CorruptFileError,
     EncryptedPdfError,
@@ -30,8 +37,50 @@ logging.basicConfig(
 )
 logger = logging.getLogger("resumatch-ml-worker")
 
-_worker: Worker | None = None
+_parse_worker: Worker | None = None
+_embed_worker: Worker | None = None
+_embedding_queue: Queue | None = None
 _should_exit = False
+
+
+def get_embedding_queue() -> Queue:
+    """Returns singleton Queue producer for embedding-queue."""
+    global _embedding_queue
+    if _embedding_queue is None:
+        _embedding_queue = Queue(
+            "embedding-queue",
+            {"connection": settings.redis_url, "prefix": "bull"},
+        )
+    return _embedding_queue
+
+
+async def enqueue_embed_job(resume_id: str) -> None:
+    """Enqueues an EMBED_DOCUMENT job for a parsed resume."""
+    try:
+        q = get_embedding_queue()
+        await q.add(
+            "EMBED_DOCUMENT",
+            {
+                "type": "EMBED_DOCUMENT",
+                "entityType": "RESUME",
+                "entityId": resume_id,
+                "resumeId": resume_id,
+            },
+            {
+                "jobId": f"embed-{resume_id}",
+                "attempts": 3,
+                "backoff": {"type": "exponential", "delay": 1000},
+                "removeOnComplete": 100,
+                "removeOnFail": 500,
+            },
+        )
+        logger.info(
+            "Enqueued EMBED_DOCUMENT job for resume %s (jobId=embed-%s)", resume_id, resume_id
+        )
+    except Exception as q_err:
+        logger.exception(
+            "Failed to enqueue EMBED_DOCUMENT job for resume %s: %s", resume_id, q_err
+        )
 
 
 async def process_parse_document(job: Job, token: str | None = None) -> dict[str, Any]:
@@ -94,6 +143,9 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
             result.ats_score,
         )
 
+        # 6. Enqueue embedding generation for the parsed resume
+        await enqueue_embed_job(resume_id)
+
         return {
             "status": "PARSED",
             "resumeId": resume_id,
@@ -135,21 +187,95 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
                 pass
 
 
+async def process_embed_document(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Processes an EMBED_DOCUMENT job from embedding-queue."""
+    data = job.data
+    entity_type = data.get("entityType", "RESUME")
+
+    if entity_type == "JOB":
+        logger.warning(
+            "Job embedding is deferred to Phase 3B (job descriptions and hybrid matching). Aborting job %s.",
+            job.id,
+        )
+        return {"status": "ABORTED", "reason": "JOB_EMBEDDING_DEFERRED_PHASE3B"}
+
+    resume_id = data.get("resumeId") or data.get("entityId")
+
+    if not resume_id:
+        logger.error("Job %s missing resumeId or entityId", job.id)
+        raise ValueError("Invalid embedding job payload: missing resumeId or entityId")
+
+    logger.info("Processing embedding job %s for resume %s", job.id, resume_id)
+
+    # 1. Fetch parsed resume data
+    parsed_data = get_parsed_resume_data(resume_id)
+    if not parsed_data:
+        logger.info(
+            "Resume %s not found (deleted). Aborting job %s.",
+            resume_id,
+            job.id,
+        )
+        return {"status": "ABORTED", "reason": "RESUME_NOT_FOUND"}
+
+    status = parsed_data["status"]
+    if status != "PARSED":
+        logger.warning(
+            "Resume %s status is %s (expected PARSED). Aborting job %s.",
+            resume_id,
+            status,
+            job.id,
+        )
+        return {"status": "ABORTED", "reason": f"INVALID_STATUS_{status}"}
+
+    raw_text = parsed_data["rawText"]
+    if not raw_text:
+        logger.warning("Resume %s has no rawText. Aborting job %s.", resume_id, job.id)
+        return {"status": "ABORTED", "reason": "PARSED_TEXT_NOT_FOUND"}
+
+    try:
+        # 2. Section-aware chunking with exact offsets
+        chunks = chunk_resume_text(raw_text)
+        logger.info("Generated %d chunks for resume %s", len(chunks), resume_id)
+
+        # 3. Generate 384-dimensional vector embeddings
+        chunk_vectors = generate_chunk_embeddings(chunks)
+
+        # 4. Atomically persist chunks to database
+        saved_count = persist_resume_chunks(resume_id, chunk_vectors)
+
+        return {
+            "status": "EMBEDDED",
+            "resumeId": resume_id,
+            "chunkCount": saved_count,
+            "embeddingDimension": 384,
+        }
+    except Exception as e:
+        logger.exception("Failed to process embedding for resume %s: %s", resume_id, e)
+        record_embedding_error(resume_id, "EMBEDDING_FAILED", str(e))
+        # Re-raise to trigger BullMQ retry
+        raise e
+
+
 async def main_async() -> None:
-    global _worker
+    global _parse_worker, _embed_worker
     redis_opts = {"connection": settings.redis_url, "prefix": "bull", "concurrency": 2}
 
-    logger.info("Starting BullMQ Worker for queue 'resume-parsing-queue' with prefix 'bull'...")
-    _worker = Worker("resume-parsing-queue", process_parse_document, redis_opts)
+    logger.info("Starting BullMQ Workers for 'resume-parsing-queue' and 'embedding-queue'...")
+    _parse_worker = Worker("resume-parsing-queue", process_parse_document, redis_opts)
+    _embed_worker = Worker("embedding-queue", process_embed_document, redis_opts)
 
     # Keep alive until shutdown requested
     while not _should_exit:
         await asyncio.sleep(1)
 
-    if _worker:
-        logger.info("Closing BullMQ worker...")
-        await _worker.close()
-        logger.info("BullMQ worker closed.")
+    logger.info("Closing BullMQ workers...")
+    if _parse_worker:
+        await _parse_worker.close()
+    if _embed_worker:
+        await _embed_worker.close()
+    if _embedding_queue:
+        await _embedding_queue.close()
+    logger.info("All BullMQ workers closed.")
 
 
 def handle_shutdown(signum: int, frame: FrameType | None) -> None:

@@ -36,6 +36,20 @@ export function buildServer(): FastifyInstance {
     credentials: true,
   });
 
+  // Support empty JSON body if client sends Content-Type: application/json with empty body
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (!body || (typeof body === 'string' && body.trim() === '')) {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body as string));
+    } catch (err: any) {
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  });
+
   // Rate limiting (required by spec for upload-url endpoint)
   app.register(rateLimit, {
     global: false, // Only apply to routes that opt in via config.rateLimit

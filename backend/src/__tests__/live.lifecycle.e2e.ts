@@ -24,13 +24,33 @@ async function runLiveLifecycleE2E() {
   console.log('--- Starting Live Cluster Phase 2D Lifecycle E2E ---');
 
   // Step 1: Mint Dev Token
-  console.log('1. Minting dev auth token for demo@resumatch.ai...');
-  const { token, userId } = await generateDevToken('demo@resumatch.ai');
-  console.log(`   Token minted for user ID: ${userId}`);
+  console.log('1. Minting dev auth token for test user...');
+  const candidates = await prisma.user.findMany({
+    include: {
+      _count: {
+        select: { resumes: true },
+      },
+    },
+    take: 10,
+  });
+  const availableUser = candidates.find((u) => u._count.resumes < 45);
+  const testUser =
+    availableUser ??
+    (await prisma.user.create({
+      data: {
+        email: `e2e-${Date.now()}@example.com`,
+        role: 'CANDIDATE',
+      },
+    }));
+  const { token, userId } = await generateDevToken(testUser.email);
+  console.log(`   Token minted for user ID: ${userId} (${testUser.email})`);
 
   // Step 2: Request Upload URL
   console.log('2. Requesting presigned upload URL from Fastify API...');
-  const fixturePath = path.resolve(process.cwd(), '../ml/tests/fixtures/sample_resume.pdf');
+  const fixturePath = path.resolve(__dirname, '../../../ml/tests/fixtures/sample_resume.pdf');
+  if (!fs.existsSync(fixturePath)) {
+    throw new Error(`Canonical test fixture not found at expected path: ${fixturePath}`);
+  }
   const samplePdfBytes = fs.readFileSync(fixturePath);
 
   const uploadRes = await fetch(`${BACKEND_URL}/v1/resumes/upload-url`, {

@@ -6,13 +6,13 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-resumatch_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-resumatch_password}
-      POSTGRES_DB: ${POSTGRES_DB:-resumatch_db}
+      POSTGRES_DB: ${POSTGRES_DB:-resumatch}
     ports:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-resumatch_user} -d ${POSTGRES_DB:-resumatch_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-resumatch_user} -d ${POSTGRES_DB:-resumatch}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -88,7 +88,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch}?schema=public
     command: ["npx", "prisma", "migrate", "deploy"]
     networks:
       - resumatch-network
@@ -114,7 +114,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_URL: redis://redis:6379
@@ -158,7 +158,7 @@ services:
       PORT: 8000
       HOST: 0.0.0.0
       EMBEDDING_DIMENSION: 384
-      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch}
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       S3_REGION: us-east-1
@@ -189,7 +189,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch}
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       S3_REGION: us-east-1
@@ -215,6 +215,7 @@ services:
       - backend
       - ml
     environment:
+      HOSTNAME: "0.0.0.0"
       NEXT_PUBLIC_API_URL: http://localhost:4000
       NEXT_PUBLIC_ML_URL: http://localhost:8000
     ports:

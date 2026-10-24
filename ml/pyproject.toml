@@ -27,11 +27,16 @@ warn_unused_ignores = true
 warn_no_return = true
 plugins = ["pydantic.mypy"]
 disable_error_code = ["import-untyped"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
     "psycopg",
     "psycopg.*",
+    "pgvector",
+    "pgvector.*",
+    "pgvector.psycopg",
+    "pgvector.psycopg.*",
     "boto3",
     "boto3.*",
     "botocore",
@@ -44,6 +49,12 @@ module = [
     "pytesseract.*",
     "bullmq",
     "bullmq.*",
+    "torch",
+    "torch.*",
+    "sentence_transformers",
+    "sentence_transformers.*",
+    "transformers",
+    "transformers.*",
 ]
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]

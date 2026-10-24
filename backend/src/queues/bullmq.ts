@@ -18,9 +18,11 @@ export interface ResumeParsingJobPayload {
 }
 
 export interface EmbeddingJobPayload {
-  entityType: 'RESUME' | 'JOB';
-  entityId: string;
-  chunks: Array<{ id: string; text: string }>;
+  type?: 'EMBED_DOCUMENT';
+  entityType?: 'RESUME' | 'JOB';
+  entityId?: string;
+  resumeId?: string;
+  chunks?: Array<{ id: string; text: string }>;
 }
 
 export interface MatchScoringJobPayload {
@@ -44,6 +46,7 @@ export const resumeParsingQueue = new Queue<ResumeParsingJobPayload>('resume-par
 
 export const embeddingQueue = new Queue<EmbeddingJobPayload>('embedding-queue', {
   connection: redisConnectionOptions,
+  prefix: 'bull',
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -57,6 +60,7 @@ export const embeddingQueue = new Queue<EmbeddingJobPayload>('embedding-queue', 
 
 export const matchScoringQueue = new Queue<MatchScoringJobPayload>('match-scoring-queue', {
   connection: redisConnectionOptions,
+  prefix: 'bull',
   defaultJobOptions: {
     attempts: 3,
     backoff: {

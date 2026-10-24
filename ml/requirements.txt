@@ -17,3 +17,7 @@ Pillow==11.1.0
 bullmq==3.4.3
 redis==8.1.0
 pytest-asyncio==0.24.0
+# Phase 3A Vector Embeddings:
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1+cpu
+sentence-transformers==3.3.1

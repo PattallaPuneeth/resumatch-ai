@@ -174,12 +174,16 @@ const ML_URL = process.env.NEXT_PUBLIC_ML_URL || 'http://localhost:8000';
 async function request<T>(baseUrl: string, endpoint: string, init?: RequestInit): Promise<T> {
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   try {
+    const headers: Record<string, string> = {};
+    if (init?.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (init?.headers) {
+      Object.assign(headers, init.headers);
+    }
     const res = await fetch(url, {
       ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...init?.headers,
-      },
+      headers,
     });
 
     if (!res.ok) {
@@ -226,10 +230,11 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  completeUpload: (resumeId: string, token: string) =>
+  completeUpload: (resumeId: string, token: string, body?: { sha256?: string }) =>
     request<CompleteUploadResponse>(BACKEND_URL, `/v1/resumes/${resumeId}/complete`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body || {}),
     }),
 
   // Phase 2D: Resume lifecycle

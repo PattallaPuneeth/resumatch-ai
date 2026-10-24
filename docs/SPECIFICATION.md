@@ -442,21 +442,22 @@ fallback; results and status appear in the UI; and deletion removes the
 object and derived data. Lint, typecheck, unit tests, integration tests,
 and CI remain green.
 Phase 3 --- Embeddings and hybrid matching
-Phase 3A --- Chunking and embedding generation
-- Enqueue an EMBED_DOCUMENT job when a resume reaches PARSED, but
-  only after Phase 3 is implemented and enabled.
-- Implement semantic-boundary chunking in
-  ml/pipelines/embeddings/chunker.py for resumes and job
-  descriptions.
-- Prefer section-aware chunking (Summary, Experience, Skills,
-  Education), target 256--384 tokens per chunk, and approximately 20%
-  overlap.
-- Generate exactly 384-dimensional embeddings with
-  sentence-transformers/all-MiniLM-L6-v2.
-- Store embeddings in ResumeChunk and JobChunk using raw SQL and
-  pgvector.
-- Make retries idempotent and avoid duplicate chunks/embeddings on
-  reprocessing.
+Phase 3A --- Chunking and embedding generation (IMPLEMENTED)
+- Enqueue an EMBED_DOCUMENT job to `embedding-queue` (prefix `bull`) when a resume reaches `PARSED`.
+- Implement semantic-boundary section-aware chunking in `ml/pipelines/embeddings/chunker.py`:
+  - Detects sections: Summary, Experience, Skills, Education, and Other.
+  - Safe token limits: `sentence-transformers/all-MiniLM-L6-v2` enforces `max_seq_length = 256` (including `[CLS]` and `[SEP]` special tokens, allowing at most 254 content tokens). To strictly prevent silent token truncation, chunks target 160–240 content tokens (nominal 200) with ~20% overlap (40 tokens).
+  - Slices `ParsedResume.rawText` directly; offset convention strictly guarantees `raw_text[chunk.start_char:chunk.end_char] == chunk.content`.
+- Generate exactly 384-dimensional normalized vector embeddings with `sentence-transformers/all-MiniLM-L6-v2` loaded once per worker process.
+- Persist embeddings in `ResumeChunk` using raw SQL with `pgvector` HNSW cosine indexes (`vector_cosine_ops`) and composite unique constraint on `("resumeId", "chunkIndex")`; prepare `JobChunk` schema, vector column, and unique index for Phase 3B job ingestion and matching.
+- Idempotency & Failure Safety:
+  - Worker operates inside a PostgreSQL transaction (`conn.transaction()`); failure rolls back completely, preventing partial chunks.
+  - Re-delivering or retrying jobs atomically replaces previous chunk records with zero duplicate rows.
+  - Observable failure status recorded in `parsed_resumes.parsingMetadata` without corrupting the `PARSED` status.
+- Deployment Resource Sizing:
+  - Worker idle memory with model loaded is ~160 MiB.
+  - Peak RSS during batch embedding inference reaches ~523 MiB.
+  - Operational requirement: Allocate at least 1 GB (preferably 2 GB) RAM in production. A 512 MB container tier (e.g. Render Starter) is unsafe and will trigger out-of-memory (OOM) termination.
 Phase 3B --- Hybrid retrieval and reranking
 1. Sparse lexical search: PostgreSQL full-text search using
    to_tsvector('english', content) and

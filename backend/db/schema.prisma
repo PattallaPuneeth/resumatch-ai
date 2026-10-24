@@ -102,6 +102,7 @@ model ResumeChunk {
   metadata    Json?
   createdAt   DateTime                   @default(now())
 
+  @@unique([resumeId, chunkIndex])
   @@index([resumeId])
   @@map("resume_chunks")
 }
@@ -143,6 +144,7 @@ model JobChunk {
   metadata    Json?
   createdAt   DateTime                   @default(now())
 
+  @@unique([jobId, chunkIndex])
   @@index([jobId])
   @@map("job_chunks")
 }

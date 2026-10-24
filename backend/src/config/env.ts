@@ -11,7 +11,7 @@ export const EnvSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   // PostgreSQL + pgvector
-  DATABASE_URL: z.string().url().default('postgresql://resumatch_user:resumatch_password@localhost:5432/resumatch_db?schema=public'),
+  DATABASE_URL: z.string().url().default('postgresql://resumatch_user:resumatch_password@localhost:5432/resumatch?schema=public'),
 
   // Redis & BullMQ
   REDIS_HOST: z.string().default('localhost'),
