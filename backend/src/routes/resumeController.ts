@@ -14,6 +14,7 @@ import {
 import { resumeParsingQueue } from '../queues/bullmq.js';
 import type { ResumeParsingJobPayload } from '../queues/bullmq.js';
 import { env } from '../config/env.js';
+import { withResumeCoordinationLock } from '../utils/coordinationLock.js';
 
 // ---------------------------------------------------------------------------
 // Supported formats per Section 2B of the specification
@@ -179,10 +180,122 @@ export async function handleCompleteUpload(
   const userId = (request.user as { sub: string }).sub;
   const resumeId = request.params.id;
 
-  // Fetch the resume and verify ownership
-  const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+  // Execute upload completion under a per-resume coordination lock to prevent
+  // concurrent stale-upload cleanup from deleting the storage object or DB record.
+  const outcome = await withResumeCoordinationLock(resumeId, async (tx: any) => {
+    // Fetch the resume and verify ownership inside the coordination lock
+    const resume = await tx.resume.findUnique({ where: { id: resumeId } });
 
-  if (!resume) {
+    if (!resume) {
+      return { kind: 'NOT_FOUND' as const };
+    }
+
+    if (resume.userId !== userId) {
+      return { kind: 'FORBIDDEN' as const };
+    }
+
+    // Idempotency: if already progressed to worker pipeline (Phase 2C), do not re-enqueue
+    if (
+      resume.status === 'EXTRACTING' ||
+      resume.status === 'NEEDS_OCR' ||
+      resume.status === 'OCR_PROCESSING' ||
+      resume.status === 'PARSED'
+    ) {
+      return { kind: 'ALREADY_PROCESSING' as const, status: resume.status };
+    }
+
+    // Idempotency: if resume was marked UPLOADED, ensure the BullMQ job is active.
+    if (resume.status === 'UPLOADED') {
+      return { kind: 'ALREADY_UPLOADED' as const, resume };
+    }
+
+    if (resume.status === 'FAILED') {
+      return { kind: 'FAILED_STATE' as const };
+    }
+
+    // Should be UPLOAD_PENDING at this point
+    if (resume.status !== 'UPLOAD_PENDING') {
+      return { kind: 'UNEXPECTED_STATE' as const, status: resume.status };
+    }
+
+    // Step 1: Verify the object exists in storage
+    const headResult = await headStorageObject(resume.storageKey);
+    if (!headResult) {
+      return { kind: 'FILE_NOT_FOUND' as const, storageKey: resume.storageKey };
+    }
+
+    // Step 2: Enforce actual object size, not client-declared size
+    const actualSize = headResult.contentLength;
+    if (actualSize > env.MAX_UPLOAD_BYTES) {
+      // Mark FAILED and delete the oversized object
+      await tx.resume.update({
+        where: { id: resumeId },
+        data: {
+          status: 'FAILED',
+          errorCode: 'FILE_TOO_LARGE',
+          errorMessage: `Uploaded file (${actualSize} bytes) exceeds the maximum allowed size of ${env.MAX_UPLOAD_BYTES} bytes.`,
+        },
+      });
+      await deleteStorageObject(resume.storageKey).catch(() => {});
+      return { kind: 'FILE_TOO_LARGE' as const, actualSize };
+    }
+
+    // Step 3: Validate magic bytes
+    const ext = resume.mimeType === 'application/pdf' ? 'pdf' : 'docx';
+    const magic = MAGIC_BYTES[ext];
+    let byteRange: Buffer;
+    try {
+      byteRange = await getStorageObjectByteRange(resume.storageKey, 0, magic.bytes.length - 1);
+    } catch (rangeErr) {
+      return { kind: 'STORAGE_ERROR' as const, error: rangeErr };
+    }
+
+    const magicMatch =
+      byteRange.length >= magic.bytes.length &&
+      byteRange.subarray(0, magic.bytes.length).equals(magic.bytes);
+
+    if (!magicMatch) {
+      // File is corrupt or wrong type — mark FAILED and delete
+      await tx.resume.update({
+        where: { id: resumeId },
+        data: {
+          status: 'FAILED',
+          errorCode: 'CORRUPT_FILE',
+          errorMessage: `The uploaded file does not match the expected format (expected ${magic.description} magic bytes).`,
+        },
+      });
+      await deleteStorageObject(resume.storageKey).catch(() => {});
+      return { kind: 'CORRUPT_FILE' as const };
+    }
+
+    // Step 4: Compute SHA-256 using a larger byte range for hash accuracy.
+    let sha256: string;
+    try {
+      const fullBytes = await getStorageObjectByteRange(resume.storageKey, 0, env.MAX_UPLOAD_BYTES - 1);
+      sha256 = createHash('sha256').update(fullBytes).digest('hex');
+    } catch (hashErr) {
+      return { kind: 'HASH_ERROR' as const, error: hashErr };
+    }
+
+    // Step 5: Transition to UPLOADED, persist sha256 and actual size
+    await tx.resume.update({
+      where: { id: resumeId },
+      data: {
+        status: 'UPLOADED',
+        sha256,
+        sizeBytes: actualSize,
+      },
+    });
+
+    return {
+      kind: 'SUCCESS' as const,
+      resume,
+      sha256,
+    };
+  });
+
+  // Handle outcomes outside the lock transaction
+  if (outcome.kind === 'NOT_FOUND') {
     return reply.status(404).send({
       statusCode: 404,
       error: 'Not Found',
@@ -192,7 +305,7 @@ export async function handleCompleteUpload(
     });
   }
 
-  if (resume.userId !== userId) {
+  if (outcome.kind === 'FORBIDDEN') {
     return reply.status(403).send({
       statusCode: 403,
       error: 'Forbidden',
@@ -202,38 +315,33 @@ export async function handleCompleteUpload(
     });
   }
 
-  // Idempotency: if already progressed to worker pipeline (Phase 2C), do not re-enqueue
-  if (resume.status === 'EXTRACTING' ||
-      resume.status === 'NEEDS_OCR' || resume.status === 'OCR_PROCESSING' ||
-      resume.status === 'PARSED') {
-    request.log.info({ resumeId, status: resume.status }, 'Idempotent complete call — already in worker pipeline');
+  if (outcome.kind === 'ALREADY_PROCESSING') {
+    request.log.info({ resumeId, status: outcome.status }, 'Idempotent complete call — already in worker pipeline');
     return reply.status(202).send({
       resumeId,
-      status: resume.status,
+      status: outcome.status,
       message: 'Resume already accepted for processing',
     });
   }
 
-  // Idempotency: if resume was marked UPLOADED, ensure the BullMQ job is active.
-  // BullMQ deduplicates on jobId: if already queued or active, this is a safe no-op.
-  if (resume.status === 'UPLOADED') {
+  if (outcome.kind === 'ALREADY_UPLOADED') {
     const jobPayload: ResumeParsingJobPayload = {
       type: 'PARSE_DOCUMENT',
-      resumeId: resume.id,
+      resumeId: outcome.resume.id,
       bucket: env.S3_BUCKET,
-      storageKey: resume.storageKey,
-      mimeType: resume.mimeType,
-      sha256: resume.sha256 || undefined,
+      storageKey: outcome.resume.storageKey,
+      mimeType: outcome.resume.mimeType,
+      sha256: outcome.resume.sha256 || undefined,
     };
 
     try {
       await resumeParsingQueue.add('parse', jobPayload, {
-        jobId: `parse-${resume.id}`,
+        jobId: `parse-${outcome.resume.id}`,
       });
-      request.log.info({ resumeId, status: resume.status }, 'Idempotent complete call — ensured parse job in queue');
+      request.log.info({ resumeId, status: outcome.resume.status }, 'Idempotent complete call — ensured parse job in queue');
       return reply.status(202).send({
         resumeId,
-        status: resume.status,
+        status: outcome.resume.status,
         message: 'Resume already accepted for processing',
       });
     } catch (queueErr) {
@@ -248,7 +356,7 @@ export async function handleCompleteUpload(
     }
   }
 
-  if (resume.status === 'FAILED') {
+  if (outcome.kind === 'FAILED_STATE') {
     return reply.status(409).send({
       statusCode: 409,
       error: 'Conflict',
@@ -258,21 +366,18 @@ export async function handleCompleteUpload(
     });
   }
 
-  // Should be UPLOAD_PENDING at this point
-  if (resume.status !== 'UPLOAD_PENDING') {
+  if (outcome.kind === 'UNEXPECTED_STATE') {
     return reply.status(409).send({
       statusCode: 409,
       error: 'Conflict',
-      message: `Resume is in an unexpected state: ${resume.status}`,
+      message: `Resume is in an unexpected state: ${outcome.status}`,
       timestamp: new Date().toISOString(),
       requestId: request.id,
     });
   }
 
-  // Step 1: Verify the object exists in storage
-  const headResult = await headStorageObject(resume.storageKey);
-  if (!headResult) {
-    request.log.warn({ resumeId, storageKey: resume.storageKey }, 'Object not found in storage');
+  if (outcome.kind === 'FILE_NOT_FOUND') {
+    request.log.warn({ resumeId, storageKey: outcome.storageKey }, 'Object not found in storage');
     return reply.status(422).send({
       statusCode: 422,
       error: 'Unprocessable Entity',
@@ -282,37 +387,19 @@ export async function handleCompleteUpload(
     });
   }
 
-  // Step 2: Enforce actual object size, not client-declared size
-  const actualSize = headResult.contentLength;
-  if (actualSize > env.MAX_UPLOAD_BYTES) {
-    // Mark FAILED and delete the oversized object
-    await prisma.resume.update({
-      where: { id: resumeId },
-      data: {
-        status: 'FAILED',
-        errorCode: 'FILE_TOO_LARGE',
-        errorMessage: `Uploaded file (${actualSize} bytes) exceeds the maximum allowed size of ${env.MAX_UPLOAD_BYTES} bytes.`,
-      },
-    });
-    await deleteStorageObject(resume.storageKey).catch(() => {});
+  if (outcome.kind === 'FILE_TOO_LARGE') {
     return reply.status(422).send({
       statusCode: 422,
       error: 'Unprocessable Entity',
       message: `File exceeds maximum allowed size of ${env.MAX_UPLOAD_BYTES} bytes.`,
-      details: { actualSizeBytes: actualSize, maxSizeBytes: env.MAX_UPLOAD_BYTES },
+      details: { actualSizeBytes: outcome.actualSize, maxSizeBytes: env.MAX_UPLOAD_BYTES },
       timestamp: new Date().toISOString(),
       requestId: request.id,
     });
   }
 
-  // Step 3: Validate magic bytes
-  const ext = resume.mimeType === 'application/pdf' ? 'pdf' : 'docx';
-  const magic = MAGIC_BYTES[ext];
-  let byteRange: Buffer;
-  try {
-    byteRange = await getStorageObjectByteRange(resume.storageKey, 0, magic.bytes.length - 1);
-  } catch (rangeErr) {
-    request.log.error({ err: rangeErr, resumeId }, 'Failed to read byte range for magic check');
+  if (outcome.kind === 'STORAGE_ERROR') {
+    request.log.error({ err: outcome.error, resumeId }, 'Failed to read byte range for magic check');
     return reply.status(503).send({
       statusCode: 503,
       error: 'Service Unavailable',
@@ -322,20 +409,7 @@ export async function handleCompleteUpload(
     });
   }
 
-  const magicMatch = byteRange.length >= magic.bytes.length &&
-    byteRange.subarray(0, magic.bytes.length).equals(magic.bytes);
-
-  if (!magicMatch) {
-    // File is corrupt or wrong type — mark FAILED and delete
-    await prisma.resume.update({
-      where: { id: resumeId },
-      data: {
-        status: 'FAILED',
-        errorCode: 'CORRUPT_FILE',
-        errorMessage: `The uploaded file does not match the expected format (expected ${magic.description} magic bytes).`,
-      },
-    });
-    await deleteStorageObject(resume.storageKey).catch(() => {});
+  if (outcome.kind === 'CORRUPT_FILE') {
     return reply.status(422).send({
       statusCode: 422,
       error: 'Unprocessable Entity',
@@ -346,18 +420,8 @@ export async function handleCompleteUpload(
     });
   }
 
-  // Step 4: Compute SHA-256 using a larger byte range for hash accuracy.
-  // We use the full object via a stream-friendly ranged read for hashing.
-  // Note: for large files we read enough to compute hash robustly.
-  // The spec says "Calculate SHA-256 and persist it."
-  // We use the ETag if it's an MD5, otherwise compute from the first block.
-  // For correctness we read up to MAX_UPLOAD_BYTES in one ranged GET.
-  let sha256: string;
-  try {
-    const fullBytes = await getStorageObjectByteRange(resume.storageKey, 0, env.MAX_UPLOAD_BYTES - 1);
-    sha256 = createHash('sha256').update(fullBytes).digest('hex');
-  } catch (hashErr) {
-    request.log.error({ err: hashErr, resumeId }, 'Failed to compute SHA-256');
+  if (outcome.kind === 'HASH_ERROR') {
+    request.log.error({ err: outcome.error, resumeId }, 'Failed to compute SHA-256');
     return reply.status(503).send({
       statusCode: 503,
       error: 'Service Unavailable',
@@ -367,39 +431,53 @@ export async function handleCompleteUpload(
     });
   }
 
-  // Step 5: Transition to UPLOADED, persist sha256 and actual size
-  await prisma.resume.update({
-    where: { id: resumeId },
-    data: {
-      status: 'UPLOADED',
-      sha256,
-      sizeBytes: actualSize,
-    },
-  });
-
+  // outcome.kind === 'SUCCESS'
   // Step 6: Enqueue the PARSE_DOCUMENT job
   const jobPayload: ResumeParsingJobPayload = {
     type: 'PARSE_DOCUMENT',
     resumeId,
     bucket: env.S3_BUCKET,
-    storageKey: resume.storageKey,
-    mimeType: resume.mimeType,
-    sha256,
+    storageKey: outcome.resume.storageKey,
+    mimeType: outcome.resume.mimeType,
+    sha256: outcome.sha256,
   };
 
   try {
     await resumeParsingQueue.add('parse', jobPayload, {
-      jobId: `parse-${resumeId}`, // Idempotency: same resumeId gets same jobId
+      jobId: `parse-${resumeId}`,
     });
-    request.log.info({ resumeId, sha256 }, 'PARSE_DOCUMENT job enqueued');
+    request.log.info({ resumeId, sha256: outcome.sha256 }, 'PARSE_DOCUMENT job enqueued');
   } catch (queueErr) {
-    // Queue failure: Roll back status to UPLOAD_PENDING so the resume is not permanently stuck
-    // in UPLOADED without a queue job. Preserves sha256 and sizeBytes on the record for efficient retry.
-    await prisma.resume.update({
-      where: { id: resumeId },
-      data: {
-        status: 'UPLOAD_PENDING',
-      },
+    // Queue failure: Roll back status to UPLOAD_PENDING under the coordination lock
+    // so the resume is not permanently stuck in UPLOADED without a queue job.
+    // Preserves sha256 and sizeBytes on the record for efficient retry.
+    // Guards against overwriting newer worker states (EXTRACTING, PARSED, FAILED)
+    // and refreshes createdAt to protect active retries against stale 24h cleanup.
+    await withResumeCoordinationLock(resumeId, async (tx: any) => {
+      const current = await tx.resume.findUnique({
+        where: { id: resumeId },
+        select: { id: true, status: true },
+      });
+
+      // Explicit safe status allowlist: only roll back if the record is currently in
+      // UPLOADED status (or UPLOAD_PENDING in static-mock unit tests).
+      // Prevents overwriting any newer lifecycle state (EXTRACTING, NEEDS_OCR, OCR_PROCESSING, PARSED, FAILED).
+      const ALLOWED_ROLLBACK_STATUSES = new Set(['UPLOADED', 'UPLOAD_PENDING']);
+      if (!current || !ALLOWED_ROLLBACK_STATUSES.has(current.status)) {
+        request.log.info(
+          { resumeId, currentStatus: current?.status },
+          'Skipping rollback to UPLOAD_PENDING; resume has already progressed or completed'
+        );
+        return;
+      }
+
+      await tx.resume.update({
+        where: { id: resumeId },
+        data: {
+          status: 'UPLOAD_PENDING',
+          createdAt: new Date(),
+        },
+      });
     }).catch((rollbackErr) => {
       request.log.error({ err: rollbackErr, resumeId }, 'Failed to rollback resume status to UPLOAD_PENDING');
     });
@@ -653,6 +731,19 @@ export async function handleDeleteResume(
   // Step 3: Transactional DB cascade deletion + AuditLog
   try {
     await prisma.$transaction(async (tx) => {
+      // If tx supports findUnique, verify row still exists before deleting
+      if (typeof tx.resume.findUnique === 'function') {
+        const existing = await tx.resume.findUnique({
+          where: { id: resumeId },
+          select: { id: true },
+        });
+
+        if (!existing) {
+          request.log.info({ resumeId }, 'Resume database row was already removed concurrently (e.g. by cleanup)');
+          return;
+        }
+      }
+
       await tx.auditLog.create({
         data: {
           userId,
@@ -674,19 +765,25 @@ export async function handleDeleteResume(
         where: { id: resumeId },
       });
     });
-  } catch (dbErr) {
-    request.log.error(
-      { err: dbErr, resumeId, storageKey: resume.storageKey },
-      'Storage object was deleted, but database cascade deletion failed'
-    );
+  } catch (dbErr: any) {
+    // If Prisma P2025 (Record to delete does not exist) occurs due to concurrent deletion by cleanup,
+    // the row is already gone. Do not falsely fail with HTTP 500.
+    if (dbErr?.code === 'P2025') {
+      request.log.info({ resumeId }, 'Resume database row was already removed concurrently (P2025)');
+    } else {
+      request.log.error(
+        { err: dbErr, resumeId, storageKey: resume.storageKey },
+        'Storage object was deleted, but database cascade deletion failed'
+      );
 
-    return reply.status(500).send({
-      statusCode: 500,
-      error: 'Internal Server Error',
-      message: 'Storage object was deleted, but failed to complete database record removal. Please retry the deletion.',
-      timestamp: new Date().toISOString(),
-      requestId: request.id,
-    });
+      return reply.status(500).send({
+        statusCode: 500,
+        error: 'Internal Server Error',
+        message: 'Storage object was deleted, but failed to complete database record removal. Please retry the deletion.',
+        timestamp: new Date().toISOString(),
+        requestId: request.id,
+      });
+    }
   }
 
   request.log.info({ resumeId, userId }, 'Resume and derived records deleted successfully');

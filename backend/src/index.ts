@@ -1,5 +1,10 @@
 import { env } from './config/env.js';
 import { prisma } from './db/prisma.js';
+import {
+  registerScheduledCleanupJob,
+  startCleanupWorker,
+  stopCleanupWorker,
+} from './queues/cleanupQueue.js';
 import { redisClient } from './queues/redis.js';
 import { buildServer } from './server.js';
 
@@ -12,6 +17,7 @@ async function main(): Promise<void> {
       app.log.info(`Received ${signal}. Gracefully shutting down...`);
       try {
         await app.close();
+        await stopCleanupWorker().catch(() => {});
         await prisma.$disconnect();
         await redisClient.quit().catch(() => {});
         app.log.info('Server and background connections shut down cleanly.');
@@ -29,6 +35,11 @@ async function main(): Promise<void> {
       host: env.HOST,
     });
     app.log.info(`🚀 ResuMatch AI Backend running at ${address}`);
+
+    // Start 24-hour cleanup worker and register scheduled repeatable job
+    startCleanupWorker();
+    await registerScheduledCleanupJob();
+    app.log.info('Initialized 24-hour maintenance cleanup worker & scheduled repeatable job.');
   } catch (err) {
     app.log.fatal({ err }, 'Fatal error starting server');
     process.exit(1);

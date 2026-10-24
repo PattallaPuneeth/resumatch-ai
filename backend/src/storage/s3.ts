@@ -3,6 +3,7 @@ import {
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -170,6 +171,49 @@ export async function deleteStorageObject(storageKey: string): Promise<void> {
     Key: storageKey,
   });
   await s3InternalClient.send(command);
+}
+
+export interface StorageObjectSummary {
+  key: string;
+  lastModified?: Date;
+  sizeBytes?: number;
+}
+
+export interface ListStorageObjectsResult {
+  objects: StorageObjectSummary[];
+  nextContinuationToken?: string;
+  isTruncated: boolean;
+}
+
+/**
+ * List objects in storage bucket using s3InternalClient with pagination support.
+ */
+export async function listStorageObjects(params?: {
+  prefix?: string;
+  continuationToken?: string;
+  maxKeys?: number;
+}): Promise<ListStorageObjectsResult> {
+  const command = new ListObjectsV2Command({
+    Bucket: env.S3_BUCKET,
+    Prefix: params?.prefix,
+    ContinuationToken: params?.continuationToken,
+    MaxKeys: params?.maxKeys,
+  });
+
+  const response = await s3InternalClient.send(command);
+  const objects: StorageObjectSummary[] = (response.Contents || [])
+    .filter((obj) => obj.Key !== undefined)
+    .map((obj) => ({
+      key: obj.Key!,
+      lastModified: obj.LastModified,
+      sizeBytes: obj.Size,
+    }));
+
+  return {
+    objects,
+    nextContinuationToken: response.NextContinuationToken,
+    isTruncated: response.IsTruncated ?? false,
+  };
 }
 
 /**

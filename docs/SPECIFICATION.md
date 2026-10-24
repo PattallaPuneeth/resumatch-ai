@@ -221,7 +221,13 @@ required storage operations.
   related ResumeChunk embeddings, Analysis/Match rows, and write
   an AuditLog record.
 - Add a scheduled cleanup job for stale UPLOAD_PENDING rows and
-  orphaned objects older than 24 hours.
+  orphaned objects older than 24 hours:
+  - Implemented via BullMQ queue `cleanup-queue` and single-concurrency worker.
+  - Repeatable job `maintenance-24h-cleanup` registered at application startup.
+  - Stale `UPLOAD_PENDING`: removes associated storage object, cascades database records, and logs `RESUME_CLEANUP_STALE_PENDING`. If storage deletion fails, database record is retained for retry and audited with `RESUME_CLEANUP_STALE_PENDING_FAILED`.
+  - Stale cleanup & upload completion synchronization: synchronized via per-resume PostgreSQL advisory transaction locks (`pg_advisory_xact_lock` / `pg_try_advisory_xact_lock` on `hashtext('resume-lifecycle:' + resumeId)`). If completion is active, cleanup yields immediately (`skipped++`) to preserve the upload; if cleanup claims the lock, completion waits until commit and returns 404 without transitioning the deleted record or touching storage.
+  - Queue-failure rollback protection: if parsing-job enqueue fails after completion validation, rollback to `UPLOAD_PENDING` acquires the coordination lock, verifies status via an explicit allowlist, and refreshes `createdAt` to `now()` so that subsequent stale-cleanup runs grant a fresh 24-hour retry window rather than immediately deleting the active retry candidate.
+  - Orphaned objects: lists objects under `resumes/` with pagination, protects objects younger than 24 hours, queries PostgreSQL references, rechecks references immediately before deletion, deletes unreferenced objects, and logs `STORAGE_CLEANUP_ORPHAN`.
 - Store a SHA-256 hash per uploaded file. Reuse parse results for
   identical files belonging to the same user when safe and consistent
   with ownership/audit requirements.
