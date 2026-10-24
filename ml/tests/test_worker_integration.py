@@ -13,7 +13,9 @@ from ml.pipelines.intake.repository import (
     save_parsed_resume,
     update_resume_status,
 )
+from ml.storage.s3 import get_s3_client
 from ml.tests.test_parser import create_sample_pdf
+from ml.worker import process_parse_document
 
 
 def get_or_create_test_user() -> str:
@@ -296,3 +298,54 @@ async def test_worker_duplicate_job_idempotency():
         cleanup_test_resume(resume_id)
 
 
+@pytest.mark.asyncio
+async def test_worker_handles_resume_deleted_while_queued():
+    """
+    Verifies that if a resume is deleted while a job is queued/in-flight,
+    the worker aborts without resurrecting.
+    """
+    user_id = get_or_create_test_user()
+    resume_id = str(uuid.uuid4())
+    storage_key = f"resumes/{user_id}/{resume_id}.pdf"
+
+    # Create Resume in DB
+    create_test_resume(user_id, "deleted_race.pdf", "application/pdf", storage_key)
+
+    # Put object in S3
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
+        create_sample_pdf(tf.name)
+        with open(tf.name, "rb") as f:
+            pdf_bytes = f.read()
+        os.remove(tf.name)
+
+    s3 = get_s3_client()
+    s3.put_object(Bucket=settings.s3_bucket, Key=storage_key, Body=pdf_bytes)
+
+    # Delete resume from database before worker processes it (simulating DELETE endpoint)
+    cleanup_test_resume(resume_id)
+
+    try:
+        job = DummyJob({
+            "type": "PARSE_DOCUMENT",
+            "resumeId": resume_id,
+            "bucket": settings.s3_bucket,
+            "storageKey": storage_key,
+            "mimeType": "application/pdf",
+        })
+
+        # Process job — worker should detect deletion and abort gracefully
+        result = await process_parse_document(job)
+        assert result["status"] == "ABORTED"
+        assert result["reason"] == "RESUME_DELETED"
+
+        # Ensure no records exist in parsed_resumes
+        with psycopg.connect(settings.database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT COUNT(*) FROM parsed_resumes WHERE "resumeId" = %s;',
+                    (resume_id,),
+                )
+                count = cur.fetchone()[0]
+                assert count == 0
+    finally:
+        s3.delete_object(Bucket=settings.s3_bucket, Key=storage_key)

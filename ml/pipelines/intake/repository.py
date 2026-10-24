@@ -12,8 +12,11 @@ def update_resume_status(
     resume_id: str,
     status: str,
     extraction_method: str | None = None,
-) -> None:
-    """Updates status and optionally extractionMethod of a resume record."""
+) -> bool:
+    """
+    Updates status and optionally extractionMethod of a resume record.
+    Returns False if resume not found (e.g. deleted).
+    """
     try:
         with psycopg.connect(settings.database_url) as conn:
             with conn.cursor() as cur:
@@ -38,14 +41,19 @@ def update_resume_status(
                         """,
                         (status, resume_id),
                     )
+                rowcount = cur.rowcount
                 conn.commit()
+                return rowcount > 0
     except Exception as e:
         logger.error("Failed to update status to %s for resume %s: %s", status, resume_id, e)
         raise
 
 
-def mark_resume_failed(resume_id: str, error_code: str, error_message: str) -> None:
-    """Transitions resume to FAILED status with user-safe error code and message."""
+def mark_resume_failed(resume_id: str, error_code: str, error_message: str) -> bool:
+    """
+    Transitions resume to FAILED status with user-safe error code and message.
+    Returns False if resume not found (e.g. deleted).
+    """
     try:
         with psycopg.connect(settings.database_url) as conn:
             with conn.cursor() as cur:
@@ -60,17 +68,25 @@ def mark_resume_failed(resume_id: str, error_code: str, error_message: str) -> N
                     """,
                     (error_code, error_message, resume_id),
                 )
+                rowcount = cur.rowcount
                 conn.commit()
-        logger.info("Marked resume %s as FAILED (code=%s)", resume_id, error_code)
+                if rowcount > 0:
+                    logger.info("Marked resume %s as FAILED (code=%s)", resume_id, error_code)
+                else:
+                    logger.warning(
+                        "Resume %s not found when marking FAILED (possibly deleted)", resume_id
+                    )
+                return rowcount > 0
     except Exception as e:
         logger.error("Failed to mark resume %s as failed: %s", resume_id, e)
         raise
 
 
-def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> None:
+def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> bool:
     """
     Persists extracted resume data into parsed_resumes and marks resume as PARSED.
     Idempotent: uses ON CONFLICT ("resumeId") DO UPDATE to prevent duplicate rows.
+    Returns False if resume was deleted prior to persistence.
     """
     contact_dict = parse_result.contact.model_dump(exclude_none=True)
     skills_list = [s.model_dump(exclude_none=True) for s in parse_result.skills]
@@ -94,6 +110,12 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> Non
                     """,
                     (parse_result.extraction_method, resume_id),
                 )
+                if cur.rowcount == 0:
+                    logger.warning(
+                        "Resume %s not found (deleted); aborting parsed data persistence",
+                        resume_id,
+                    )
+                    return False
 
                 # 2. Upsert into parsed_resumes
                 cur.execute(
@@ -165,6 +187,7 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> Non
                     ),
                 )
                 conn.commit()
+                return True
         logger.info(
             "Successfully saved parsed resume for %s (method=%s, ats_score=%.1f)",
             resume_id,

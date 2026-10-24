@@ -72,6 +72,98 @@ export interface CompleteUploadResponse {
   message: string;
 }
 
+export interface ParsedResumeData {
+  id: string;
+  rawText: string;
+  candidateName?: string | null;
+  contactInfo?: {
+    email?: string | null;
+    phone?: string | null;
+    linkedin?: string | null;
+    github?: string | null;
+    location?: string | null;
+  } | null;
+  summary?: string | null;
+  skills?: Array<{
+    name: string;
+    category: string;
+    confidence: number;
+    startChar: number;
+    endChar: number;
+  }> | null;
+  experience?: Array<{
+    title?: string | null;
+    company?: string | null;
+    location?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    description?: string | null;
+    startChar: number;
+    endChar: number;
+  }> | null;
+  education?: Array<{
+    degree?: string | null;
+    institution?: string | null;
+    year?: string | null;
+    gpa?: string | null;
+    startChar: number;
+    endChar: number;
+  }> | null;
+  certifications?: unknown[] | null;
+  pageCount?: number | null;
+  atsScore?: number | null;
+  atsHazards?: Array<{
+    type: string;
+    severity: string;
+    message: string;
+    details?: unknown;
+  }> | null;
+  parsingMetadata?: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResumeDetailsResponse {
+  id: string;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: string;
+  extractionMethod?: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  parsedResume?: ParsedResumeData | null;
+}
+
+export interface DownloadUrlResponse {
+  resumeId: string;
+  downloadUrl: string;
+  expiresIn: number;
+}
+
+export interface DeleteResumeResponse {
+  statusCode: number;
+  message: string;
+  id: string;
+}
+
+export interface ListResumesResponse {
+  resumes: Array<{
+    id: string;
+    originalFilename: string;
+    mimeType: string;
+    sizeBytes: number;
+    status: string;
+    extractionMethod?: string | null;
+    errorCode?: string | null;
+    errorMessage?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
 // ---------------------------------------------------------------------------
 // Base request helpers
 // ---------------------------------------------------------------------------
@@ -137,6 +229,28 @@ export const api = {
   completeUpload: (resumeId: string, token: string) =>
     request<CompleteUploadResponse>(BACKEND_URL, `/v1/resumes/${resumeId}/complete`, {
       method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Phase 2D: Resume lifecycle
+  getResume: (resumeId: string, token: string) =>
+    request<ResumeDetailsResponse>(BACKEND_URL, `/v1/resumes/${resumeId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getResumeDownloadUrl: (resumeId: string, token: string) =>
+    request<DownloadUrlResponse>(BACKEND_URL, `/v1/resumes/${resumeId}/download-url`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  deleteResume: (resumeId: string, token: string) =>
+    request<DeleteResumeResponse>(BACKEND_URL, `/v1/resumes/${resumeId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  listResumes: (token: string) =>
+    request<ListResumesResponse>(BACKEND_URL, '/v1/resumes', {
       headers: { Authorization: `Bearer ${token}` },
     }),
 

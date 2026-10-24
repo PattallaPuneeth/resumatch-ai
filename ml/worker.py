@@ -48,8 +48,12 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
 
     logger.info("Processing resume parsing job %s for resume %s", job.id, resume_id)
 
-    # 1. Update status to EXTRACTING
-    update_resume_status(resume_id, "EXTRACTING")
+    # 1. Update status to EXTRACTING (or abort if resume was deleted)
+    if not update_resume_status(resume_id, "EXTRACTING"):
+        logger.info(
+            "Resume %s was deleted prior to processing. Aborting job %s.", resume_id, job.id
+        )
+        return {"status": "ABORTED", "reason": "RESUME_DELETED"}
 
     # Determine local temp path
     ext = storage_key.split(".")[-1].lower() if "." in storage_key else "pdf"
@@ -76,7 +80,13 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
         result = parse_document(temp_file, mime_type, status_callback=on_status_change)
 
         # 5. Persist results and transition to PARSED
-        save_parsed_resume(resume_id, result)
+        persisted = save_parsed_resume(resume_id, result)
+        if not persisted:
+            logger.info(
+                "Resume %s was deleted during processing. Aborting job %s.", resume_id, job.id
+            )
+            return {"status": "ABORTED", "reason": "RESUME_DELETED"}
+
         logger.info(
             "Resume %s successfully parsed and persisted (method=%s, score=%.1f)",
             resume_id,

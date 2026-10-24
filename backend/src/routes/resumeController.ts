@@ -6,6 +6,7 @@ import { prisma } from '../db/prisma.js';
 import {
   buildStorageKey,
   createPresignedUploadUrl,
+  createPresignedDownloadUrl,
   headStorageObject,
   getStorageObjectByteRange,
   deleteStorageObject,
@@ -418,4 +419,310 @@ export async function handleCompleteUpload(
     status: 'UPLOADED',
     message: 'Resume accepted for processing.',
   });
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/resumes/:id
+// ---------------------------------------------------------------------------
+export async function handleGetResume(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  const userId = (request.user as { sub: string }).sub;
+  const resumeId = request.params.id;
+
+  const resume = await prisma.resume.findUnique({
+    where: { id: resumeId },
+    include: { parsedResume: true },
+  });
+
+  if (!resume) {
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume not found',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  if (resume.userId !== userId) {
+    return reply.status(403).send({
+      statusCode: 403,
+      error: 'Forbidden',
+      message: 'You do not have permission to access this resume',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  // Include parsed data ONLY when status is PARSED per specification
+  const isParsed = resume.status === 'PARSED';
+  const parsedData = isParsed && resume.parsedResume
+    ? {
+        id: resume.parsedResume.id,
+        rawText: resume.parsedResume.rawText,
+        candidateName: resume.parsedResume.candidateName,
+        contactInfo: resume.parsedResume.contactInfo,
+        summary: resume.parsedResume.summary,
+        skills: resume.parsedResume.skills,
+        experience: resume.parsedResume.experience,
+        education: resume.parsedResume.education,
+        certifications: resume.parsedResume.certifications,
+        pageCount: resume.parsedResume.pageCount,
+        atsScore: resume.parsedResume.atsScore,
+        atsHazards: resume.parsedResume.atsHazards,
+        parsingMetadata: resume.parsedResume.parsingMetadata,
+        createdAt: resume.parsedResume.createdAt,
+        updatedAt: resume.parsedResume.updatedAt,
+      }
+    : null;
+
+  return reply.status(200).send({
+    id: resume.id,
+    originalFilename: resume.originalFilename,
+    mimeType: resume.mimeType,
+    sizeBytes: resume.sizeBytes,
+    status: resume.status,
+    extractionMethod: resume.extractionMethod,
+    errorCode: resume.errorCode,
+    errorMessage: resume.errorMessage,
+    createdAt: resume.createdAt,
+    updatedAt: resume.updatedAt,
+    parsedResume: parsedData,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/resumes/:id/download-url
+// ---------------------------------------------------------------------------
+export async function handleGetDownloadUrl(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  const userId = (request.user as { sub: string }).sub;
+  const resumeId = request.params.id;
+
+  const resume = await prisma.resume.findUnique({
+    where: { id: resumeId },
+  });
+
+  if (!resume) {
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume not found',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  if (resume.userId !== userId) {
+    return reply.status(403).send({
+      statusCode: 403,
+      error: 'Forbidden',
+      message: 'You do not have permission to access this resume',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  if (resume.status === 'UPLOAD_PENDING') {
+    return reply.status(422).send({
+      statusCode: 422,
+      error: 'Unprocessable Entity',
+      message: 'Resume upload is still pending and has not been confirmed.',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  // Verify object exists in storage
+  const head = await headStorageObject(resume.storageKey);
+  if (!head) {
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume document not found in storage. It may have been deleted or corrupted.',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  // Generate short-lived presigned download URL
+  const presigned = await createPresignedDownloadUrl({
+    storageKey: resume.storageKey,
+    originalFilename: resume.originalFilename,
+    expiresInSeconds: env.PRESIGN_GET_TTL_SECONDS,
+  });
+
+  return reply.status(200).send({
+    resumeId: resume.id,
+    downloadUrl: presigned.downloadUrl,
+    expiresIn: presigned.expiresIn,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// DELETE /v1/resumes/:id
+// ---------------------------------------------------------------------------
+export async function handleDeleteResume(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  const userId = (request.user as { sub: string }).sub;
+  const resumeId = request.params.id;
+
+  const resume = await prisma.resume.findUnique({
+    where: { id: resumeId },
+  });
+
+  if (!resume) {
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume not found',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  if (resume.userId !== userId) {
+    return reply.status(403).send({
+      statusCode: 403,
+      error: 'Forbidden',
+      message: 'You do not have permission to delete this resume',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  // Step 1: Best-effort remove from BullMQ queue to prevent stale worker execution
+  try {
+    const job = await resumeParsingQueue.getJob(`parse-${resumeId}`);
+    if (job) {
+      await job.remove();
+      request.log.info({ resumeId, jobId: job.id }, 'Removed pending BullMQ parsing job');
+    }
+  } catch (queueErr) {
+    request.log.warn({ err: queueErr, resumeId }, 'Could not remove job from queue on deletion');
+  }
+
+  // Step 2: Delete storage object from S3
+  try {
+    await deleteStorageObject(resume.storageKey);
+    request.log.info({ resumeId, storageKey: resume.storageKey }, 'Deleted object from storage');
+  } catch (s3Err) {
+    request.log.error(
+      { err: s3Err, resumeId, storageKey: resume.storageKey },
+      'Failed to delete storage object; aborting database deletion to prevent orphaned object'
+    );
+
+    // Record failure in AuditLog to provide a durable audit trail
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'RESUME_DELETE_FAILED',
+          entityType: 'Resume',
+          entityId: resumeId,
+          details: {
+            storageKey: resume.storageKey,
+            originalFilename: resume.originalFilename,
+            status: resume.status,
+            stage: 'STORAGE_DELETION',
+            error: s3Err instanceof Error ? s3Err.message : String(s3Err),
+          },
+          ipAddress: request.ip,
+          userAgent: (request.headers['user-agent'] as string) || null,
+        },
+      });
+    } catch (auditErr) {
+      request.log.warn({ err: auditErr, resumeId }, 'Failed to record RESUME_DELETE_FAILED audit log');
+    }
+
+    return reply.status(503).send({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      message: 'Storage service temporarily unavailable. The resume could not be deleted; please retry.',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  // Step 3: Transactional DB cascade deletion + AuditLog
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: 'RESUME_DELETE',
+          entityType: 'Resume',
+          entityId: resumeId,
+          details: {
+            storageKey: resume.storageKey,
+            originalFilename: resume.originalFilename,
+            status: resume.status,
+            sizeBytes: resume.sizeBytes,
+          },
+          ipAddress: request.ip,
+          userAgent: (request.headers['user-agent'] as string) || null,
+        },
+      });
+
+      await tx.resume.delete({
+        where: { id: resumeId },
+      });
+    });
+  } catch (dbErr) {
+    request.log.error(
+      { err: dbErr, resumeId, storageKey: resume.storageKey },
+      'Storage object was deleted, but database cascade deletion failed'
+    );
+
+    return reply.status(500).send({
+      statusCode: 500,
+      error: 'Internal Server Error',
+      message: 'Storage object was deleted, but failed to complete database record removal. Please retry the deletion.',
+      timestamp: new Date().toISOString(),
+      requestId: request.id,
+    });
+  }
+
+  request.log.info({ resumeId, userId }, 'Resume and derived records deleted successfully');
+
+  return reply.status(200).send({
+    statusCode: 200,
+    message: 'Resume deleted successfully',
+    id: resumeId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// GET /v1/resumes
+// ---------------------------------------------------------------------------
+export async function handleListResumes(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const userId = (request.user as { sub: string }).sub;
+
+  const resumes = await prisma.resume.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      originalFilename: true,
+      mimeType: true,
+      sizeBytes: true,
+      status: true,
+      extractionMethod: true,
+      errorCode: true,
+      errorMessage: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return reply.status(200).send({ resumes });
 }
