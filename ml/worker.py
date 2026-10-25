@@ -3,11 +3,15 @@ import logging
 import os
 import signal
 from types import FrameType
-from typing import Any
+from typing import Any, Literal
 
 from bullmq import Job, Queue, Worker
 
 from ml.config import settings
+from ml.eval.metrics import (
+    DEFAULT_STRONG_THRESHOLD,
+    DEFAULT_WEAK_THRESHOLD,
+)
 from ml.pipelines.embeddings.chunker import chunk_job_text, chunk_resume_text
 from ml.pipelines.embeddings.embedder import generate_chunk_embeddings
 from ml.pipelines.embeddings.repository import (
@@ -31,6 +35,17 @@ from ml.pipelines.intake.repository import (
     save_parsed_resume,
     update_resume_status,
 )
+from ml.pipelines.llm.config import PROMPT_VERSION, llm_settings
+from ml.pipelines.llm.gateway import LLMUnavailableError, llm_gateway
+from ml.pipelines.llm.models import StructuredAnalysisResult
+from ml.pipelines.llm.repository import (
+    get_analysis_context,
+    persist_analysis_result,
+)
+from ml.pipelines.llm.safety import (
+    detect_prompt_injection,
+    redact_pii,
+)
 from ml.pipelines.matching.lexical import search_lexical
 from ml.pipelines.matching.repository import get_match_context, persist_match_result
 from ml.pipelines.matching.reranker import (
@@ -52,6 +67,7 @@ logger = logging.getLogger("resumatch-ml-worker")
 _parse_worker: Worker | None = None
 _embed_worker: Worker | None = None
 _match_worker: Worker | None = None
+_analysis_worker: Worker | None = None
 _embedding_queue: Queue | None = None
 _should_exit = False
 
@@ -409,17 +425,215 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
         raise e
 
 
+async def process_analysis(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Processes an analysis job from analysis-queue."""
+    data = job.data
+    resume_id = data.get("resumeId")
+    job_id = data.get("jobId")
+
+    if not resume_id or not job_id:
+        logger.warning("Analysis job %s missing resumeId or jobId.", job.id)
+        return {"status": "ABORTED", "reason": "MISSING_IDS"}
+
+    try:
+        ctx = get_analysis_context(resume_id, job_id)
+        if not ctx:
+            logger.warning("Analysis context not found for resume %s and job %s", resume_id, job_id)
+            return {"status": "ABORTED", "reason": "CONTEXT_NOT_FOUND"}
+
+        if ctx.get("resume_status") != "PARSED":
+            logger.warning(
+                "Resume %s is not in PARSED status (current: %s)",
+                resume_id,
+                ctx.get("resume_status"),
+            )
+            return {"status": "ABORTED", "reason": "RESUME_NOT_PARSED"}
+
+        raw_text = ctx.get("raw_text", "")
+        job_desc = ctx.get("job_description", "")
+        match_final_score = ctx.get("match_final_score")
+        match_explanation = ctx.get("match_explanation") or {}
+
+        if match_final_score is None:
+            logger.warning("Match not computed yet for resume %s and job %s", resume_id, job_id)
+            return {"status": "ABORTED", "reason": "MATCH_NOT_COMPUTED"}
+
+        # 1. PII Redaction & Prompt-Injection Detection
+        candidate_name = ctx.get("candidate_name")
+        resume_redaction = redact_pii(raw_text, candidate_name=candidate_name)
+        jd_redaction = redact_pii(job_desc)
+
+        injection_suspected = detect_prompt_injection(raw_text) or detect_prompt_injection(job_desc)
+
+        # 2. Deterministic Score Injection (LLM never sees or edits scores)
+        final_score = float(match_final_score)
+        ats_score = float(ctx["ats_score"]) if ctx.get("ats_score") is not None else None
+
+        verdict_band: Literal["strong", "medium", "weak"]
+        if final_score >= DEFAULT_STRONG_THRESHOLD:
+            verdict_band = "strong"
+        elif final_score >= DEFAULT_WEAK_THRESHOLD:
+            verdict_band = "medium"
+        else:
+            verdict_band = "weak"
+
+        skill_gap_data = match_explanation.get("skillGap", {})
+        matched_skills = skill_gap_data.get("matched", [])
+        missing_skills = skill_gap_data.get("missing", [])
+        partial_skills = skill_gap_data.get("partial", [])
+
+        # 3. LLM Gateway Execution or Graceful Degradation
+        configured_tiers = llm_settings.get_configured_tiers()
+        require_llm = os.getenv("REQUIRE_LLM", "").strip() == "1"
+        structured_result: StructuredAnalysisResult
+
+        if not configured_tiers:
+            if require_llm:
+                raise RuntimeError(
+                    "REQUIRE_LLM=1 but no LLM provider keys are configured. "
+                    "Set at least one of: GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY."
+                )
+            logger.info(
+                "No LLM provider keys configured. "
+                "Returning deterministic-only analysis for resume %s",
+                resume_id,
+            )
+            structured_result = StructuredAnalysisResult(
+                summary=(
+                    "Deterministic scoring completed. "
+                    "LLM multi-tier analysis is currently unavailable."
+                ),
+                strengths=[],
+                gaps=[],
+                prioritized_improvements=[],
+                match_score=final_score,
+                ats_score=ats_score,
+                verdict_band=verdict_band,
+                matched_skills=matched_skills,
+                missing_skills=missing_skills,
+                partial_skills=partial_skills,
+                llm_status="UNAVAILABLE",
+                provider=None,
+                model=None,
+                prompt_version=PROMPT_VERSION,
+                tokens_prompt=0,
+                tokens_completion=0,
+                latency_ms=0,
+                fabricated_evidence_rate=0.0,
+                injection_suspected=injection_suspected,
+            )
+        else:
+            try:
+                exec_res = await llm_gateway.execute(
+                    redaction=resume_redaction,
+                    redacted_jd=jd_redaction.redacted_text,
+                )
+                structured_result = StructuredAnalysisResult(
+                    summary=exec_res.llm_response.summary,
+                    strengths=exec_res.verified_strengths,
+                    gaps=exec_res.llm_response.gaps,
+                    prioritized_improvements=exec_res.llm_response.prioritized_improvements,
+                    match_score=final_score,
+                    ats_score=ats_score,
+                    verdict_band=verdict_band,
+                    matched_skills=matched_skills,
+                    missing_skills=missing_skills,
+                    partial_skills=partial_skills,
+                    llm_status="SUCCESS",
+                    provider=exec_res.provider,
+                    model=exec_res.model,
+                    prompt_version=PROMPT_VERSION,
+                    tokens_prompt=exec_res.tokens_prompt,
+                    tokens_completion=exec_res.tokens_completion,
+                    latency_ms=exec_res.latency_ms,
+                    fabricated_evidence_rate=exec_res.fabricated_rate,
+                    injection_suspected=injection_suspected,
+                )
+            except LLMUnavailableError as unavail_err:
+                if require_llm:
+                    raise RuntimeError(
+                        f"REQUIRE_LLM=1 but all LLM tiers exhausted: {unavail_err}"
+                    ) from unavail_err
+                logger.warning(
+                    "All LLM tiers exhausted or unavailable (%s). "
+                    "Falling back to deterministic analysis.",
+                    unavail_err,
+                )
+                structured_result = StructuredAnalysisResult(
+                    summary=(
+                        "LLM analysis provider unavailable; "
+                        "falling back to deterministic matching insights."
+                    ),
+                    strengths=[],
+                    gaps=[],
+                    prioritized_improvements=[],
+                    match_score=final_score,
+                    ats_score=ats_score,
+                    verdict_band=verdict_band,
+                    matched_skills=matched_skills,
+                    missing_skills=missing_skills,
+                    partial_skills=partial_skills,
+                    llm_status="UNAVAILABLE",
+                    provider=None,
+                    model=None,
+                    prompt_version=PROMPT_VERSION,
+                    tokens_prompt=0,
+                    tokens_completion=0,
+                    latency_ms=0,
+                    fabricated_evidence_rate=0.0,
+                    injection_suspected=injection_suspected,
+                )
+
+        # 4. Atomic Idempotent Persistence
+        analysis_id = persist_analysis_result(
+            resume_id=resume_id,
+            job_id=job_id,
+            result=structured_result.model_dump(by_alias=True),
+            llm_status=structured_result.llm_status,
+            provider=structured_result.provider,
+            model=structured_result.model,
+            prompt_version=structured_result.prompt_version,
+            tokens_prompt=structured_result.tokens_prompt,
+            tokens_completion=structured_result.tokens_completion,
+            latency_ms=structured_result.latency_ms,
+            fabricated_evidence_rate=structured_result.fabricated_evidence_rate,
+            injection_suspected=structured_result.injection_suspected,
+            score=final_score,
+            skill_gap=skill_gap_data,
+            ats_findings=ctx.get("ats_hazards"),
+            status="COMPLETED",
+        )
+
+        return {
+            "status": "COMPLETED",
+            "analysisId": analysis_id,
+            "resumeId": resume_id,
+            "jobId": job_id,
+            "llmStatus": structured_result.llm_status,
+        }
+
+    except Exception as e:
+        logger.exception(
+            "Failed processing analysis for resume %s and job %s: %s",
+            resume_id,
+            job_id,
+            e,
+        )
+        raise e
+
+
 async def main_async() -> None:
-    global _parse_worker, _embed_worker, _match_worker
+    global _parse_worker, _embed_worker, _match_worker, _analysis_worker
     redis_opts = {"connection": settings.redis_url, "prefix": "bull", "concurrency": 2}
 
     logger.info(
         "Starting BullMQ Workers for resume-parsing-queue, "
-        "embedding-queue, and match-scoring-queue..."
+        "embedding-queue, match-scoring-queue, and analysis-queue..."
     )
     _parse_worker = Worker("resume-parsing-queue", process_parse_document, redis_opts)
     _embed_worker = Worker("embedding-queue", process_embed_document, redis_opts)
     _match_worker = Worker("match-scoring-queue", process_match_scoring, redis_opts)
+    _analysis_worker = Worker("analysis-queue", process_analysis, redis_opts)
 
     # Keep alive until shutdown requested
     while not _should_exit:
@@ -432,6 +646,8 @@ async def main_async() -> None:
         await _embed_worker.close()
     if _match_worker:
         await _match_worker.close()
+    if _analysis_worker:
+        await _analysis_worker.close()
     if _embedding_queue:
         await _embedding_queue.close()
     logger.info("All BullMQ workers closed.")

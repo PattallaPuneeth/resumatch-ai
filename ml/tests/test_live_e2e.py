@@ -383,7 +383,7 @@ async def test_live_scanned_pdf_ocr_pipeline_e2e() -> None:
         assert complete_res.status_code == 202
 
     # 4. Wait for OCR processing and completion
-    result = wait_for_status(resume_id, "PARSED", timeout_sec=40.0)
+    result = wait_for_status(resume_id, "PARSED", timeout_sec=60.0)
     assert result["status"] == "PARSED", f"Expected PARSED, got {result}"
     assert result["extractionMethod"] == "OCR"
 

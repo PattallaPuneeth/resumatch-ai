@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db/prisma.js';
-import { embeddingQueue, matchScoringQueue } from '../queues/bullmq.js';
+import { analysisQueue, embeddingQueue, matchScoringQueue } from '../queues/bullmq.js';
 
 // ---------------------------------------------------------------------------
 // Validation Schemas
@@ -18,6 +18,10 @@ export const createJobBodySchema = z.object({
 });
 
 export const matchJobBodySchema = z.object({
+  resumeId: z.string().uuid('Invalid resume UUID'),
+});
+
+export const analysisJobBodySchema = z.object({
   resumeId: z.string().uuid('Invalid resume UUID'),
 });
 
@@ -310,6 +314,183 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         explanation: match.explanation,
         createdAt: match.createdAt,
         updatedAt: match.updatedAt,
+      });
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // Phase 4A: POST /v1/jobs/:id/analysis
+  // -------------------------------------------------------------------------
+  app.post<{ Params: { id: string } }>(
+    '/v1/jobs/:id/analysis',
+    {
+      config: {
+        rateLimit: {
+          max: 20,
+          timeWindow: '1 minute',
+        },
+      },
+      preHandler: app.authenticate,
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+      const userId: string = user.userId || user.sub;
+      const { id: jobId } = request.params;
+
+      const bodyParse = analysisJobBodySchema.safeParse(request.body);
+      if (!bodyParse.success) {
+        return reply.status(422).send({
+          statusCode: 422,
+          error: 'Unprocessable Entity',
+          message: bodyParse.error.errors.map((e) => e.message).join('; '),
+        });
+      }
+
+      const { resumeId } = bodyParse.data;
+
+      // Verify that BOTH the job and the resume belong to the authenticated user (404 convention)
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      if (!job || job.userId !== userId) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Job not found',
+        });
+      }
+
+      const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+      if (!resume || resume.userId !== userId) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Resume not found',
+        });
+      }
+
+      // Verify that the resume is in PARSED status
+      if (resume.status !== 'PARSED') {
+        return reply.status(422).send({
+          statusCode: 422,
+          error: 'Unprocessable Entity',
+          message: `Resume must be in PARSED status to initiate structured analysis. Current status: ${resume.status}`,
+        });
+      }
+
+      // Verify that Match scoring has already completed (409 Conflict if no Match exists)
+      const existingMatch = await prisma.match.findUnique({
+        where: {
+          resumeId_jobId: {
+            resumeId,
+            jobId,
+          },
+        },
+      });
+
+      if (!existingMatch) {
+        return reply.status(409).send({
+          statusCode: 409,
+          error: 'Conflict',
+          message: 'Match scoring must be completed before structured analysis can be generated. Please trigger POST /v1/jobs/:id/match first.',
+        });
+      }
+
+      // Enqueue analysis job
+      try {
+        await analysisQueue.add(
+          `analysis-${jobId}-${resumeId}`,
+          {
+            jobId,
+            resumeId,
+          },
+          {
+            jobId: `analysis-${jobId}-${resumeId}`,
+          }
+        );
+      } catch (queueErr) {
+        request.log.error({ err: queueErr, jobId, resumeId }, 'Failed to enqueue structured analysis job');
+        return reply.status(503).send({
+          statusCode: 503,
+          error: 'Service Unavailable',
+          message: 'Failed to enqueue structured analysis task',
+        });
+      }
+
+      return reply.status(202).send({
+        statusCode: 202,
+        message: 'Structured analysis job enqueued',
+        jobId,
+        resumeId,
+        status: 'QUEUED',
+      });
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // Phase 4A: GET /v1/jobs/:id/analysis/:resumeId (Single Analysis Result Route)
+  // -------------------------------------------------------------------------
+  app.get<{ Params: { id: string; resumeId: string } }>(
+    '/v1/jobs/:id/analysis/:resumeId',
+    {
+      preHandler: app.authenticate,
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+      const userId: string = user.userId || user.sub;
+      const { id: jobId, resumeId } = request.params;
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      if (!job || job.userId !== userId) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Job not found',
+        });
+      }
+
+      const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+      if (!resume || resume.userId !== userId) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Resume not found',
+        });
+      }
+
+      const analysis = await prisma.analysis.findUnique({
+        where: {
+          resumeId_jobId: {
+            resumeId,
+            jobId,
+          },
+        },
+      });
+
+      if (!analysis) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Analysis result not found',
+        });
+      }
+
+      return reply.status(200).send({
+        id: analysis.id,
+        resumeId: analysis.resumeId,
+        jobId: analysis.jobId,
+        status: analysis.status,
+        llmStatus: analysis.llmStatus,
+        score: analysis.score,
+        result: analysis.result,
+        provider: analysis.provider,
+        model: analysis.model,
+        promptVersion: analysis.promptVersion,
+        tokensPrompt: analysis.tokensPrompt,
+        tokensCompletion: analysis.tokensCompletion,
+        latencyMs: analysis.latencyMs,
+        fabricatedEvidenceRate: analysis.fabricatedEvidenceRate,
+        injectionSuspected: analysis.injectionSuspected,
+        createdAt: analysis.createdAt,
+        updatedAt: analysis.updatedAt,
       });
     }
   );

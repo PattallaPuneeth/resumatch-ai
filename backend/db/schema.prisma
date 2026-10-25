@@ -150,19 +150,30 @@ model JobChunk {
 }
 
 model Analysis {
-  id             String   @id @default(uuid())
-  resumeId       String
-  resume         Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  jobId          String?
-  job            Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
-  score          Float?
-  skillGap       Json?
-  atsFindings    Json?
-  bulletRewrites Json?
-  status         String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  resumeId               String
+  resume                 Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobId                  String?
+  job                    Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  score                  Float?
+  skillGap               Json?
+  atsFindings            Json?
+  bulletRewrites         Json?
+  status                 String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  result                 Json?
+  llmStatus              String?  // SUCCESS, UNAVAILABLE, FAILED
+  provider               String?
+  model                  String?
+  promptVersion          String?
+  tokensPrompt           Int?
+  tokensCompletion       Int?
+  latencyMs              Int?
+  fabricatedEvidenceRate Float?
+  injectionSuspected     Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
+  @@unique([resumeId, jobId])
   @@index([resumeId])
   @@index([jobId])
   @@map("analyses")

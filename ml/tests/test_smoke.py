@@ -114,12 +114,12 @@ def test_pydantic_match_result_schema() -> None:
     result = MatchResult(
         score=92.5,
         components=ScoreComponents(
-            bm25_score=8.4,
-            vector_cosine_score=0.89,
-            rrf_score=0.032,
-            cross_encoder_score=0.94,
+            bm25Score=8.4,
+            vectorCosineScore=0.89,
+            rrfScore=0.032,
+            crossEncoderScore=0.94,
         ),
-        matched_skills=["Python", "PostgreSQL", "FastAPI"],
+        matchedSkills=["Python", "PostgreSQL", "FastAPI"],
         gaps=["Docker"],
         evidence=[
             EvidenceItem(

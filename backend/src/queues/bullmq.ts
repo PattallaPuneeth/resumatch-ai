@@ -31,6 +31,11 @@ export interface MatchScoringJobPayload {
   jobId: string;
 }
 
+export interface AnalysisJobPayload {
+  resumeId: string;
+  jobId: string;
+}
+
 export const resumeParsingQueue = new Queue<ResumeParsingJobPayload>('resume-parsing-queue', {
   connection: redisConnectionOptions,
   prefix: 'bull',
@@ -60,6 +65,20 @@ export const embeddingQueue = new Queue<EmbeddingJobPayload>('embedding-queue', 
 });
 
 export const matchScoringQueue = new Queue<MatchScoringJobPayload>('match-scoring-queue', {
+  connection: redisConnectionOptions,
+  prefix: 'bull',
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+    removeOnComplete: 100,
+    removeOnFail: 500,
+  },
+});
+
+export const analysisQueue = new Queue<AnalysisJobPayload>('analysis-queue', {
   connection: redisConnectionOptions,
   prefix: 'bull',
   defaultJobOptions: {

@@ -783,3 +783,51 @@ Follow Section 10 (Execution Protocol for the Coding Agent) strictly.
 6. Do not implement any Phase 2B upload endpoints during this task.
 7. Before proceeding to Phase 2B, report progress using the Section 12 Completion and Reporting Checklist, including changed files, commands run, actual results, and blockers.
 8. If the repository’s current state conflicts with this specification, stop and explain the conflict rather than silently changing architecture or weakening requirements.
+
+14. Phase 4A Specification: Multi-Provider LLM Gateway, Safety Layer & Structured Analysis
+14.1 LLM Gateway Architecture & Tier Fallback
+All providers expose OpenAI-compatible /chat/completions endpoints. The gateway executes in priority order:
+- Tier 1: Google AI Studio (base: https://generativelanguage.googleapis.com/v1beta/openai/, model: gemini-3.5-flash, overridable via GEMINI_MODEL). Key: GEMINI_API_KEY.
+- Tier 2: Groq Primary (base: https://api.groq.com/openai/v1, model: openai/gpt-oss-120b, overridable via GROQ_MODEL_PRIMARY). Key: GROQ_API_KEY.
+- Tier 3: OpenRouter Free (base: https://openrouter.ai/api/v1, model: openrouter/free, overridable via OPENROUTER_MODEL). Key: OPENROUTER_API_KEY.
+- Tier 4: Groq Emergency (base: https://api.groq.com/openai/v1, model: openai/gpt-oss-20b, overridable via GROQ_MODEL_EMERGENCY). Key: GROQ_API_KEY.
+
+How to obtain provider API keys:
+- Google AI Studio: sign up at https://aistudio.google.com/ and create a free Gemini API key.
+- Groq: register at https://console.groq.com/keys and generate an API key.
+- OpenRouter: register at https://openrouter.ai/settings/keys and create an API key.
+
+Data Privacy & Prompt Retention Warning:
+Free and public tiers of third-party LLM providers may retain, log, or train on prompts submitted to their endpoints.
+Therefore:
+- Strict bidirectional PII redaction is mandatory before any prompt leaves the service boundary.
+- Automated tests and development workflows must exclusively use synthetic fixtures. Real personal data must never be transmitted.
+
+Failover & Cooldown Rules:
+- 429 rate limit, 5xx server errors, network drop, or timeouts: log exactly
+  `[LLM Failover] {provider} rate-limited. Activating 60s cooldown. Switching to {next_provider}...`,
+  set 60-second cooldown via time.monotonic() (or honor Retry-After if larger), and immediately retry the same request on the next available tier.
+- 401/403/invalid key or model-not-found (404): permanently disable that tier for the process lifetime with an error that never logs secrets. Do not enter 60s cooldown.
+- Cooldown expiry: tiers whose cooldown expired return to the pool cyclically.
+- When all tiers are exhausted or unconfigured: return graceful deterministic fallback result with llmStatus = 'UNAVAILABLE' without raising an uncaught exception.
+
+14.2 Safety & Prompt Injection Defense
+- PII Redaction: Removes candidate name, email, phone, URLs, street addresses, dates of birth, and demographic bias cues (pronouns, marital status, age). Maintains an exact character offset map to re-ground evidence quotes to original rawText. Quotes overlapping redaction placeholders are dropped.
+- Untrusted Data Framing: Resume and JD text are wrapped in random per-request UUID delimiters (e.g. `---RESUME-DATA-{uuid}---`) and marked strictly as untrusted data.
+- Injection Heuristics: Scans for override commands ("ignore previous instructions", "give perfect score"). Detected attempts set `injectionSuspected = true` for auditing.
+- Grounding Verifier: Every evidence quote returned by the LLM must match an exact substring in rawText. Fabricated quotes are dropped. If fabricated evidence rate exceeds 0.5, the tier fails and gateway fails over.
+
+14.3 Score Integrity Guarantee
+Under no circumstance does an LLM generate, edit, adjust, or view-as-editable any score.
+All scores (matchScore, atsScore, sub-scores, verdict band, skill gap lists) are injected exclusively by deterministic Python ML code from the existing Match and Parse models. The LLM only explains, highlights strengths/gaps, and suggests fixes.
+
+14.4 API & Queue Contracts
+- Queue: `analysis-queue` (prefix `bull`, 3 retries with exponential backoff). Job payload: `{ resumeId, jobId }`.
+- `POST /v1/jobs/:id/analysis`
+  - Request: `{ resumeId: UUID }`
+  - Response: 202 Accepted `{ status: 'QUEUED', jobId, resumeId }`
+  - Preconditions: Both job and resume must belong to authenticated user (404 convention); resume must have status PARSED (422 if not); Match must exist (409 Conflict if no Match computed yet).
+  - Rate limit: 10 requests per minute per user.
+- `GET /v1/jobs/:id/analysis/:resumeId`
+  - Response: 200 OK with full Analysis model (id, jobId, resumeId, status, score, skillGap, atsFindings, result, llmStatus, provider, model, promptVersion, tokensPrompt, tokensCompletion, latencyMs, fabricatedEvidenceRate, injectionSuspected).
+  - Ownership: 404 Not Found if requested by non-owner.

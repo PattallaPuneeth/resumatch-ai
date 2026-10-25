@@ -48,9 +48,9 @@
 | 3B | Hybrid retrieval, RRF, cross-encoder, job ingestion, match scoring | COMPLETE (committed) |
 | 3C-1 | Evaluation harness and extended skill taxonomy | COMPLETE |
 | 3C-2 | Score recalibration against labeled dataset | COMPLETE |
-| 4A | LLM gateway, safety layer, structured analysis | NEXT |
-| 4B | Fact-grounded STAR bullet rewriter | PLANNED |
-| 4C | Resume-only improvements and role suggestions | PLANNED |
+| 4A | LLM gateway, safety layer, structured analysis | COMPLETE (verified) |
+| 4B | Fact-grounded STAR bullet rewriter | PLANNED (not started) |
+| 4C | Resume-only improvements and role suggestions | PLANNED (not started) |
 | 5 | Accounts and authentication (username/password) | PLANNED |
 | 6 | Usage metering, displayed limits, 50/70/90 alerts | PLANNED (required) |
 | 7 | Job suggestions via Firecrawl | PLANNED |
