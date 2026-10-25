@@ -14,14 +14,14 @@ from ml.pipelines.embeddings.embedder import (
 )
 
 
-def test_embedder_singleton_reuse():
+def test_embedder_singleton_reuse() -> None:
     """Verifies the model is loaded as a singleton within the worker process."""
     m1 = get_embedder()
     m2 = get_embedder()
     assert m1 is m2, "get_embedder() must return the same singleton instance"
 
 
-def test_generate_embeddings_dimension_and_finite_values():
+def test_generate_embeddings_dimension_and_finite_values() -> None:
     """Verifies that generated embeddings have 384 dimensions and finite float values."""
     texts = [
         "Senior Software Engineer specializing in distributed databases and Python.",
@@ -42,12 +42,12 @@ def test_generate_embeddings_dimension_and_finite_values():
         assert pytest.approx(norm, abs=1e-3) == 1.0
 
 
-def test_generate_embeddings_empty_list():
+def test_generate_embeddings_empty_list() -> None:
     """Verifies that an empty input list returns an empty vector list."""
     assert generate_embeddings([]) == []
 
 
-def test_generate_chunk_embeddings_correspondence():
+def test_generate_chunk_embeddings_correspondence() -> None:
     """Verifies 1:1 correspondence between TextChunk input and output tuples."""
     chunks = [
         TextChunk(
@@ -81,7 +81,7 @@ def test_generate_chunk_embeddings_correspondence():
         assert np.isfinite(vec).all()
 
 
-def test_generate_embeddings_raises_on_overlong_text():
+def test_generate_embeddings_raises_on_overlong_text() -> None:
     """Verifies that generate_embeddings rejects texts that exceed model max sequence length."""
     # Create text with 300 words which is well over 256 WordPiece tokens
     overlong_text = "word " * 350
@@ -89,7 +89,7 @@ def test_generate_embeddings_raises_on_overlong_text():
         generate_embeddings([overlong_text])
 
 
-def test_generate_chunk_embeddings_uses_heading_context_without_altering_content():
+def test_generate_chunk_embeddings_uses_heading_context_without_altering_content() -> None:
     """
     Verifies that generate_chunk_embeddings encodes embedding_text (which incorporates heading)
     without mutating chunk.content or offsets.

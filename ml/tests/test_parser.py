@@ -1,5 +1,6 @@
 import os
 import tempfile
+from collections.abc import Generator
 
 import docx
 import fitz
@@ -16,7 +17,7 @@ from ml.pipelines.intake.parser import parse_document
 
 
 @pytest.fixture
-def temp_dir():
+def temp_dir() -> Generator[str, None, None]:
     with tempfile.TemporaryDirectory() as td:
         yield td
 
@@ -138,7 +139,7 @@ def create_scanned_image_pdf(path: str, text: str) -> str:
     return path
 
 
-def test_valid_pdf_extraction(temp_dir):
+def test_valid_pdf_extraction(temp_dir: str) -> None:
     pdf_path = os.path.join(temp_dir, "resume.pdf")
     create_sample_pdf(pdf_path, is_multi_column=False)
 
@@ -155,16 +156,18 @@ def test_valid_pdf_extraction(temp_dir):
 
     # Verify exact character offsets into canonical raw_text
     for skill in result.skills:
+        assert skill.confidence is not None
         span = skill.confidence.source_span
         assert span is not None
         assert result.raw_text[span.start_char : span.end_char].lower() == skill.name.lower()
 
     if result.contact.email_confidence:
         span = result.contact.email_confidence.source_span
+        assert span is not None
         assert result.raw_text[span.start_char : span.end_char] == result.contact.email
 
 
-def test_valid_docx_extraction(temp_dir):
+def test_valid_docx_extraction(temp_dir: str) -> None:
     docx_path = os.path.join(temp_dir, "resume.docx")
     create_sample_docx(docx_path, include_table=True)
 
@@ -180,7 +183,7 @@ def test_valid_docx_extraction(temp_dir):
     assert any(h.code == "TABLES_PRESENT" for h in result.ats_hazards)
 
 
-def test_multi_column_pdf_detection(temp_dir):
+def test_multi_column_pdf_detection(temp_dir: str) -> None:
     pdf_path = os.path.join(temp_dir, "multi_column.pdf")
     create_sample_pdf(pdf_path, is_multi_column=True)
 
@@ -190,7 +193,7 @@ def test_multi_column_pdf_detection(temp_dir):
     assert result.ats_score < 100.0
 
 
-def test_scanned_pdf_triggers_ocr(temp_dir):
+def test_scanned_pdf_triggers_ocr(temp_dir: str) -> None:
     pdf_path = os.path.join(temp_dir, "scanned.pdf")
     scanned_text = (
         "Thomas Edison\n"
@@ -207,9 +210,9 @@ def test_scanned_pdf_triggers_ocr(temp_dir):
     )
     create_scanned_image_pdf(pdf_path, scanned_text)
 
-    status_transitions = []
+    status_transitions: list[str] = []
 
-    def status_cb(status: str):
+    def status_cb(status: str) -> None:
         status_transitions.append(status)
 
     result = parse_document(pdf_path, "application/pdf", status_callback=status_cb)
@@ -220,7 +223,7 @@ def test_scanned_pdf_triggers_ocr(temp_dir):
     assert "Edison" in result.raw_text
 
 
-def test_ocr_text_too_short_fails(temp_dir):
+def test_ocr_text_too_short_fails(temp_dir: str) -> None:
     pdf_path = os.path.join(temp_dir, "too_short.pdf")
     # Tiny text (< 200 chars)
     create_scanned_image_pdf(pdf_path, "Short scan")
@@ -229,7 +232,7 @@ def test_ocr_text_too_short_fails(temp_dir):
         parse_document(pdf_path, "application/pdf")
 
 
-def test_encrypted_pdf_fails(temp_dir):
+def test_encrypted_pdf_fails(temp_dir: str) -> None:
     pdf_path = os.path.join(temp_dir, "encrypted.pdf")
     doc = fitz.open()
     page = doc.new_page()
@@ -241,7 +244,7 @@ def test_encrypted_pdf_fails(temp_dir):
         parse_document(pdf_path, "application/pdf")
 
 
-def test_corrupt_pdf_fails(temp_dir):
+def test_corrupt_pdf_fails(temp_dir: str) -> None:
     pdf_path = os.path.join(temp_dir, "corrupt.pdf")
     with open(pdf_path, "wb") as f:
         f.write(b"%PDF-1.4 garbage corrupt bytes not a valid pdf header \x00\xff")
@@ -250,7 +253,7 @@ def test_corrupt_pdf_fails(temp_dir):
         parse_document(pdf_path, "application/pdf")
 
 
-def test_unsupported_type_fails(temp_dir):
+def test_unsupported_type_fails(temp_dir: str) -> None:
     txt_path = os.path.join(temp_dir, "resume.txt")
     with open(txt_path, "w") as f:
         f.write("Plain text resume")
@@ -259,7 +262,7 @@ def test_unsupported_type_fails(temp_dir):
         parse_document(txt_path, "text/plain")
 
 
-def test_empty_zero_byte_file_fails(temp_dir):
+def test_empty_zero_byte_file_fails(temp_dir: str) -> None:
     empty_path = os.path.join(temp_dir, "empty.pdf")
     with open(empty_path, "wb") as f:
         f.write(b"")
@@ -268,7 +271,7 @@ def test_empty_zero_byte_file_fails(temp_dir):
         parse_document(empty_path, "application/pdf")
 
 
-def test_textless_blank_pdf_fails_ocr_too_short(temp_dir):
+def test_textless_blank_pdf_fails_ocr_too_short(temp_dir: str) -> None:
     pdf_path = os.path.join(temp_dir, "blank.pdf")
     doc = fitz.open()
     doc.new_page()  # Completely blank white page
@@ -279,7 +282,7 @@ def test_textless_blank_pdf_fails_ocr_too_short(temp_dir):
         parse_document(pdf_path, "application/pdf")
 
 
-def test_corrupt_docx_fails(temp_dir):
+def test_corrupt_docx_fails(temp_dir: str) -> None:
     docx_path = os.path.join(temp_dir, "corrupt.docx")
     with open(docx_path, "wb") as f:
         f.write(b"PK\x03\x04 corrupt zip payload not a real word document")

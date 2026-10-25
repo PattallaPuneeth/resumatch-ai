@@ -58,7 +58,7 @@ def deterministic_train_heldout_split(
     for _, group in sorted(by_label.items()):
         shuffled = list(group)
         rng.shuffle(shuffled)
-        k = max(1, int(round(len(shuffled) * train_ratio)))
+        k = max(1, round(len(shuffled) * train_ratio))
         # Ensure at least 1 in heldout if group has >= 2 items
         if len(shuffled) >= 2 and k == len(shuffled):
             k = len(shuffled) - 1

@@ -4,6 +4,7 @@ Tests idempotency, transaction rollback on failure, uniqueness constraints, and 
 """
 
 import uuid
+from typing import cast
 
 import psycopg
 import pytest
@@ -82,7 +83,7 @@ def _cleanup_test_data(user_id: str) -> None:
 
 
 @pytest.mark.asyncio
-async def test_embedding_worker_lifecycle_and_persistence():
+async def test_embedding_worker_lifecycle_and_persistence() -> None:
     """Verifies that an EMBED_DOCUMENT job parses text, embeds, and persists chunks."""
     user_id, resume_id = _create_test_user_and_resume(status="PARSED")
     try:
@@ -136,7 +137,7 @@ async def test_embedding_worker_lifecycle_and_persistence():
 
 
 @pytest.mark.asyncio
-async def test_embedding_worker_idempotency_duplicate_delivery():
+async def test_embedding_worker_idempotency_duplicate_delivery() -> None:
     """
     Verifies that running the same embedding job twice produces the exact same chunk count
     and does NOT create duplicate chunks or violate constraints.
@@ -158,7 +159,9 @@ async def test_embedding_worker_idempotency_duplicate_delivery():
                     'SELECT COUNT(*) FROM resume_chunks WHERE "resumeId" = %s;',
                     (resume_id,),
                 )
-                count_run1 = cur.fetchone()[0]
+                row_run1 = cur.fetchone()
+                assert row_run1 is not None
+                count_run1 = row_run1[0]
 
         # Run 2 (Simulated duplicate delivery or retry)
         res2 = await process_embed_document(job)
@@ -171,7 +174,9 @@ async def test_embedding_worker_idempotency_duplicate_delivery():
                     'SELECT COUNT(*) FROM resume_chunks WHERE "resumeId" = %s;',
                     (resume_id,),
                 )
-                count_run2 = cur.fetchone()[0]
+                row_run2 = cur.fetchone()
+                assert row_run2 is not None
+                count_run2 = row_run2[0]
 
         assert count_run1 == count_run2
         assert count_run2 == res1["chunkCount"]
@@ -181,7 +186,7 @@ async def test_embedding_worker_idempotency_duplicate_delivery():
 
 
 @pytest.mark.asyncio
-async def test_embedding_worker_aborts_on_unparsed_status():
+async def test_embedding_worker_aborts_on_unparsed_status() -> None:
     """Verifies that the embedding worker aborts if the resume is not in PARSED status."""
     user_id, resume_id = _create_test_user_and_resume(status="EXTRACTING")
     try:
@@ -200,13 +205,15 @@ async def test_embedding_worker_aborts_on_unparsed_status():
                     'SELECT COUNT(*) FROM resume_chunks WHERE "resumeId" = %s;',
                     (resume_id,),
                 )
-                assert cur.fetchone()[0] == 0
+                row_unparsed = cur.fetchone()
+                assert row_unparsed is not None
+                assert row_unparsed[0] == 0
     finally:
         _cleanup_test_data(user_id)
 
 
 @pytest.mark.asyncio
-async def test_embedding_worker_aborts_on_deleted_resume():
+async def test_embedding_worker_aborts_on_deleted_resume() -> None:
     """Verifies that the worker aborts cleanly if the resume was deleted."""
     non_existent_id = str(uuid.uuid4())
     job = Job.__new__(Job)
@@ -218,7 +225,7 @@ async def test_embedding_worker_aborts_on_deleted_resume():
     assert result["reason"] == "RESUME_NOT_FOUND"
 
 
-def test_persist_resume_chunks_transaction_rollback_on_error():
+def test_persist_resume_chunks_transaction_rollback_on_error() -> None:
     """Verifies that DB failure during chunk insertion rolls back transaction completely."""
     user_id, resume_id = _create_test_user_and_resume(status="PARSED")
     try:
@@ -237,7 +244,7 @@ def test_persist_resume_chunks_transaction_rollback_on_error():
             chunk_index=1,
             section_type="EXPERIENCE",
             heading="EXPERIENCE",
-            content=None,  # Will trigger NOT NULL constraint violation on content column
+            content=cast(str, None),  # Will trigger NOT NULL constraint violation on content column
             start_char=14,
             end_char=20,
             token_count=2,
@@ -256,7 +263,9 @@ def test_persist_resume_chunks_transaction_rollback_on_error():
                 cur.execute(
                     'SELECT COUNT(*) FROM resume_chunks WHERE "resumeId" = %s;', (resume_id,)
                 )
-                count = cur.fetchone()[0]
+                row_rollback = cur.fetchone()
+                assert row_rollback is not None
+                count = row_rollback[0]
                 assert count == 0, f"Expected 0 chunks after transaction rollback, found {count}"
 
     finally:
@@ -264,7 +273,7 @@ def test_persist_resume_chunks_transaction_rollback_on_error():
 
 
 @pytest.mark.asyncio
-async def test_embedding_worker_aborts_on_missing_job_entity():
+async def test_embedding_worker_aborts_on_missing_job_entity() -> None:
     """Verifies that missing job entities are aborted with JOB_NOT_FOUND."""
     job = Job.__new__(Job)
     job.id = "embed-job-123"
@@ -275,7 +284,7 @@ async def test_embedding_worker_aborts_on_missing_job_entity():
     assert result["reason"] == "JOB_NOT_FOUND"
 
 
-def test_record_embedding_error_preserves_existing_parsing_metadata():
+def test_record_embedding_error_preserves_existing_parsing_metadata() -> None:
     """
     Verifies that recording an embedding error merges into existing
     parsingMetadata without overwriting it.
@@ -307,7 +316,9 @@ def test_record_embedding_error_preserves_existing_parsing_metadata():
                     'SELECT "parsingMetadata" FROM parsed_resumes WHERE "resumeId" = %s;',
                     (resume_id,),
                 )
-                meta = cur.fetchone()[0]
+                row_meta = cur.fetchone()
+                assert row_meta is not None
+                meta = row_meta[0]
 
         assert meta["extractor"] == "pdfplumber"
         assert meta["customFlag"] is True

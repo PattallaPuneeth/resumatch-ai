@@ -13,7 +13,7 @@ from typing import Any
 import psycopg
 from ml.config import settings
 from ml.pipelines.embeddings.embedder import generate_embeddings
-from pgvector.psycopg import register_vector  # type: ignore[import-untyped]
+from pgvector.psycopg import register_vector
 
 logger = logging.getLogger("resumatch-ml-semantic")
 

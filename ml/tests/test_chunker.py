@@ -51,7 +51,7 @@ KEY PROJECTS
 """
 
 
-def test_chunker_realistic_resume_offsets_and_sections():
+def test_chunker_realistic_resume_offsets_and_sections() -> None:
     """Verifies chunking on realistic multi-section resume."""
     tokenizer = get_tokenizer()
     chunks = chunk_resume_text(REALISTIC_RESUME_TEXT, tokenizer=tokenizer)
@@ -78,13 +78,13 @@ def test_chunker_realistic_resume_offsets_and_sections():
     assert indices == list(range(len(chunks)))
 
 
-def test_chunker_empty_and_blank_text():
+def test_chunker_empty_and_blank_text() -> None:
     """Verifies that empty and blank text return empty chunk lists."""
     assert chunk_resume_text("") == []
     assert chunk_resume_text("   \n\t\r  ") == []
 
 
-def test_chunker_short_text():
+def test_chunker_short_text() -> None:
     """Verifies that short text is emitted as a single chunk without data loss."""
     short_text = "Experienced Python developer with expertise in PostgreSQL and Redis."
     chunks = chunk_resume_text(short_text)
@@ -97,7 +97,7 @@ def test_chunker_short_text():
     assert chunk.section_type == "OTHER"
 
 
-def test_chunker_long_section_token_limits_and_overlap():
+def test_chunker_long_section_token_limits_and_overlap() -> None:
     """
     Verifies that a section exceeding 384 tokens is split into multiple chunks
     with ~20% token overlap and exact string slicing.
@@ -131,7 +131,7 @@ def test_chunker_long_section_token_limits_and_overlap():
         assert c2.start_char < c1.end_char, f"Expected overlap between chunk {i} and {i+1}"
 
 
-def test_chunker_heading_variants():
+def test_chunker_heading_variants() -> None:
     """Verifies detection of multiple heading variants."""
     text = (
         "ABOUT ME\nPassionate engineer building tools.\n\n"
@@ -148,7 +148,7 @@ def test_chunker_heading_variants():
     assert types_by_index[3] == "EDUCATION"
 
 
-def test_chunker_repeated_headings():
+def test_chunker_repeated_headings() -> None:
     """Verifies that repeated headings are handled in document order without crashing."""
     text = (
         "WORK EXPERIENCE\nFirst role as backend engineer.\n\n"
@@ -163,7 +163,7 @@ def test_chunker_repeated_headings():
     assert text[chunks[1].start_char : chunks[1].end_char] == chunks[1].content
 
 
-def test_chunker_unicode_and_special_characters():
+def test_chunker_unicode_and_special_characters() -> None:
     """Verifies correct offset calculation and handling of Unicode characters."""
     text = (
         "PROFILE\nDéveloppeur logiciel senior avec expertise en IA et résumé 🚀.\n\n"
@@ -175,7 +175,7 @@ def test_chunker_unicode_and_special_characters():
         assert text[chunk.start_char : chunk.end_char] == chunk.content
 
 
-def test_chunker_prevents_silent_embedding_model_truncation():
+def test_chunker_prevents_silent_embedding_model_truncation() -> None:
     """
     Regression test: Verifies that no chunk exceeds the model's hard input limit (256 tokens).
     SentenceTransformer adds [CLS] and [SEP] (2 special tokens), so content tokens must be <= 254.
@@ -211,7 +211,7 @@ def test_chunker_prevents_silent_embedding_model_truncation():
         assert seq_len <= 256, f"Long chunk {c.chunk_index} exceeded limit: {seq_len}"
 
 
-def test_chunker_numbered_headings_and_clean_cand():
+def test_chunker_numbered_headings_and_clean_cand() -> None:
     """Regression test: Verifies detection of numbered headings, markdown, and punctuation."""
     text = (
         "1. Professional Experience\nSenior engineer at Cloud Corp.\n\n"
@@ -231,7 +231,7 @@ def test_chunker_numbered_headings_and_clean_cand():
         assert text[chunk.start_char : chunk.end_char] == chunk.content
 
 
-def test_chunker_heading_context_retention_via_embedding_text():
+def test_chunker_heading_context_retention_via_embedding_text() -> None:
     """
     Regression test: Verifies that embedding_text retains heading context for dense embeddings
     without mutating the canonical source slice or violating the exact character offset contract.
@@ -250,7 +250,7 @@ def test_chunker_heading_context_retention_via_embedding_text():
     assert c.embedding_text == "TECHNICAL SKILLS\nPython, Docker, pgvector, Redis, Fastify"
 
 
-def test_chunker_windows_crlf_line_endings():
+def test_chunker_windows_crlf_line_endings() -> None:
     """Regression test: Verifies correct offset calculation with Windows CRLF line endings."""
     crlf_text = (
         "PROFESSIONAL SUMMARY\r\nSenior engineer with distributed systems experience.\r\n\r\n"
@@ -263,7 +263,7 @@ def test_chunker_windows_crlf_line_endings():
         assert crlf_text[c.start_char : c.end_char] == c.content
 
 
-def test_chunker_empty_and_whitespace_sections_skipped():
+def test_chunker_empty_and_whitespace_sections_skipped() -> None:
     """Regression test: Empty or whitespace-only sections between headings do not create chunks."""
     text = (
         "PROFESSIONAL SUMMARY\nValid summary here.\n\n"
@@ -280,8 +280,11 @@ def test_chunker_empty_and_whitespace_sections_skipped():
         assert text[c.start_char : c.end_char] == c.content
 
 
-def test_chunker_short_final_chunk_behavior():
-    """Regression test: Sections just over TARGET_MAX_TOKENS produce sensible final overlapping chunk."""
+def test_chunker_short_final_chunk_behavior() -> None:
+    """
+    Regression test: Sections just over TARGET_MAX_TOKENS produce sensible final
+    overlapping chunk.
+    """
     para = "Senior engineer specialized in distributed database architectures and cloud scaling. "
     # ~300 tokens (each sentence is ~12 tokens, 12 * 25 = 300 > TARGET_MAX_TOKENS of 240)
     text = "EXPERIENCE\n" + (para * 25)

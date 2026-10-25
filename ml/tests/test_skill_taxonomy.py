@@ -16,7 +16,7 @@ from ml.pipelines.matching.skill_gap import (
 )
 
 
-def test_taxonomy_file_loads():
+def test_taxonomy_file_loads() -> None:
     aliases = load_skill_aliases(force_reload=True)
     assert isinstance(aliases, dict)
     assert len(aliases) >= 15
@@ -67,11 +67,11 @@ def test_taxonomy_file_loads():
         ("google cloud platform", "gcp"),
     ],
 )
-def test_skill_taxonomy_groups(synonym: str, canonical: str):
+def test_skill_taxonomy_groups(synonym: str, canonical: str) -> None:
     assert _normalize_skill(synonym) == canonical
 
 
-def test_synonym_matching_in_gap_analysis():
+def test_synonym_matching_in_gap_analysis() -> None:
     # Job requires canonical and resume provides acronym
     job_reqs = ["Kubernetes", "PostgreSQL", "TypeScript", "CI/CD"]
     resume_skills = ["K8s", "Postgres", "TS", "GitHub Actions"]
@@ -83,7 +83,7 @@ def test_synonym_matching_in_gap_analysis():
     assert len(res["partial"]) == 0
 
 
-def test_false_positive_rejection_java_vs_javascript():
+def test_false_positive_rejection_java_vs_javascript() -> None:
     # Java requirement vs JavaScript resume skill
     job_reqs = ["Java"]
     resume_skills = ["JavaScript", "HTML", "CSS"]
@@ -95,7 +95,7 @@ def test_false_positive_rejection_java_vs_javascript():
     assert res["coverage_ratio"] == 0.0
 
 
-def test_false_positive_rejection_c_vs_cpp_csharp():
+def test_false_positive_rejection_c_vs_cpp_csharp() -> None:
     # C requirement vs C++ and C#
     job_reqs = ["C"]
     resume_skills = ["C++", "C#", "CSS"]
@@ -107,7 +107,7 @@ def test_false_positive_rejection_c_vs_cpp_csharp():
     assert res["coverage_ratio"] == 0.0
 
 
-def test_false_positive_rejection_go_vs_django():
+def test_false_positive_rejection_go_vs_django() -> None:
     # Go requirement vs Django or Google Cloud
     job_reqs = ["Go"]
     resume_skills = ["Django", "Algorithm"]
@@ -118,7 +118,7 @@ def test_false_positive_rejection_go_vs_django():
     assert res["coverage_ratio"] == 0.0
 
 
-def test_partial_match_word_boundary():
+def test_partial_match_word_boundary() -> None:
     # Multi-word skill with boundary match
     job_reqs = ["Relational Database"]
     resume_skills = ["Relational Database Design", "Python"]

@@ -5,7 +5,7 @@ import signal
 from types import FrameType
 from typing import Any
 
-from bullmq import Job, Queue, Worker  # type: ignore[import-untyped]
+from bullmq import Job, Queue, Worker
 
 from ml.config import settings
 from ml.pipelines.embeddings.chunker import chunk_job_text, chunk_resume_text

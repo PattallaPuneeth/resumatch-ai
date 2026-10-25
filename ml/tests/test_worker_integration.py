@@ -64,7 +64,7 @@ def cleanup_test_resume(resume_id: str) -> None:
             conn.commit()
 
 
-def test_status_transitions_and_persistence():
+def test_status_transitions_and_persistence() -> None:
     user_id = get_or_create_test_user()
     resume_id = create_test_resume(
         user_id, "test_resume.pdf", "application/pdf", f"resumes/{user_id}/test.pdf"
@@ -76,7 +76,9 @@ def test_status_transitions_and_persistence():
         with psycopg.connect(settings.database_url) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT status FROM resumes WHERE id = %s;", (resume_id,))
-                status = cur.fetchone()[0]
+                row_status = cur.fetchone()
+                assert row_status is not None
+                status = row_status[0]
                 assert status == "EXTRACTING"
 
         # 2. Parse a valid sample document
@@ -98,7 +100,9 @@ def test_status_transitions_and_persistence():
                     """,
                     (resume_id,),
                 )
-                r_status, r_method, r_err = cur.fetchone()
+                row_res = cur.fetchone()
+                assert row_res is not None
+                r_status, r_method, r_err = row_res
                 assert r_status == "PARSED"
                 assert r_method == "TEXT_LAYER"
                 assert r_err is None
@@ -110,7 +114,9 @@ def test_status_transitions_and_persistence():
                     """,
                     (resume_id,),
                 )
-                raw_text, ats_score, page_count, skills, experience = cur.fetchone()
+                row_parsed = cur.fetchone()
+                assert row_parsed is not None
+                raw_text, ats_score, page_count, skills, experience = row_parsed
                 assert "Jane Doe" in raw_text
                 assert ats_score >= 80.0
                 assert page_count == 1
@@ -124,14 +130,16 @@ def test_status_transitions_and_persistence():
                     'SELECT COUNT(*) FROM parsed_resumes WHERE "resumeId" = %s;',
                     (resume_id,),
                 )
-                count = cur.fetchone()[0]
+                row_cnt = cur.fetchone()
+                assert row_cnt is not None
+                count = row_cnt[0]
                 assert count == 1
 
     finally:
         cleanup_test_resume(resume_id)
 
 
-def test_mark_resume_failed_state():
+def test_mark_resume_failed_state() -> None:
     user_id = get_or_create_test_user()
     resume_id = create_test_resume(
         user_id, "corrupt.pdf", "application/pdf", f"resumes/{user_id}/corrupt.pdf"
@@ -146,7 +154,9 @@ def test_mark_resume_failed_state():
                     'SELECT status, "errorCode", "errorMessage" FROM resumes WHERE id = %s;',
                     (resume_id,),
                 )
-                status, err_code, err_msg = cur.fetchone()
+                row_failed = cur.fetchone()
+                assert row_failed is not None
+                status, err_code, err_msg = row_failed
                 assert status == "FAILED"
                 assert err_code == "CORRUPT_FILE"
                 assert err_msg == "The file is corrupt."
@@ -155,13 +165,13 @@ def test_mark_resume_failed_state():
 
 
 class DummyJob:
-    def __init__(self, data: dict[str, Any], job_id: str = "test-job-id"):
+    def __init__(self, data: dict[str, Any], job_id: str = "test-job-id") -> None:
         self.data = data
         self.id = job_id
 
 
 @pytest.mark.asyncio
-async def test_worker_missing_storage_object():
+async def test_worker_missing_storage_object() -> None:
     from ml.worker import process_parse_document
 
     user_id = get_or_create_test_user()
@@ -188,7 +198,9 @@ async def test_worker_missing_storage_object():
                     'SELECT status, "errorCode" FROM resumes WHERE id = %s;',
                     (resume_id,),
                 )
-                status, err_code = cur.fetchone()
+                row_missing = cur.fetchone()
+                assert row_missing is not None
+                status, err_code = row_missing
                 assert status == "FAILED"
                 assert err_code == "STORAGE_OBJECT_NOT_FOUND"
     finally:
@@ -196,7 +208,7 @@ async def test_worker_missing_storage_object():
 
 
 @pytest.mark.asyncio
-async def test_worker_corrupt_file_handling():
+async def test_worker_corrupt_file_handling() -> None:
     from ml.storage.s3 import get_s3_client
     from ml.worker import process_parse_document
 
@@ -232,7 +244,9 @@ async def test_worker_corrupt_file_handling():
                     'SELECT status, "errorCode" FROM resumes WHERE id = %s;',
                     (resume_id,),
                 )
-                status, err_code = cur.fetchone()
+                row_corrupt = cur.fetchone()
+                assert row_corrupt is not None
+                status, err_code = row_corrupt
                 assert status == "FAILED"
                 assert err_code == "CORRUPT_FILE"
     finally:
@@ -241,7 +255,7 @@ async def test_worker_corrupt_file_handling():
 
 
 @pytest.mark.asyncio
-async def test_worker_duplicate_job_idempotency():
+async def test_worker_duplicate_job_idempotency() -> None:
     from ml.storage.s3 import get_s3_client
     from ml.worker import process_parse_document
 
@@ -291,7 +305,9 @@ async def test_worker_duplicate_job_idempotency():
                     'SELECT COUNT(*) FROM parsed_resumes WHERE "resumeId" = %s;',
                     (resume_id,),
                 )
-                count = cur.fetchone()[0]
+                row_idem = cur.fetchone()
+                assert row_idem is not None
+                count = row_idem[0]
                 assert count == 1
     finally:
         s3.delete_object(Bucket=settings.s3_bucket, Key=storage_key)
@@ -299,7 +315,7 @@ async def test_worker_duplicate_job_idempotency():
 
 
 @pytest.mark.asyncio
-async def test_worker_handles_resume_deleted_while_queued():
+async def test_worker_handles_resume_deleted_while_queued() -> None:
     """
     Verifies that if a resume is deleted while a job is queued/in-flight,
     the worker aborts without resurrecting.
@@ -345,7 +361,9 @@ async def test_worker_handles_resume_deleted_while_queued():
                     'SELECT COUNT(*) FROM parsed_resumes WHERE "resumeId" = %s;',
                     (resume_id,),
                 )
-                count = cur.fetchone()[0]
+                row_del = cur.fetchone()
+                assert row_del is not None
+                count = row_del[0]
                 assert count == 0
     finally:
         s3.delete_object(Bucket=settings.s3_bucket, Key=storage_key)

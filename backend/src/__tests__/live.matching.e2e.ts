@@ -21,17 +21,20 @@ const BACKEND_URL = 'http://localhost:4000';
 
 async function runLiveMatchingE2E() {
   console.log('--- Starting Live Cluster Phase 3B Matching E2E ---');
+  let userA: any = null;
+  let userB: any = null;
 
-  // Step 1: Mint Dev Token for User A
-  console.log('1. Minting dev auth token for test user A...');
-  const userA = await prisma.user.create({
-    data: {
-      email: `matching-e2e-${Date.now()}@example.com`,
-      role: 'CANDIDATE',
-    },
-  });
-  const { token: tokenA, userId: userIdA } = await generateDevToken(userA.email);
-  console.log(`   User A created: ${userIdA} (${userA.email})`);
+  try {
+    // Step 1: Mint Dev Token for User A
+    console.log('1. Minting dev auth token for test user A...');
+    userA = await prisma.user.create({
+      data: {
+        email: `matching-e2e-${Date.now()}@example.com`,
+        role: 'CANDIDATE',
+      },
+    });
+    const { token: tokenA, userId: userIdA } = await generateDevToken(userA.email);
+    console.log(`   User A created: ${userIdA} (${userA.email})`);
 
   // Step 2: Post Job via Fastify API
   console.log('2. Ingesting Job description via POST /v1/jobs...');
@@ -96,9 +99,19 @@ Required Qualifications:
 
   // Step 4: Upload and Parse Resume
   console.log('4. Uploading and parsing Jane Doe sample resume...');
-  const fixturePath = path.resolve(__dirname, '../../../ml/tests/fixtures/sample_resume.pdf');
-  if (!fs.existsSync(fixturePath)) {
-    throw new Error(`Fixture not found at: ${fixturePath}`);
+  const candidatePaths = [
+    process.env.SAMPLE_RESUME_PATH,
+    path.resolve(__dirname, '../../../ml/tests/fixtures/sample_resume.pdf'),
+    path.resolve(__dirname, '../../../../ml/tests/fixtures/sample_resume.pdf'),
+    '/app/ml/tests/fixtures/sample_resume.pdf',
+    '/ml/tests/fixtures/sample_resume.pdf',
+    path.resolve(process.cwd(), '../ml/tests/fixtures/sample_resume.pdf'),
+    path.resolve(process.cwd(), 'ml/tests/fixtures/sample_resume.pdf'),
+  ].filter(Boolean) as string[];
+
+  const fixturePath = candidatePaths.find((p) => fs.existsSync(p));
+  if (!fixturePath) {
+    throw new Error(`Fixture not found in candidate paths: ${candidatePaths.join(', ')}`);
   }
   const samplePdfBytes = fs.readFileSync(fixturePath);
 
@@ -170,20 +183,21 @@ Required Qualifications:
     throw new Error(`Complete failed with status ${completeRes.status}: ${await completeRes.text()}`);
   }
 
-  // Poll until PARSED
-  let resumeParsed = false;
-  for (let i = 0; i < 25; i++) {
+  // Poll until PARSED and all chunks (5 chunks for Jane Doe sample resume) are embedded
+  let resumeEmbedded = false;
+  for (let i = 0; i < 30; i++) {
     await new Promise((r) => setTimeout(r, 1000));
     const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
-    if (resume && resume.status === 'PARSED') {
-      resumeParsed = true;
+    const chunkCount = await prisma.resumeChunk.count({ where: { resumeId } });
+    if (resume && resume.status === 'PARSED' && chunkCount >= 5) {
+      resumeEmbedded = true;
       break;
     }
   }
-  if (!resumeParsed) {
-    throw new Error(`Timed out waiting for resume ${resumeId} to reach PARSED status.`);
+  if (!resumeEmbedded) {
+    throw new Error(`Timed out waiting for resume ${resumeId} chunks (expected 5) to be embedded.`);
   }
-  console.log(`   Resume parsed successfully (ID: ${resumeId}).`);
+  console.log(`   Resume parsed and embedded successfully (ID: ${resumeId}).`);
 
   // Step 5: Trigger Match Scoring
   console.log('5. Triggering match scoring via POST /v1/jobs/:id/match...');
@@ -234,10 +248,16 @@ Required Qualifications:
   if (matchResult.finalScore <= 0 || matchResult.finalScore > 100) {
     throw new Error(`Final score out of valid range: ${matchResult.finalScore}`);
   }
+  if (Math.abs(matchResult.finalScore - 83.39) > 0.5) {
+    throw new Error(`Final score ${matchResult.finalScore} deviated from canonical baseline 83.39`);
+  }
+  if (Math.abs(matchResult.crossEncoderScore - 88.46) > 0.5) {
+    throw new Error(`Cross-encoder score ${matchResult.crossEncoderScore} deviated from canonical baseline 88.46`);
+  }
 
   // Step 7: Validate Tenant Isolation (User B cannot access Match Result)
   console.log('7. Validating tenant isolation with User B...');
-  const userB = await prisma.user.create({
+  userB = await prisma.user.create({
     data: {
       email: `user-b-${Date.now()}@example.com`,
       role: 'CANDIDATE',
@@ -254,6 +274,15 @@ Required Qualifications:
   console.log('   Tenant isolation verified: User B received 404 Not Found.');
 
   console.log(' SUCCESS: Live Docker Cluster Phase 3B Matching Verified 100% End-to-End!');
+  } finally {
+    // Safe, targeted cleanup by exact created user IDs — cannot delete real user data
+    if (userA?.id) {
+      await prisma.user.delete({ where: { id: userA.id } }).catch(() => {});
+    }
+    if (userB?.id) {
+      await prisma.user.delete({ where: { id: userB.id } }).catch(() => {});
+    }
+  }
 }
 
 runLiveMatchingE2E()

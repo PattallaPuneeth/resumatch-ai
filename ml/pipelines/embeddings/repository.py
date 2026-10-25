@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 import psycopg
 from ml.config import settings
-from pgvector.psycopg import register_vector  # type: ignore[import-untyped]
+from pgvector.psycopg import register_vector
 
 if TYPE_CHECKING:
     from ml.pipelines.embeddings.chunker import TextChunk

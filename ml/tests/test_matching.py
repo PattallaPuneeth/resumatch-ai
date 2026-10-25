@@ -14,6 +14,7 @@ Tests:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import psycopg
@@ -43,7 +44,7 @@ from ml.worker import process_embed_document, process_match_scoring
 
 
 @pytest.fixture
-def db_conn():
+def db_conn() -> Generator[psycopg.Connection, None, None]:
     with psycopg.connect(settings.database_url) as conn:
         register_vector(conn)
         yield conn
@@ -174,7 +175,7 @@ def _seed_test_match_environment(
 # =============================================================================
 
 
-def test_build_or_tsquery(db_conn: psycopg.Connection):
+def test_build_or_tsquery(db_conn: psycopg.Connection) -> None:
     """Verifies OR-style tsquery generation and safe character handling."""
     text = "Senior Python & PostgreSQL Engineer with 5+ years experience in K8s / Docker!"
     q = build_or_tsquery(text, db_conn)
@@ -188,7 +189,7 @@ def test_build_or_tsquery(db_conn: psycopg.Connection):
         assert res is not None
 
 
-def test_lexical_search_long_job_description_returns_hits(db_conn: psycopg.Connection):
+def test_lexical_search_long_job_description_returns_hits(db_conn: psycopg.Connection) -> None:
     """
     Condition 1: Proves that a long, multi-paragraph job description returns lexical hits
     using OR semantics (unlike plainto_tsquery which requires all words to match simultaneously).
@@ -224,7 +225,7 @@ def test_lexical_search_long_job_description_returns_hits(db_conn: psycopg.Conne
     assert top_hit["rank"] == 1
 
 
-def test_lexical_search_uses_gin_index_explain(db_conn: psycopg.Connection):
+def test_lexical_search_uses_gin_index_explain(db_conn: psycopg.Connection) -> None:
     """
     Examines PostgreSQL query plans for lexical search:
     1. Single-resume query (as executed by process_match_scoring):
@@ -289,7 +290,7 @@ def test_lexical_search_uses_gin_index_explain(db_conn: psycopg.Connection):
 # =============================================================================
 
 
-def test_semantic_search_synonyms_and_concepts(db_conn: psycopg.Connection):
+def test_semantic_search_synonyms_and_concepts(db_conn: psycopg.Connection) -> None:
     """Verifies that vector cosine search captures semantic synonyms."""
     user_id, job_id, resume_id = _seed_test_match_environment(db_conn)
 
@@ -309,7 +310,7 @@ def test_semantic_search_synonyms_and_concepts(db_conn: psycopg.Connection):
 # =============================================================================
 
 
-def test_rrf_formula_and_tie_breaking():
+def test_rrf_formula_and_tie_breaking() -> None:
     """
     Tests RRF formula with k=60, fusion of lexical and semantic ranks,
     and deterministic tie-breaking (rrf_score DESC, chunk_id ASC).
@@ -346,7 +347,7 @@ def test_rrf_formula_and_tie_breaking():
     assert fused[2]["semantic_rank"] is None
 
 
-def test_rrf_empty_inputs():
+def test_rrf_empty_inputs() -> None:
     """Verifies graceful handling of empty rank lists."""
     assert fuse_ranks([], []) == []
     summary = aggregate_resume_rrf([])
@@ -354,7 +355,7 @@ def test_rrf_empty_inputs():
     assert summary["max_chunk_rrf"] == 0.0
 
 
-def test_aggregate_resume_rrf_scoring():
+def test_aggregate_resume_rrf_scoring() -> None:
     """Tests chunk-to-resume aggregation with peak match and depth bonus."""
     fused_chunks = [
         {"chunk_id": "c1", "rrf_score": 0.032},
@@ -375,7 +376,7 @@ def test_aggregate_resume_rrf_scoring():
 # =============================================================================
 
 
-def test_cross_encoder_calibrated_percentage_spread():
+def test_cross_encoder_calibrated_percentage_spread() -> None:
     """Tests score calibration from raw cross-encoder logits to [0, 100]."""
     # Centered at shift=-3.5, logit -3.5 maps to exactly 50.0
     assert abs(normalize_cross_encoder_logit(-3.5) - 50.0) < 0.1
@@ -390,7 +391,7 @@ def test_cross_encoder_calibrated_percentage_spread():
     assert normalize_cross_encoder_logit(-10.0) < 10.0
 
 
-def test_cross_encoder_calibration_and_spread_strong_medium_weak():
+def test_cross_encoder_calibration_and_spread_strong_medium_weak() -> None:
     """
     Issue 1 Labeled Set:
     Evaluates cross-encoder and composite score calibration across candidate profiles:
@@ -488,7 +489,7 @@ def test_cross_encoder_calibration_and_spread_strong_medium_weak():
     assert final_weak <= 15.0, f"Final weak score {final_weak} > 15"
 
 
-def test_cross_encoder_bounded_query_never_truncates_chunk():
+def test_cross_encoder_bounded_query_never_truncates_chunk() -> None:
     """
     Issue 2 Regression Test:
     Ensures that a long job description (thousands of characters) paired with
@@ -566,7 +567,7 @@ def test_cross_encoder_bounded_query_never_truncates_chunk():
     assert 0.0 <= reranked[0]["cross_encoder_score"] <= 100.0
 
 
-def test_cross_encoder_rerank_sequence_length_truncation():
+def test_cross_encoder_rerank_sequence_length_truncation() -> None:
     """
     Verifies that inputs exceeding 512 tokens are safely truncated without
     throwing runtime or memory errors.
@@ -600,7 +601,7 @@ def test_cross_encoder_rerank_sequence_length_truncation():
 # =============================================================================
 
 
-def test_skill_gap_analysis():
+def test_skill_gap_analysis() -> None:
     """Tests exact, alias, and missing skill categorizations."""
     job_required = ["Python", "PostgreSQL", "Kubernetes", "GraphQL"]
     job_preferred = ["AWS", "Docker"]
@@ -624,7 +625,7 @@ def test_skill_gap_analysis():
 # =============================================================================
 
 
-def test_persist_match_result_idempotency(db_conn: psycopg.Connection):
+def test_persist_match_result_idempotency(db_conn: psycopg.Connection) -> None:
     """
     Verifies atomic transaction persistence and that repeated match runs
     safely update the existing Match record (ON CONFLICT DO UPDATE).
@@ -707,7 +708,7 @@ def test_persist_match_result_idempotency(db_conn: psycopg.Connection):
 
 
 @pytest.mark.asyncio
-async def test_embed_document_backward_compatibility_resume_id(db_conn: psycopg.Connection):
+async def test_embed_document_backward_compatibility_resume_id(db_conn: psycopg.Connection) -> None:
     """
     Condition 4: EMBED_DOCUMENT must stay backward compatible.
     The existing {resumeId} payload from Phase 3A (without entityType) must continue to work.
@@ -735,7 +736,7 @@ async def test_embed_document_backward_compatibility_resume_id(db_conn: psycopg.
 @pytest.mark.asyncio
 async def test_process_match_scoring_raises_and_persists_no_row_when_semantic_fails(
     db_conn: psycopg.Connection,
-):
+) -> None:
     """
     Issue 3 cleanup regression: Proves that a failed semantic search raises an
     exception out of process_match_scoring (enabling BullMQ retry) and strictly
@@ -768,7 +769,7 @@ async def test_process_match_scoring_raises_and_persists_no_row_when_semantic_fa
 @pytest.mark.asyncio
 async def test_process_match_scoring_raises_and_persists_no_row_when_lexical_fails(
     db_conn: psycopg.Connection,
-):
+) -> None:
     """
     Issue 3 cleanup regression: Proves that a failed lexical search raises an
     exception out of process_match_scoring (enabling BullMQ retry) and strictly

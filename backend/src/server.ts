@@ -30,9 +30,25 @@ export function buildServer(): FastifyInstance {
         },
   });
 
+  const ALLOWED_ORIGINS = new Set([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ]);
+
   // Plugins
   app.register(cors, {
-    origin: true,
+    origin: (origin, cb) => {
+      // Allow requests with no origin (such as mobile apps, curl, or server-to-server)
+      if (!origin) {
+        cb(null, true);
+        return;
+      }
+      if (ALLOWED_ORIGINS.has(origin)) {
+        cb(null, true);
+        return;
+      }
+      cb(null, false);
+    },
     credentials: true,
   });
 

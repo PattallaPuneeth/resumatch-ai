@@ -42,7 +42,7 @@ FIXTURE_DATASET_DIR = Path(__file__).parent / "fixtures" / "eval_dataset"
 # ==============================================================================
 
 
-def test_load_valid_fixture_dataset():
+def test_load_valid_fixture_dataset() -> None:
     examples = load_and_validate_dataset(FIXTURE_DATASET_DIR)
     assert len(examples) == 5
     pair_names = {(e.resume_name, e.job_name) for e in examples}
@@ -50,25 +50,25 @@ def test_load_valid_fixture_dataset():
     assert ("resume_frontend_dev.pdf", "job_frontend_dev.txt") in pair_names
 
 
-def test_dataset_validation_missing_directory(tmp_path: Path):
+def test_dataset_validation_missing_directory(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         load_and_validate_dataset(tmp_path / "nonexistent_dir")
 
 
-def test_dataset_validation_missing_labels_csv(tmp_path: Path):
+def test_dataset_validation_missing_labels_csv(tmp_path: Path) -> None:
     (tmp_path / "resumes").mkdir()
     (tmp_path / "jobs").mkdir()
     with pytest.raises(FileNotFoundError, match="Missing required 'labels.csv'"):
         load_and_validate_dataset(tmp_path)
 
 
-def test_dataset_validation_missing_subdirectories(tmp_path: Path):
+def test_dataset_validation_missing_subdirectories(tmp_path: Path) -> None:
     (tmp_path / "labels.csv").write_text("resume,job,expected,reason\n", encoding="utf-8")
     with pytest.raises(DatasetValidationError, match="Missing required 'resumes' directory"):
         load_and_validate_dataset(tmp_path)
 
 
-def test_dataset_validation_missing_columns(tmp_path: Path):
+def test_dataset_validation_missing_columns(tmp_path: Path) -> None:
     (tmp_path / "resumes").mkdir()
     (tmp_path / "jobs").mkdir()
     (tmp_path / "labels.csv").write_text(
@@ -78,7 +78,7 @@ def test_dataset_validation_missing_columns(tmp_path: Path):
         load_and_validate_dataset(tmp_path)
 
 
-def test_dataset_validation_invalid_label(tmp_path: Path):
+def test_dataset_validation_invalid_label(tmp_path: Path) -> None:
     (tmp_path / "resumes").mkdir()
     (tmp_path / "jobs").mkdir()
     (tmp_path / "resumes" / "test.pdf").write_text("dummy", encoding="utf-8")
@@ -91,7 +91,7 @@ def test_dataset_validation_invalid_label(tmp_path: Path):
         load_and_validate_dataset(tmp_path)
 
 
-def test_dataset_validation_duplicate_pair(tmp_path: Path):
+def test_dataset_validation_duplicate_pair(tmp_path: Path) -> None:
     (tmp_path / "resumes").mkdir()
     (tmp_path / "jobs").mkdir()
     (tmp_path / "resumes" / "test.pdf").write_text("dummy", encoding="utf-8")
@@ -106,7 +106,7 @@ def test_dataset_validation_duplicate_pair(tmp_path: Path):
         load_and_validate_dataset(tmp_path)
 
 
-def test_dataset_validation_referenced_file_not_found(tmp_path: Path):
+def test_dataset_validation_referenced_file_not_found(tmp_path: Path) -> None:
     (tmp_path / "resumes").mkdir()
     (tmp_path / "jobs").mkdir()
     (tmp_path / "labels.csv").write_text(
@@ -122,7 +122,7 @@ def test_dataset_validation_referenced_file_not_found(tmp_path: Path):
 # ==============================================================================
 
 
-def test_pairwise_ordering_accuracy_perfect():
+def test_pairwise_ordering_accuracy_perfect() -> None:
     items = [
         {"expected": "strong", "score": 90.0},
         {"expected": "medium", "score": 60.0},
@@ -132,7 +132,7 @@ def test_pairwise_ordering_accuracy_perfect():
     assert acc == 1.0
 
 
-def test_pairwise_ordering_accuracy_inverted():
+def test_pairwise_ordering_accuracy_inverted() -> None:
     items = [
         {"expected": "strong", "score": 20.0},
         {"expected": "medium", "score": 60.0},
@@ -142,7 +142,7 @@ def test_pairwise_ordering_accuracy_inverted():
     assert acc == 0.0
 
 
-def test_pairwise_ordering_accuracy_ties():
+def test_pairwise_ordering_accuracy_ties() -> None:
     items = [
         {"expected": "strong", "score": 80.0},
         {"expected": "medium", "score": 80.0},  # tie = 0.5 points
@@ -157,7 +157,7 @@ def test_pairwise_ordering_accuracy_ties():
     assert pytest.approx(acc, 0.01) == 0.8333
 
 
-def test_mean_scores_and_gaps():
+def test_mean_scores_and_gaps() -> None:
     items = [
         {"expected": "strong", "score": 95.0},
         {"expected": "strong", "score": 85.0},
@@ -175,7 +175,7 @@ def test_mean_scores_and_gaps():
     assert gaps["strong_to_weak"] == 80.0
 
 
-def test_label_classification_accuracy():
+def test_label_classification_accuracy() -> None:
     items = [
         {"expected": "strong", "score": 85.0},  # correct (>= 75)
         {"expected": "medium", "score": 55.0},  # correct (>= 45 and < 75)
@@ -193,7 +193,7 @@ def test_label_classification_accuracy():
 # ==============================================================================
 
 
-def test_ablation_score_extraction():
+def test_ablation_score_extraction() -> None:
     sample = {
         "lexical_score": 0.5,
         "semantic_score": 0.8,
@@ -209,7 +209,7 @@ def test_ablation_score_extraction():
     assert extract_ablation_score(sample, "full_blend") == 88.25
 
 
-def test_ablation_analysis_output_structure():
+def test_ablation_analysis_output_structure() -> None:
     pairs = [
         {
             "expected": "strong",
@@ -239,7 +239,7 @@ def test_ablation_analysis_output_structure():
 # ==============================================================================
 
 
-def test_split_determinism():
+def test_split_determinism() -> None:
     examples = [
         {"id": f"ex_{i}", "expected": "strong" if i < 3 else ("medium" if i < 6 else "weak")}
         for i in range(10)
@@ -253,7 +253,7 @@ def test_split_determinism():
     assert [e["id"] for e in train1] != [e["id"] for e in train_diff_seed]
 
 
-def test_calibration_optimizer_fit():
+def test_calibration_optimizer_fit() -> None:
     train_examples = [
         {
             "cross_encoder_logit": 3.0,
@@ -285,7 +285,7 @@ def test_calibration_optimizer_fit():
 # ==============================================================================
 
 
-def test_run_evaluation_suite_end_to_end(tmp_path: Path):
+def test_run_evaluation_suite_end_to_end(tmp_path: Path) -> None:
     out_dir = tmp_path / "eval_out"
     cache_dir = tmp_path / "eval_cache"
 
