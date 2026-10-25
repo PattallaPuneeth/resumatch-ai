@@ -192,7 +192,7 @@ describe('Phase 2D: Resume Lifecycle Endpoints', () => {
       expect(body.message).toBe('Resume not found');
     });
 
-    it('returns 403 Forbidden on cross-user tenant violation', async () => {
+    it('returns 404 Not Found on cross-user tenant violation', async () => {
       mockResumeFindUnique.mockResolvedValue(createMockResume({ userId: 'other-user-uuid' }) as any);
       const auth = await getAuthToken(app, 'attacker-user-uuid');
 
@@ -202,10 +202,10 @@ describe('Phase 2D: Resume Lifecycle Endpoints', () => {
         headers: { authorization: auth },
       });
 
-      expect(res.statusCode).toBe(403);
+      expect(res.statusCode).toBe(404);
       const body = JSON.parse(res.body);
-      expect(body.error).toBe('Forbidden');
-      expect(body.message).toContain('do not have permission');
+      expect(body.error).toBe('Not Found');
+      expect(body.message).toBe('Resume not found');
     });
 
     it('returns 200 with complete parsedResume data when status is PARSED', async () => {
@@ -297,7 +297,7 @@ describe('Phase 2D: Resume Lifecycle Endpoints', () => {
       expect(res.statusCode).toBe(404);
     });
 
-    it('returns 403 Forbidden when requesting download URL for another user resume', async () => {
+    it('returns 404 Not Found when requesting download URL for another user resume', async () => {
       mockResumeFindUnique.mockResolvedValue(createMockResume({ userId: 'other-user' }) as any);
       const auth = await getAuthToken(app, 'attacker-user');
 
@@ -307,7 +307,7 @@ describe('Phase 2D: Resume Lifecycle Endpoints', () => {
         headers: { authorization: auth },
       });
 
-      expect(res.statusCode).toBe(403);
+      expect(res.statusCode).toBe(404);
     });
 
     it('returns 422 if resume is still in UPLOAD_PENDING state', async () => {
@@ -395,7 +395,7 @@ describe('Phase 2D: Resume Lifecycle Endpoints', () => {
       expect(res.statusCode).toBe(404);
     });
 
-    it('returns 403 Forbidden when attempting to delete another user resume', async () => {
+    it('returns 404 Not Found when attempting to delete another user resume', async () => {
       mockResumeFindUnique.mockResolvedValue(createMockResume({ userId: 'other-user' }) as any);
       const auth = await getAuthToken(app, 'attacker-user');
 
@@ -405,7 +405,7 @@ describe('Phase 2D: Resume Lifecycle Endpoints', () => {
         headers: { authorization: auth },
       });
 
-      expect(res.statusCode).toBe(403);
+      expect(res.statusCode).toBe(404);
     });
 
     it('successfully deletes resume: cancels queue job, deletes S3 object, deletes DB record, writes AuditLog', async () => {

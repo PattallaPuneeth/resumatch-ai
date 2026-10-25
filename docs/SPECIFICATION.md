@@ -928,3 +928,78 @@ Flow:
     - 401 Unauthorized: Missing or invalid JWT.
     - 404 Not Found: Resume or job not found or owned by another user.
     - 422 Unprocessable Content: Bullet not found in resume rawText (`BULLET_NOT_IN_RESUME`) or all options rejected by verifier (`HALLUCINATION_DETECTED`).
+
+## 16. Phase 5: Accounts and Authentication
+
+### 16.1 Architecture Decisions
+1. **Credentials & Identity Separation:** Identity (`User` model) is strictly decoupled from credentials (`Credential` model). Google OAuth is not built in Phase 5; the schema cleanly permits alternative auth providers in the future without schema churn.
+2. **User.email:** Made optional (`String? @unique`), non-destructive change preserving all existing test users and databases.
+3. **Password Security:** Argon2id with OWASP minimum recommended parameters (memoryCost: 19 MiB / 19456 KiB, timeCost: 2, parallelism: 1). Password length: 12-128 chars, must not contain username (case-insensitive), rejected if in bundled common password list, no composition rules. Username: 3-32 chars `[a-zA-Z0-9_.-]`, case-insensitive unique.
+4. **Timing Equalization:** When login or password recovery is attempted for an unknown username, a dummy Argon2id verification executes against a precomputed dummy hash with identical work factor parameters to prevent username enumeration via timing attacks.
+5. **Token Architecture:**
+   - **Access Token:** JWT signed with `JWT_SECRET`, 15-minute lifetime. Contains claims `{ sub: userId, sid: sessionId, username: string }`.
+   - **Refresh Token:** Cryptographically secure opaque 256-bit random hex string, stored exclusively as a SHA-256 hash in the database, 14-day lifetime. Rotated on every use.
+   - **Session Families & Replay Detection:** Every login creates a new session family (`familyId`). Reuse of an already-used or revoked refresh token revokes all active sessions in the family immediately without a grace window.
+   - **Immediate Revocation:** Every authenticated request verifies the `sid` claim against the database session table (`prisma.session`). Revocation on logout, logout-all, password recovery, or refresh token reuse takes effect on the very next request rather than waiting for JWT expiration.
+6. **Cookie Security:**
+   - `access_token`: `httpOnly: true`, `sameSite: 'lax'`, `secure: COOKIE_SECURE || production`, `path: '/'`, `maxAge: 15m`.
+   - `refresh_token`: `httpOnly: true`, `sameSite: 'lax'`, `secure: COOKIE_SECURE || production`, `path: '/v1/auth'`, `maxAge: 14d`.
+   - `csrf_token`: `httpOnly: false` (JS-readable for double-submit header), `sameSite: 'lax'`, `secure`, `path: '/'`.
+   - Dual Auth Support: `Authorization: Bearer <accessToken>` header accepted alongside cookies for API clients and automated tests.
+7. **CSRF Enforcement:**
+   - Cookie-authenticated state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require both an allowed `Origin`/`Referer` (from `CORS_ORIGIN`) and a matching double-submit `X-CSRF-Token` header.
+   - Bearer-token authenticated requests are exempt from CSRF checks.
+8. **Rate Limiting & Lockout (Fail Closed):**
+   - Redis-backed rate limiter on all `/v1/auth/*` routes.
+   - Per-account failed login counter keyed by lowercase username (`auth:failed_login:<usernameLower>`) whether or not the account exists.
+   - Exponential lockout starting at 5 failed attempts (60s, 120s, 240s, 480s, 960s, capped at 1800s / 30m) with `Retry-After` header on HTTP 429.
+   - Fails CLOSED with HTTP 503 Service Unavailable if Redis is unreachable.
+9. **Password Reset via Recovery Codes:**
+   - 10 single-use recovery codes generated at registration (128 bits entropy each).
+   - Returned ONCE at registration; stored hashed with SHA-256. No email provider.
+   - Endpoint `/v1/auth/recover` requires username, recovery code, and new password. Resets password and revokes all active sessions.
+   - Endpoint `/v1/auth/recovery-codes/regenerate` requires password re-entry.
+10. **Account Deletion:**
+    - `DELETE /v1/account` requires password confirmation.
+    - Cascades to delete S3 objects for all user resumes, user resumes, parsed resumes, resume chunks, jobs, job chunks, analyses, matches, credentials, sessions, and recovery codes.
+    - Writes an audit event (`ACCOUNT_DELETED`) with nullable `userId` and no foreign key so the record survives user deletion.
+
+### 16.2 API Contracts (for Phase 8 UI Integration)
+- `POST /v1/auth/register`
+  - Body: `{ "username": "string", "password": "string" }`
+  - Response (201 Created): `{ "user": { "id": "UUID", "username": "string", "createdAt": "ISO" }, "tokens": { "accessToken": "string", "refreshToken": "string", "expiresIn": 900 }, "recoveryCodes": ["xxxx-xxxx-xxxx-xxxx", ...] }`
+- `POST /v1/auth/login`
+  - Body: `{ "username": "string", "password": "string" }`
+  - Response (200 OK): `{ "user": { "id": "UUID", "username": "string" }, "tokens": { "accessToken": "string", "refreshToken": "string", "expiresIn": 900 } }`
+- `POST /v1/auth/refresh`
+  - Body (optional if cookie present): `{ "refreshToken": "string" }`
+  - Response (200 OK): `{ "tokens": { "accessToken": "string", "refreshToken": "string", "expiresIn": 900 } }`
+- `POST /v1/auth/logout`
+  - Headers: `Authorization: Bearer <token>` or session cookie
+  - Response (200 OK): `{ "message": "Successfully logged out." }`
+- `POST /v1/auth/logout-all`
+  - Headers: `Authorization: Bearer <token>` or session cookie
+  - Response (200 OK): `{ "message": "All active sessions have been revoked." }`
+- `GET /v1/auth/me`
+  - Headers: `Authorization: Bearer <token>` or session cookie
+  - Response (200 OK): `{ "user": { "id": "UUID", "username": "string", "email": "string|null", "role": "CANDIDATE", "createdAt": "ISO" } }`
+- `POST /v1/auth/recover`
+  - Body: `{ "username": "string", "recoveryCode": "string", "newPassword": "string" }`
+  - Response (200 OK): `{ "message": "Password has been reset successfully. Please log in with your new password." }`
+- `POST /v1/auth/recovery-codes/regenerate`
+  - Headers: `Authorization: Bearer <token>`
+  - Body: `{ "password": "string" }`
+  - Response (200 OK): `{ "recoveryCodes": ["xxxx-xxxx-xxxx-xxxx", ...] }`
+- `DELETE /v1/account`
+  - Headers: `Authorization: Bearer <token>`
+  - Body: `{ "password": "string" }`
+  - Response (200 OK): `{ "message": "Account successfully deleted." }`
+
+### 16.3 Known Limitations
+- Redis availability dependency: Rate limiting and lockout fail closed with 503 if Redis goes down, intentionally prioritizing brute-force defense over unthrottled uptime.
+- Recovery code preservation: In the absence of an email delivery integration, users must securely preserve their 10 recovery codes offline; loss of both password and recovery codes makes account recovery impossible by design.
+- Username-keyed lockout denial-of-service: Because failed login counters are keyed by lowercase username to protect accounts from distributed credential stuffing, an attacker can intentionally lock a known username for up to 30 minutes by deliberately sending 5+ invalid passwords. Mitigations planned for a later phase include:
+  1. CAPTCHA / Proof-of-Work challenge triggered after 3 failed attempts before enforcing hard lockout.
+  2. Dual-keying lockout by IP subnet and device fingerprint alongside username.
+  3. Out-of-band email or recovery code unlock to immediately bypass the lockout window.
+  4. Progressive step-up authentication rather than total login denial.

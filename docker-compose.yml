@@ -132,7 +132,10 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-resumes}
       ML_SERVICE_URL: http://ml:8000
-      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-in-production}
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://127.0.0.1:3000}
       RESUME_CAP_PER_USER: ${RESUME_CAP_PER_USER:-50}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
     ports:

@@ -433,7 +433,7 @@ describe('Phase 2B: POST /v1/resumes/:id/complete', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('returns 403 when resume belongs to another user (ownership check)', async () => {
+  it('returns 404 when resume belongs to another user (ownership check)', async () => {
     const token = await getAuthToken(app, 'user-test-uuid');
     mockResumeFindUnique.mockResolvedValue(mockResume({ userId: 'other-user-uuid' }) as any);
 
@@ -442,9 +442,9 @@ describe('Phase 2B: POST /v1/resumes/:id/complete', () => {
       url: '/v1/resumes/resume-uuid-1/complete',
       headers: { Authorization: token },
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(404);
     const body = JSON.parse(res.body);
-    expect(body.error).toBe('Forbidden');
+    expect(body.error).toBe('Not Found');
   });
 
   it('returns 422 when object is not found in storage (expired URL scenario)', async () => {

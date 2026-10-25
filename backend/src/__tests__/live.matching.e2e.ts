@@ -14,7 +14,7 @@
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
-import { generateDevToken } from '../scripts/mintDevToken.js';
+import { generateDevToken } from './testAuthHelper.js';
 import { prisma } from '../db/prisma.js';
 
 const BACKEND_URL = 'http://localhost:4000';

@@ -229,7 +229,7 @@ describe('Security Audit & Verification Suite (Phases 1-3)', () => {
       updatedAt: new Date(),
     };
 
-    it('User B cannot retrieve User A resume details (403 Forbidden)', async () => {
+    it('User B cannot retrieve User A resume details (404 Not Found)', async () => {
       vi.mocked(prisma.resume.findUnique).mockResolvedValueOnce(resumeOwnedByA as any);
 
       const res = await app.inject({
@@ -238,11 +238,11 @@ describe('Security Audit & Verification Suite (Phases 1-3)', () => {
         headers: { Authorization: userBToken() },
       });
 
-      expect(res.statusCode).toBe(403);
-      expect(res.json().message).toContain('permission');
+      expect(res.statusCode).toBe(404);
+      expect(res.json().message).toContain('Resume not found');
     });
 
-    it('User B cannot trigger upload complete for User A resume (403 Forbidden)', async () => {
+    it('User B cannot trigger upload complete for User A resume (404 Not Found)', async () => {
       vi.mocked(prisma.resume.findUnique).mockResolvedValueOnce(resumeOwnedByA as any);
 
       const res = await app.inject({
@@ -252,11 +252,11 @@ describe('Security Audit & Verification Suite (Phases 1-3)', () => {
         payload: {},
       });
 
-      expect(res.statusCode).toBe(403);
-      expect(res.json().message).toContain('permission');
+      expect(res.statusCode).toBe(404);
+      expect(res.json().message).toContain('Resume not found');
     });
 
-    it('User B cannot retrieve download URL for User A resume (403 Forbidden)', async () => {
+    it('User B cannot retrieve download URL for User A resume (404 Not Found)', async () => {
       vi.mocked(prisma.resume.findUnique).mockResolvedValueOnce(resumeOwnedByA as any);
 
       const res = await app.inject({
@@ -265,11 +265,11 @@ describe('Security Audit & Verification Suite (Phases 1-3)', () => {
         headers: { Authorization: userBToken() },
       });
 
-      expect(res.statusCode).toBe(403);
-      expect(res.json().message).toContain('permission');
+      expect(res.statusCode).toBe(404);
+      expect(res.json().message).toContain('Resume not found');
     });
 
-    it('User B cannot delete User A resume (403 Forbidden)', async () => {
+    it('User B cannot delete User A resume (404 Not Found)', async () => {
       vi.mocked(prisma.resume.findUnique).mockResolvedValueOnce(resumeOwnedByA as any);
 
       const res = await app.inject({
@@ -278,8 +278,8 @@ describe('Security Audit & Verification Suite (Phases 1-3)', () => {
         headers: { Authorization: userBToken() },
       });
 
-      expect(res.statusCode).toBe(403);
-      expect(res.json().message).toContain('permission');
+      expect(res.statusCode).toBe(404);
+      expect(res.json().message).toContain('Resume not found');
     });
 
     it('User B listing resumes never includes User A records', async () => {

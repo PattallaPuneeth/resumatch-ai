@@ -1,8 +1,11 @@
 import dotenv from 'dotenv';
+import path from 'path';
 import { z } from 'zod';
 
-// Load .env file from project root or current working directory
+// Load .env file from project root and current working directory
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -55,8 +58,40 @@ export const EnvSchema = z.object({
   PRESIGN_PUT_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   PRESIGN_GET_TTL_SECONDS: z.coerce.number().int().positive().default(300),
 
-  // Auth
-  JWT_SECRET: z.string().min(16).default('local-dev-secret-change-in-production'),
+  // Auth (Phase 5)
+  JWT_SECRET: z
+    .string({
+      required_error: 'JWT_SECRET is required and must be at least 32 characters',
+    })
+    .min(32, 'JWT_SECRET must be at least 32 characters')
+    .refine(
+      (val) => {
+        const lower = val.toLowerCase();
+        return !lower.includes('local-dev') && !lower.includes('change');
+      },
+      {
+        message: 'JWT_SECRET must not contain "local-dev" or "change"',
+      }
+    ),
+  COOKIE_SECURE: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return false;
+    })
+    .default(false),
+  TRUST_PROXY: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return false;
+    })
+    .default(false),
+  CORS_ORIGIN: z.string().default('http://localhost:3000,http://127.0.0.1:3000'),
 
   // Per-user resume upload cap
   RESUME_CAP_PER_USER: z.coerce.number().int().positive().default(50),

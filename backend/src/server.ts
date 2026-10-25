@@ -1,9 +1,11 @@
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { FastifyInstance } from 'fastify';
 import { env } from './config/env.js';
 import { registerErrorHandler } from './plugins/errorHandler.js';
 import authPlugin from './plugins/auth.js';
+import { authRoutes } from './routes/auth.js';
 import { analysesRoutes } from './routes/analyses.js';
 import { healthRoutes } from './routes/health.js';
 import { jobsRoutes } from './routes/jobs.js';
@@ -15,6 +17,7 @@ export function buildServer(): FastifyInstance {
   const isDev = env.NODE_ENV === 'development';
 
   const app = Fastify({
+    trustProxy: env.TRUST_PROXY,
     logger: isDev
       ? {
           level: env.LOG_LEVEL,
@@ -32,12 +35,17 @@ export function buildServer(): FastifyInstance {
         },
   });
 
-  const ALLOWED_ORIGINS = new Set([
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-  ]);
+  const ALLOWED_ORIGINS = new Set(
+    (env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.0.1:3000')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
 
-  // Plugins
+  // Register cookie support before auth plugin
+  app.register(cookie);
+
+  // Strict CORS allowlist with credentials
   app.register(cors, {
     origin: (origin, cb) => {
       // Allow requests with no origin (such as mobile apps, curl, or server-to-server)
@@ -45,7 +53,7 @@ export function buildServer(): FastifyInstance {
         cb(null, true);
         return;
       }
-      if (ALLOWED_ORIGINS.has(origin)) {
+      if (ALLOWED_ORIGINS.has(origin.toLowerCase())) {
         cb(null, true);
         return;
       }
@@ -75,7 +83,7 @@ export function buildServer(): FastifyInstance {
     timeWindow: '1 minute',
   });
 
-  // JWT authentication
+  // Session & JWT authentication
   app.register(authPlugin);
 
   // Central Error Handler
@@ -83,6 +91,7 @@ export function buildServer(): FastifyInstance {
 
   // Route Registration
   app.register(healthRoutes);
+  app.register(authRoutes);
   app.register(resumesRoutes);
   app.register(analysesRoutes);
   app.register(jobsRoutes);

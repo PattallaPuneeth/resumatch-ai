@@ -15,7 +15,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { generateDevToken } from '../scripts/mintDevToken.js';
+import { generateDevToken } from './testAuthHelper.js';
 import { prisma } from '../db/prisma.js';
 
 const BACKEND_URL = 'http://localhost:4000';
@@ -42,7 +42,7 @@ async function runLiveLifecycleE2E() {
         role: 'CANDIDATE',
       },
     }));
-  const { token, userId } = await generateDevToken(testUser.email);
+  const { token, userId } = await generateDevToken(testUser.email || undefined);
   console.log(`   Token minted for user ID: ${userId} (${testUser.email})`);
 
   // Step 2: Request Upload URL

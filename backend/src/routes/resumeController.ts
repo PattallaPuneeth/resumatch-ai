@@ -306,10 +306,10 @@ export async function handleCompleteUpload(
   }
 
   if (outcome.kind === 'FORBIDDEN') {
-    return reply.status(403).send({
-      statusCode: 403,
-      error: 'Forbidden',
-      message: 'You do not have permission to access this resume',
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume not found',
       timestamp: new Date().toISOString(),
       requestId: request.id,
     });
@@ -525,10 +525,10 @@ export async function handleGetResume(
   }
 
   if (resume.userId !== userId) {
-    return reply.status(403).send({
-      statusCode: 403,
-      error: 'Forbidden',
-      message: 'You do not have permission to access this resume',
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume not found',
       timestamp: new Date().toISOString(),
       requestId: request.id,
     });
@@ -596,10 +596,10 @@ export async function handleGetDownloadUrl(
   }
 
   if (resume.userId !== userId) {
-    return reply.status(403).send({
-      statusCode: 403,
-      error: 'Forbidden',
-      message: 'You do not have permission to access this resume',
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume not found',
       timestamp: new Date().toISOString(),
       requestId: request.id,
     });
@@ -666,10 +666,10 @@ export async function handleDeleteResume(
   }
 
   if (resume.userId !== userId) {
-    return reply.status(403).send({
-      statusCode: 403,
-      error: 'Forbidden',
-      message: 'You do not have permission to delete this resume',
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Resume not found',
       timestamp: new Date().toISOString(),
       requestId: request.id,
     });

@@ -51,7 +51,7 @@
 | 4A | LLM gateway, safety layer, structured analysis | COMPLETE (verified) |
 | 4B | Fact-grounded STAR bullet rewriter | COMPLETE (verified) |
 | 4C | Resume-only improvements and role suggestions | COMPLETE (verified) |
-| 5 | Accounts and authentication (username/password) | PLANNED |
+| 5 | Accounts and authentication (username/password) | COMPLETE (verified) |
 | 6 | Usage metering, displayed limits, 50/70/90 alerts | PLANNED (required) |
 | 7 | Job suggestions via Firecrawl | PLANNED |
 | 8 | Product UI (full frontend, green/white/black theme) | PLANNED |

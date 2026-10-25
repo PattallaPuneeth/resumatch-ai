@@ -11,17 +11,19 @@ generator client {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String?
-  fullName     String?
-  role         String     @default("CANDIDATE")
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id            String         @id @default(uuid())
+  email         String?        @unique
+  passwordHash  String?
+  fullName      String?
+  role          String         @default("CANDIDATE")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  resumes      Resume[]
-  jobs         Job[]
-  auditLogs    AuditLog[]
+  credential    Credential?
+  sessions      Session[]
+  recoveryCodes RecoveryCode[]
+  resumes       Resume[]
+  jobs          Job[]
 
   @@map("users")
 }
@@ -200,11 +202,57 @@ model Match {
   @@map("matches")
 }
 
+model Credential {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username      String
+  usernameLower String   @unique
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([usernameLower])
+  @@map("credentials")
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  familyId     String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  ipAddress    String?
+  userAgent    String?
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([tokenHash])
+  @@map("sessions")
+}
+
+model RecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("recovery_codes")
+}
+
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action     String   // RESUME_UPLOAD, RESUME_DELETE, ANALYSIS_TRIGGERED, JOB_CREATED, MATCH_CALCULATED
+  event      String?  // REGISTER, LOGIN_SUCCESS, LOGIN_FAILURE, LOCKOUT, REFRESH_REUSE_DETECTED, LOGOUT, LOGOUT_ALL, RECOVERY_USED, RECOVERY_CODES_REGENERATED, ACCOUNT_DELETED
+  action     String   // RESUME_UPLOAD, RESUME_DELETE, ANALYSIS_TRIGGERED, JOB_CREATED, MATCH_CALCULATED, AUTH
   entityType String
   entityId   String?
   details    Json?
@@ -214,6 +262,7 @@ model AuditLog {
 
   @@index([userId])
   @@index([action])
+  @@index([event])
   @@index([createdAt])
   @@map("audit_logs")
 }
