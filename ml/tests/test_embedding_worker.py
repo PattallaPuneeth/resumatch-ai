@@ -264,19 +264,22 @@ def test_persist_resume_chunks_transaction_rollback_on_error():
 
 
 @pytest.mark.asyncio
-async def test_embedding_worker_aborts_on_job_entity_phase3b_deferred():
-    """Verifies that job embedding requests are cleanly deferred to Phase 3B without error."""
+async def test_embedding_worker_aborts_on_missing_job_entity():
+    """Verifies that missing job entities are aborted with JOB_NOT_FOUND."""
     job = Job.__new__(Job)
     job.id = "embed-job-123"
     job.data = {"type": "EMBED_DOCUMENT", "entityType": "JOB", "jobId": "job-123"}
 
     result = await process_embed_document(job)
     assert result["status"] == "ABORTED"
-    assert result["reason"] == "JOB_EMBEDDING_DEFERRED_PHASE3B"
+    assert result["reason"] == "JOB_NOT_FOUND"
 
 
 def test_record_embedding_error_preserves_existing_parsing_metadata():
-    """Verifies that recording an embedding error merges into existing parsingMetadata without overwriting it."""
+    """
+    Verifies that recording an embedding error merges into existing
+    parsingMetadata without overwriting it.
+    """
     user_id, resume_id = _create_test_user_and_resume(status="PARSED")
     try:
         # Prepopulate existing parsingMetadata (e.g. from parsing worker)
@@ -285,7 +288,9 @@ def test_record_embedding_error_preserves_existing_parsing_metadata():
                 cur.execute(
                     """
                     UPDATE parsed_resumes
-                    SET "parsingMetadata" = '{"extractor": "pdfplumber", "pageCount": 1, "customFlag": true}'::jsonb
+                    SET "parsingMetadata" = (
+                        '{"extractor": "pdfplumber", "pageCount": 1, "customFlag": true}'::jsonb
+                    )
                     WHERE "resumeId" = %s;
                     """,
                     (resume_id,),
@@ -312,4 +317,3 @@ def test_record_embedding_error_preserves_existing_parsing_metadata():
 
     finally:
         _cleanup_test_data(user_id)
-

@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import psycopg
 from ml.config import settings
@@ -207,3 +207,94 @@ def record_embedding_error(resume_id: str, error_code: str, error_message: str) 
                 conn.commit()
     except Exception as e:
         logger.error("Failed to record embedding error for resume %s: %s", resume_id, e)
+
+
+def get_job_data(job_id: str) -> dict[str, Any] | None:
+    """Fetches job record for embedding."""
+    try:
+        with psycopg.connect(settings.database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, title, company, "rawDescription", "requiredSkills", status
+                    FROM jobs
+                    WHERE id = %s;
+                    """,
+                    (job_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return {
+                    "id": row[0],
+                    "title": row[1],
+                    "company": row[2],
+                    "rawDescription": row[3],
+                    "requiredSkills": row[4],
+                    "status": row[5],
+                }
+    except Exception as e:
+        logger.error("Failed to query job data for job %s: %s", job_id, e)
+        raise
+
+
+def persist_job_chunks(
+    job_id: str,
+    chunk_vectors: list[tuple[TextChunk, list[float]]],
+) -> int:
+    """
+    Atomically persists chunks and vector embeddings for a job description.
+    All deletions and insertions occur in a single PostgreSQL transaction.
+    """
+    try:
+        with psycopg.connect(settings.database_url) as conn:
+            register_vector(conn)
+            with conn.transaction():
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT 1 FROM jobs WHERE id = %s FOR UPDATE;",
+                        (job_id,),
+                    )
+                    if cur.fetchone() is None:
+                        logger.warning(
+                            "Job %s not found (deleted) during chunk persistence; aborting",
+                            job_id,
+                        )
+                        return 0
+
+                    cur.execute('DELETE FROM job_chunks WHERE "jobId" = %s;', (job_id,))
+
+                    for chunk, vector in chunk_vectors:
+                        meta_json = json.dumps(chunk.metadata) if chunk.metadata else "{}"
+                        cur.execute(
+                            """
+                            INSERT INTO job_chunks (
+                                id, "jobId", "chunkIndex", "sectionType",
+                                content, embedding, "tokenCount", metadata, "createdAt"
+                            ) VALUES (
+                                gen_random_uuid(),
+                                %s, %s, %s, %s, %s, %s, %s::jsonb, NOW()
+                            );
+                            """,
+                            (
+                                job_id,
+                                chunk.chunk_index,
+                                chunk.section_type,
+                                chunk.content,
+                                vector,
+                                chunk.token_count,
+                                meta_json,
+                            ),
+                        )
+
+        logger.info(
+            "Successfully persisted %d chunks and vector embeddings for job %s",
+            len(chunk_vectors),
+            job_id,
+        )
+        return len(chunk_vectors)
+    except Exception as e:
+        logger.exception(
+            "Failed to persist chunks for job %s; transaction rolled back: %s", job_id, e
+        )
+        raise

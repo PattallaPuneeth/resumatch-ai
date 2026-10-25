@@ -18,10 +18,10 @@ COPY requirements.txt ./ml/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r ./ml/requirements.txt
 
-# Pre-download sentence-transformers/all-MiniLM-L6-v2 model weights per SPEC § 7.1
+# Pre-download embedding and cross-encoder model weights per SPEC § 7.1
 ENV TRANSFORMERS_CACHE=/root/.cache/huggingface/hub \
     HF_HOME=/root/.cache/huggingface
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+RUN python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')"
 
 COPY . ./ml/
 

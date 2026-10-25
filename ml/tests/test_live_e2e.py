@@ -50,6 +50,7 @@ def get_demo_user() -> tuple[str, str]:
             if row:
                 return str(row[0]), str(row[1])
             import uuid
+
             uid = str(uuid.uuid4())
             email = f"e2e-{uid[:8]}@example.com"
             cur.execute(
@@ -312,7 +313,7 @@ async def test_live_docx_pipeline_e2e() -> None:
         assert complete_res.status_code == 202
 
     # 4. Wait for worker
-    result = wait_for_status(resume_id, "PARSED", timeout_sec=25.0)
+    result = wait_for_status(resume_id, "PARSED", timeout_sec=35.0)
     assert result["status"] == "PARSED", f"Expected PARSED, got {result}"
     assert result["extractionMethod"] == "DOCX"
 

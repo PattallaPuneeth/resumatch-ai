@@ -22,6 +22,7 @@ export interface EmbeddingJobPayload {
   entityType?: 'RESUME' | 'JOB';
   entityId?: string;
   resumeId?: string;
+  jobId?: string;
   chunks?: Array<{ id: string; text: string }>;
 }
 

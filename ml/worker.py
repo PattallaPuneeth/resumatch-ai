@@ -8,10 +8,12 @@ from typing import Any
 from bullmq import Job, Queue, Worker  # type: ignore[import-untyped]
 
 from ml.config import settings
-from ml.pipelines.embeddings.chunker import chunk_resume_text
+from ml.pipelines.embeddings.chunker import chunk_job_text, chunk_resume_text
 from ml.pipelines.embeddings.embedder import generate_chunk_embeddings
 from ml.pipelines.embeddings.repository import (
+    get_job_data,
     get_parsed_resume_data,
+    persist_job_chunks,
     persist_resume_chunks,
     record_embedding_error,
 )
@@ -29,6 +31,16 @@ from ml.pipelines.intake.repository import (
     save_parsed_resume,
     update_resume_status,
 )
+from ml.pipelines.matching.lexical import search_lexical
+from ml.pipelines.matching.repository import get_match_context, persist_match_result
+from ml.pipelines.matching.reranker import (
+    build_bounded_rerank_query,
+    rerank_candidates,
+)
+from ml.pipelines.matching.rrf import aggregate_resume_rrf, fuse_ranks
+from ml.pipelines.matching.scorer import compute_match_scores
+from ml.pipelines.matching.semantic import search_semantic
+from ml.pipelines.matching.skill_gap import analyze_skill_gap
 from ml.storage.s3 import download_file
 
 logging.basicConfig(
@@ -39,6 +51,7 @@ logger = logging.getLogger("resumatch-ml-worker")
 
 _parse_worker: Worker | None = None
 _embed_worker: Worker | None = None
+_match_worker: Worker | None = None
 _embedding_queue: Queue | None = None
 _should_exit = False
 
@@ -78,9 +91,7 @@ async def enqueue_embed_job(resume_id: str) -> None:
             "Enqueued EMBED_DOCUMENT job for resume %s (jobId=embed-%s)", resume_id, resume_id
         )
     except Exception as q_err:
-        logger.exception(
-            "Failed to enqueue EMBED_DOCUMENT job for resume %s: %s", resume_id, q_err
-        )
+        logger.exception("Failed to enqueue EMBED_DOCUMENT job for resume %s: %s", resume_id, q_err)
 
 
 async def process_parse_document(job: Job, token: str | None = None) -> dict[str, Any]:
@@ -193,11 +204,34 @@ async def process_embed_document(job: Job, token: str | None = None) -> dict[str
     entity_type = data.get("entityType", "RESUME")
 
     if entity_type == "JOB":
-        logger.warning(
-            "Job embedding is deferred to Phase 3B (job descriptions and hybrid matching). Aborting job %s.",
-            job.id,
-        )
-        return {"status": "ABORTED", "reason": "JOB_EMBEDDING_DEFERRED_PHASE3B"}
+        job_id = data.get("jobId") or data.get("entityId")
+        if not job_id:
+            logger.error("Job embedding missing jobId or entityId in job %s", job.id)
+            raise ValueError("Invalid job embedding payload: missing jobId or entityId")
+
+        logger.info("Processing embedding job %s for Job %s", job.id, job_id)
+        job_data = get_job_data(job_id)
+        if not job_data:
+            logger.info("Job %s not found (deleted). Aborting job %s.", job_id, job.id)
+            return {"status": "ABORTED", "reason": "JOB_NOT_FOUND"}
+
+        raw_desc = job_data.get("rawDescription", "")
+        if not raw_desc or not raw_desc.strip():
+            logger.warning("Job %s has empty rawDescription. Aborting.", job_id)
+            return {"status": "ABORTED", "reason": "JOB_DESCRIPTION_EMPTY"}
+
+        chunks = chunk_job_text(raw_desc)
+        logger.info("Generated %d chunks for Job %s", len(chunks), job_id)
+        chunk_vectors = generate_chunk_embeddings(chunks)
+        saved_count = persist_job_chunks(job_id, chunk_vectors)
+
+        return {
+            "status": "EMBEDDED",
+            "entityType": "JOB",
+            "jobId": job_id,
+            "chunkCount": saved_count,
+            "embeddingDimension": 384,
+        }
 
     resume_id = data.get("resumeId") or data.get("entityId")
 
@@ -256,13 +290,136 @@ async def process_embed_document(job: Job, token: str | None = None) -> dict[str
         raise e
 
 
+async def process_match_scoring(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Processes a match calculation job from match-scoring-queue."""
+    data = job.data
+    job_id = data.get("jobId")
+    resume_id = data.get("resumeId")
+
+    if not job_id or not resume_id:
+        logger.error("Job %s missing jobId or resumeId in data: %s", job.id, data)
+        raise ValueError("Invalid match scoring payload: missing jobId or resumeId")
+
+    logger.info("Processing match scoring for resume %s and job %s", resume_id, job_id)
+
+    ctx = get_match_context(resume_id, job_id)
+    if not ctx:
+        logger.info("Context not found for resume %s or job %s. Aborting.", resume_id, job_id)
+        return {"status": "ABORTED", "reason": "CONTEXT_NOT_FOUND"}
+
+    status = ctx.get("resume_status")
+    if status != "PARSED":
+        logger.warning("Resume %s status is %s (expected PARSED). Aborting.", resume_id, status)
+        return {"status": "ABORTED", "reason": f"INVALID_STATUS_{status}"}
+
+    job_title = ctx.get("job_title", "")
+    job_desc = ctx.get("job_description", "")
+    job_req_skills = ctx.get("job_required_skills")
+    resume_skills = ctx.get("resume_skills")
+
+    if not job_desc or not job_desc.strip():
+        logger.warning("Job %s has no description text.", job_id)
+        return {"status": "ABORTED", "reason": "EMPTY_JOB_DESCRIPTION"}
+
+    # Build query text for lexical and semantic retrieval
+    skills_text = " ".join(job_req_skills) if isinstance(job_req_skills, list) else ""
+    query_text = f"{job_title}\n{skills_text}\n{job_desc}".strip()
+
+    try:
+        # 1. Sparse Lexical Search (BM25-style with GIN index)
+        lexical_hits = search_lexical(query_text, resume_id=resume_id, limit=50)
+
+        # 2. Dense Semantic Search (pgvector cosine <=> with HNSW index)
+        semantic_hits = search_semantic(query_text, resume_id=resume_id, limit=50)
+
+        # 3. Reciprocal Rank Fusion
+        fused_chunks = fuse_ranks(lexical_hits, semantic_hits, k=settings.rrf_k)
+        rrf_summary = aggregate_resume_rrf(fused_chunks)
+
+        # 4. Cross-Encoder Reranking on top fused candidates
+        job_rerank_query = build_bounded_rerank_query(
+            job_title, job_req_skills, job_desc, max_tokens=180
+        )
+        reranked_chunks = rerank_candidates(
+            job_rerank_query, fused_chunks, top_n=settings.top_k_candidates
+        )
+
+        # 5. Skill-Gap Analysis
+        skill_gap = analyze_skill_gap(
+            job_req_skills if isinstance(job_req_skills, list) else [],
+            resume_skills,
+        )
+
+        # 6. Score aggregation
+        scores = compute_match_scores(
+            lexical_hits=lexical_hits,
+            semantic_hits=semantic_hits,
+            reranked_chunks=reranked_chunks,
+            skill_gap=skill_gap,
+        )
+        best_bm25 = scores["best_bm25"]
+        best_vector = scores["best_vector"]
+        rrf_score = rrf_summary["resume_rrf_score"]
+        best_ce_score = scores["best_ce_score"]
+        final_score = scores["final_score"]
+
+        explanation = {
+            "skillGap": skill_gap,
+            "scoringBreakdown": {
+                "bm25TopScore": best_bm25,
+                "vectorSimilarity": best_vector,
+                "rrfScore": rrf_score,
+                "crossEncoderScore": best_ce_score,
+                "skillCoverage": skill_gap.get("coverage_ratio", 0.0),
+            },
+            "topMatchingChunks": [
+                {
+                    "chunkId": c["chunk_id"],
+                    "sectionType": c.get("section_type"),
+                    "crossEncoderScore": c.get("cross_encoder_score"),
+                    "snippet": c["content"][:250],
+                }
+                for c in reranked_chunks[:5]
+            ],
+            "totalChunksEvaluated": len(fused_chunks),
+        }
+
+        # 7. Atomic persistence to matches table
+        match_id = persist_match_result(
+            resume_id=resume_id,
+            job_id=job_id,
+            bm25_score=best_bm25,
+            vector_score=best_vector,
+            rrf_score=rrf_score,
+            cross_encoder_score=best_ce_score,
+            final_score=final_score,
+            explanation=explanation,
+        )
+
+        return {
+            "status": "MATCHED",
+            "matchId": match_id,
+            "resumeId": resume_id,
+            "jobId": job_id,
+            "finalScore": final_score,
+        }
+
+    except Exception as e:
+        logger.exception("Failed match scoring for resume %s and job %s: %s", resume_id, job_id, e)
+        raise e
+
+
 async def main_async() -> None:
-    global _parse_worker, _embed_worker
+    global _parse_worker, _embed_worker, _match_worker
     redis_opts = {"connection": settings.redis_url, "prefix": "bull", "concurrency": 2}
 
-    logger.info("Starting BullMQ Workers for 'resume-parsing-queue' and 'embedding-queue'...")
+    logger.info(
+        "Starting BullMQ Workers for resume-parsing-queue, "
+        "embedding-queue, and match-scoring-queue..."
+    )
     _parse_worker = Worker("resume-parsing-queue", process_parse_document, redis_opts)
     _embed_worker = Worker("embedding-queue", process_embed_document, redis_opts)
+    _match_worker = Worker("match-scoring-queue", process_match_scoring, redis_opts)
 
     # Keep alive until shutdown requested
     while not _should_exit:
@@ -273,6 +430,8 @@ async def main_async() -> None:
         await _parse_worker.close()
     if _embed_worker:
         await _embed_worker.close()
+    if _match_worker:
+        await _match_worker.close()
     if _embedding_queue:
         await _embedding_queue.close()
     logger.info("All BullMQ workers closed.")

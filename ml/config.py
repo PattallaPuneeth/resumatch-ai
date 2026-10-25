@@ -39,6 +39,18 @@ class Settings(BaseSettings):
         default="sentence-transformers/all-MiniLM-L6-v2",
         alias="EMBEDDING_MODEL_NAME",
     )
+    reranker_model_name: str = Field(
+        default="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        alias="RERANKER_MODEL_NAME",
+    )
+    rrf_k: int = Field(
+        default=60,
+        alias="RRF_K",
+    )
+    top_k_candidates: int = Field(
+        default=20,
+        alias="TOP_K_CANDIDATES",
+    )
 
     # S3 Object Storage Configuration
     s3_endpoint: str = Field(default="http://localhost:9000", alias="S3_ENDPOINT")

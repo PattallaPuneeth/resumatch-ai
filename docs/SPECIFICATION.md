@@ -459,27 +459,53 @@ Phase 3A --- Chunking and embedding generation (IMPLEMENTED)
   - Peak RSS during batch embedding inference reaches ~523 MiB.
   - Operational requirement: Allocate at least 1 GB (preferably 2 GB) RAM in production. A 512 MB container tier (e.g. Render Starter) is unsafe and will trigger out-of-memory (OOM) termination.
 Phase 3B --- Hybrid retrieval and reranking
-1. Sparse lexical search: PostgreSQL full-text search using
-   to_tsvector('english', content) and
-   to_tsquery('english', query), supported by GIN indexes. Use an
-   appropriate ranking function (for example, ts_rank/ts_rank_cd)
-   as a BM25-style lexical signal; do not claim PostgreSQL full-text
-   rank is mathematically identical to BM25.
-2. Dense semantic search: pgvector cosine-distance queries using
-   <=> and HNSW indexes with vector_cosine_ops.
-3. Reciprocal Rank Fusion: merge lexical and semantic rankings.
-   Initial formula:
-   RRF_Score(d) = Σ_m 1 / (k + rank_m(d)), with k = 60.
-4. Cross-encoder reranking: rerank the top 20 fused candidates with
-   cross-encoder/ms-marco-MiniLM-L-6-v2.
-5. Produce a normalized match score from 0--100 only if the
-   normalization method is defined and tested. Persist scoring
-   components and evidence in Match.
-6. Generate skill-gap analysis: matching skills, missing skills, and
-   partial matches.
-7. Add tests for lexical-only matches, semantic-only matches, combined
-   ranking, empty results, duplicate candidates, and reranking
-   behavior.
+- Job Ingestion & Storage:
+  - Fastify endpoint `POST /v1/jobs` accepts job title, company, description, requiredSkills, preferredSkills, location, and jobType. Validates payload via Zod, enforces JWT auth and user ownership, and persists to `jobs` table with `ACTIVE` status.
+  - Automatically enqueues `EMBED_DOCUMENT` task with payload `{ entityType: "JOB", jobId }` to `embedding-queue`.
+  - ML worker splits job description into section-aware chunks (`chunk_job_text`), generates 384-dimensional embeddings, and idempotently persists them to `job_chunks`.
+  - `GET /v1/jobs/:id` retrieves job details and chunk count with strict tenant isolation (404 for non-owners).
+- Matching Triggers & Endpoints:
+  - `POST /v1/jobs/:id/match` accepts `{ resumeId: UUID }`. Verifies that BOTH the job and the resume belong to the authenticated user (using 404 convention for cross-tenant attempts), and strictly validates that the resume is in `PARSED` status (returning 422 Unprocessable Entity otherwise). Enqueues task to `match-scoring-queue` and responds with 202 Accepted.
+  - `GET /v1/jobs/:id/matches/:resumeId` exposes single match result route, returning `bm25Score`, `vectorScore`, `rrfScore`, `crossEncoderScore`, `finalScore`, and structured `explanation` with skill-gap metrics.
+- Hybrid Retrieval & Scoring Pipeline:
+  1. Sparse Lexical Search: PostgreSQL full-text search with OR-style `tsquery` (joining stemmed English lexemes with ` | ` using `quote_literal(elem)` to prevent syntax errors and avoid `plainto_tsquery` AND failure modes on long job descriptions). Matches exact expression `to_tsvector('english', content)` on GIN index `resume_chunks_content_tsv_idx` and ranks via `ts_rank_cd`.
+  2. Dense Semantic Search: pgvector cosine distance `<=>` queries utilizing HNSW index `resume_chunks_embedding_hnsw_idx` with `vector_cosine_ops`, converting distance to similarity (`1 - distance`).
+  3. Reciprocal Rank Fusion (RRF): Evaluates candidate chunks $d$ for a single (job, resume) pair using:
+     $$RRF\_Score(d) = \sum_{m \in \{lex, sem\}} \frac{1}{k + rank_m(d)}, \quad k = 60$$
+     Applies deterministic tie-breaking sorted by `rrf_score DESC, chunk_id ASC`. Aggregates chunk ranks into resume-level RRF score: $max(chunk\_rrf) + 0.25 \times mean(top\_3\_chunks\_rrf)$.
+  4. Cross-Encoder Reranking: Top 20 fused candidates evaluated against bounded job requirements using `cross-encoder/ms-marco-MiniLM-L-6-v2`. Bounded rerank query (max 180 tokens) guarantees candidate resume chunks (up to 254 tokens) are protected from 512-token sequence truncation. Normalizes raw cross-encoder logits to calibrated 0–100 match percentage using calibrated logistic scaling:
+     $$P = \frac{100}{1 + e^{-(logit - shift) / temp}}$$
+     *Note on Calibration*: The current parameters (shift = -3.5, temp = 2.8) are provisional, tuned on a handful of representative examples (strong fit ~98%, medium ~86%, irrelevant ~11%), and will be recalibrated against the full labeled evaluation set in test-data/.
+  5. Skill-Gap Analysis: Normalizes candidate and job skills with alias mapping (e.g. `k8s` -> `kubernetes`, `postgres` -> `postgresql`), categorizing into `matched`, `partial`, and `missing` skills, and computing fractional coverage ratio.
+  6. Idempotent Persistence: Persists results into `matches` table via atomic transaction with `ON CONFLICT ("resumeId", "jobId") DO UPDATE`.
+  7. Backward Compatibility: Preserves Phase 3A `{ resumeId }` payload compatibility on `embedding-queue`.
+- Resource & Memory Profiling:
+  - Both `sentence-transformers/all-MiniLM-L6-v2` and `cross-encoder/ms-marco-MiniLM-L-6-v2` baked directly into Docker image during build.
+  - ML worker memory usage during hybrid retrieval, batch inference, and reranking measured at ~467 MiB RSS, well within the 1.5 GB memory limit.
+Phase 3C-1 --- Evaluation Harness and Extended Skill Taxonomy (IMPLEMENTED)
+- Skill Taxonomy & Alias Map:
+  - Canonical taxonomy defined in `ml/pipelines/matching/skill_taxonomy.json` across 16 core technology clusters (backend, frontend, cloud, databases, DevOps, machine learning, testing, messaging, etc.).
+  - Normalization engine in `ml/pipelines/matching/skill_gap.py` resolves aliases (e.g. `k8s` -> `kubernetes`, `postgres` -> `postgresql`, `react.js` -> `react`, `aws` -> `amazon web services`).
+  - Strict false-positive prevention: Enforces word-boundary regular expression matching `(?:^|[\s,;/()\[\]]){escaped}(?:$|[\s,;/()\[\]])` ensuring substring collisions are prevented (e.g., `Java` does not match `JavaScript`, `C` does not match `C++` or `C#`, `Go` does not match `Google` or `Django`).
+- Modular Match Scoring (`ml/pipelines/matching/scorer.py`):
+  - Extracted modular scoring function `compute_match_scores` supporting configurable shift, temperature, and blend weights (`w_ce`, `w_skill`, `w_vec`) for calibration and ablation while strictly preserving production defaults:
+    $$shift = -3.5, \quad temp = 2.8, \quad w_{ce} = 0.65, \quad w_{skill} = 0.25, \quad w_{vec} = 0.10$$
+  - Integrated into production worker pipeline (`ml/worker.py`) without modifying external API response schemas.
+- Evaluation Harness Architecture (`ml/eval/`):
+  - CLI Entrypoint: `python -m ml.eval.run --dataset <path> [--output-dir <path>] [--cache-dir <path>]`.
+  - Structured modules:
+    - `dataset.py`: Comprehensive dataset loader with strict schema validation (missing files, invalid labels, missing columns, duplicate pairs).
+    - `metrics.py`: Computes Pairwise Ordering Accuracy, Label Classification Accuracy, per-tier Mean Scores, and Separation Margins ($Strong - Medium$, $Medium - Weak$).
+    - `ablation.py`: Evaluates 6 pipeline configurations (Lexical only, Semantic only, RRF only, RRF + Cross-Encoder, + Skill-Gap, Full Composite Blend) and exports structured ablation tables.
+    - `calibration.py`: Performs deterministic stratified train/held-out splitting (seed=42) and grid-search parameter optimization against held-out benchmark pairs.
+    - `runner.py`: End-to-end evaluation pipeline with SHA-256 disk-based artifact caching (`.eval_cache`) for sub-second repeat runs.
+  - Zero DB Pollution: Executes entirely in-memory against local files, creating zero temporary or permanent rows in the production PostgreSQL `resumatch` database.
+  - Benchmark Dataset Format:
+    - `resumes/`: Synthetic candidate resumes (`.pdf`, `.docx`).
+    - `jobs/`: Synthetic job requirement specifications (`.txt`).
+    - `labels.csv`: Labeled pairs with columns `resume,job,expected,reason`, where `expected` is strictly in `{"strong", "medium", "weak"}`.
+    - Built-in fixture dataset provided under `ml/tests/fixtures/eval_dataset/` for deterministic CI regression testing.
+  - Synthetic Data Labeling: All generated markdown reports and tables explicitly identify benchmark results as synthetic evaluation data.
 Phase 4 --- Fact-grounded STAR bullet rewriter
 - Implement POST /v1/rewriter/bullet to accept a candidate's
   original experience bullet and target-job keywords/description.

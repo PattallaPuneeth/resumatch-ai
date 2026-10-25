@@ -1,0 +1,15 @@
+Senior Backend Lead
+We are seeking an experienced Senior Backend Engineer to architect, build, and scale our distributed cloud platform.
+
+Responsibilities:
+- Design, implement, and maintain high-throughput backend services using Python.
+- Optimize relational database queries and data schemas with PostgreSQL.
+- Architect containerized microservices orchestrated on Kubernetes clusters.
+- Build reliable CI/CD pipelines and deployment automation with Docker and GitHub Actions.
+- Ensure 99.99% system availability with Redis caching and distributed locks.
+
+Requirements:
+- 5+ years of software development experience with Python.
+- Strong knowledge of PostgreSQL, query optimization, and relational database schema design.
+- Practical experience with container orchestration using Kubernetes and Docker.
+- Experience with asynchronous task queues and Redis.

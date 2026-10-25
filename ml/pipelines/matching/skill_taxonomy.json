@@ -1,0 +1,76 @@
+{
+  "kubernetes": [
+    "k8s",
+    "kubernetes",
+    "container orchestration"
+  ],
+  "postgresql": [
+    "postgres",
+    "postgresql",
+    "pgsql",
+    "relational database"
+  ],
+  "javascript": [
+    "js",
+    "javascript"
+  ],
+  "typescript": [
+    "ts",
+    "typescript"
+  ],
+  "nodejs": [
+    "node",
+    "node.js",
+    "nodejs"
+  ],
+  "python": [
+    "py",
+    "python"
+  ],
+  "machine learning": [
+    "ml",
+    "machine learning",
+    "deep learning",
+    "ai/ml"
+  ],
+  "ci/cd": [
+    "ci/cd",
+    "cicd",
+    "continuous integration",
+    "continuous deployment",
+    "github actions",
+    "gitlab ci",
+    "jenkins"
+  ],
+  "docker": [
+    "docker",
+    "containerization"
+  ],
+  "react": [
+    "react",
+    "react.js",
+    "reactjs"
+  ],
+  "aws": [
+    "aws",
+    "amazon web services"
+  ],
+  "gcp": [
+    "gcp",
+    "google cloud platform",
+    "google cloud"
+  ],
+  "azure": [
+    "azure",
+    "microsoft azure"
+  ],
+  "fastapi": [
+    "fastapi"
+  ],
+  "redis": [
+    "redis"
+  ],
+  "graphql": [
+    "graphql"
+  ]
+}

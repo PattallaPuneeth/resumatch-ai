@@ -23,9 +23,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from transformers import AutoTokenizer
-
 from ml.config import settings
+from transformers import AutoTokenizer
 
 # Target token boundaries: strictly <= 240 tokens to prevent model truncation (ceiling: 254)
 TARGET_MIN_TOKENS = 160
@@ -157,7 +156,8 @@ def _detect_sections(raw_text: str) -> list[tuple[str, str | None, int, int]]:
         if not stripped or len(stripped) > 60:
             continue
 
-        # Check for heading candidates (e.g. "EXPERIENCE", "Work Experience:", "## Skills", "1. Professional Experience")
+        # Check for heading candidates (e.g. "EXPERIENCE", "Work Experience:",
+        # "## Skills", "1. Professional Experience")
         clean_cand = re.sub(
             r"^(?:[\s#*_\-–—]+|(?:\d+|[A-Za-z]|[IVXLCDMivxlcdm]+)[\.\)\-\:]\s*)+|[\s:*#_\-–—]+$",
             "",
@@ -363,6 +363,144 @@ def chunk_resume_text(
 
     tok = tokenizer or get_tokenizer()
     sections = _detect_sections(raw_text)
+
+    all_chunks: list[TextChunk] = []
+    chunk_counter = 0
+
+    for section_type, heading, body_start, body_end in sections:
+        section_chunks = _chunk_text_span(
+            raw_text=raw_text,
+            span_start=body_start,
+            span_end=body_end,
+            section_type=section_type,
+            heading=heading,
+            chunk_index_start=chunk_counter,
+            tokenizer=tok,
+        )
+        for chunk in section_chunks:
+            all_chunks.append(chunk)
+            chunk_counter += 1
+
+    return all_chunks
+
+
+JOB_SECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    (
+        "RESPONSIBILITIES",
+        re.compile(
+            r"^(?:responsibilities|duties|what\s+you\s+will\s+do|what\s+you'll\s+do|"
+            r"core\s+responsibilities|key\s+responsibilities|the\s+role|role\s+responsibilities|"
+            r"essential\s+duties|primary\s+responsibilities)$",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "QUALIFICATIONS",
+        re.compile(
+            r"^(?:qualifications|requirements|basic\s+qualifications|preferred\s+qualifications|"
+            r"what\s+we\s+look\s+for|what\s+you\s+bring|skills\s+(?:&|and)\s+qualifications|"
+            r"minimum\s+qualifications|desired\s+skills|experience\s+(?:&|and)\s+skills|"
+            r"who\s+you\s+are)$",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "BENEFITS",
+        re.compile(
+            r"^(?:benefits|perks|compensation|what\s+we\s+offer|why\s+join\s+us|"
+            r"compensation\s+(?:&|and)\s+benefits)$",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "OVERVIEW",
+        re.compile(
+            r"^(?:about\s+us|about\s+the\s+company|company\s+overview|job\s+summary|"
+            r"about\s+the\s+role|role\s+overview|introduction|job\s+overview)$",
+            re.IGNORECASE,
+        ),
+    ),
+]
+
+
+def _classify_job_heading(cleaned_line: str) -> str | None:
+    for section_type, pattern in JOB_SECTION_PATTERNS:
+        if pattern.match(cleaned_line):
+            return section_type
+    return None
+
+
+def _detect_job_sections(raw_text: str) -> list[tuple[str, str | None, int, int]]:
+    lines_with_offsets: list[tuple[str, int, int]] = []
+    current_pos = 0
+    for line in raw_text.splitlines(keepends=True):
+        line_len = len(line)
+        lines_with_offsets.append((line, current_pos, current_pos + line_len))
+        current_pos += line_len
+
+    detected: list[_DetectedHeading] = []
+    for line_text, line_start, line_end in lines_with_offsets:
+        stripped = line_text.strip()
+        if not stripped or len(stripped) > 60:
+            continue
+        clean_cand = re.sub(
+            r"^(?:[\s#*_\-–—]+|(?:\d+|[A-Za-z]|[IVXLCDMivxlcdm]+)[\.\)\-\:]\s*)+|[\s:*#_\-–—]+$",
+            "",
+            stripped,
+        ).strip()
+        if not clean_cand:
+            continue
+        sec_type = _classify_job_heading(clean_cand)
+        if sec_type:
+            detected.append(
+                _DetectedHeading(
+                    section_type=sec_type,
+                    heading_text=clean_cand,
+                    heading_start=line_start,
+                    heading_end=line_end,
+                    body_start=line_end,
+                )
+            )
+
+    if not detected:
+        return [("OVERVIEW", None, 0, len(raw_text))]
+
+    sections: list[tuple[str, str | None, int, int]] = []
+    if detected[0].heading_start > 0:
+        pre_content = raw_text[0 : detected[0].heading_start]
+        if pre_content.strip():
+            sections.append(("OVERVIEW", None, 0, detected[0].heading_start))
+
+    for i, h in enumerate(detected):
+        next_start = detected[i + 1].heading_start if i + 1 < len(detected) else len(raw_text)
+        body_end = next_start
+        body_text = raw_text[h.body_start : body_end]
+        if body_text.strip():
+            sections.append((h.section_type, h.heading_text, h.body_start, body_end))
+
+    return sections if sections else [("OVERVIEW", None, 0, len(raw_text))]
+
+
+def chunk_job_text(
+    raw_text: str,
+    tokenizer: Any = None,
+) -> list[TextChunk]:
+    """
+    Main entry point for section-aware job description chunking.
+
+    Args:
+        raw_text: Full text from Job.rawDescription.
+        tokenizer: Optional AutoTokenizer instance (defaults to singleton all-MiniLM-L6-v2).
+
+    Returns:
+        List of TextChunk instances with sectionType in
+        {RESPONSIBILITIES, QUALIFICATIONS, BENEFITS, OVERVIEW}.
+    """
+    if not raw_text or not raw_text.strip():
+        return []
+
+    tok = tokenizer or get_tokenizer()
+    sections = _detect_job_sections(raw_text)
 
     all_chunks: list[TextChunk] = []
     chunk_counter = 0

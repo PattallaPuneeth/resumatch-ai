@@ -73,3 +73,7 @@ Thumbs.db
 # Vitest / Jest
 test-results/
 .vitest/
+
+test-data/
+.eval_cache/
+eval-output/
