@@ -114,7 +114,7 @@ def build_bounded_rerank_query(
         return full_candidate_query
 
     truncated_tokens = tokens[:max_tokens]
-    return tok.decode(truncated_tokens, skip_special_tokens=True).strip()
+    return str(tok.decode(truncated_tokens, skip_special_tokens=True).strip())
 
 
 def rerank_candidates(

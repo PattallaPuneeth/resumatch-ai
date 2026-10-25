@@ -108,11 +108,20 @@ def calculate_label_gaps(means: dict[str, float]) -> dict[str, float]:
     }
 
 
+# Canonical score threshold boundaries for discrete band classification
+# Single source of truth for evaluation classification:
+# - Strong: score >= DEFAULT_STRONG_THRESHOLD (75.0)
+# - Medium: DEFAULT_WEAK_THRESHOLD <= score < DEFAULT_STRONG_THRESHOLD [45.0, 75.0)
+# - Weak: score < DEFAULT_WEAK_THRESHOLD (45.0)
+DEFAULT_STRONG_THRESHOLD: float = 75.0
+DEFAULT_WEAK_THRESHOLD: float = 45.0
+
+
 def calculate_label_accuracy(
     scored_examples: list[dict[str, Any]],
     score_key: str = "final_score",
-    strong_threshold: float = 75.0,
-    weak_threshold: float = 45.0,
+    strong_threshold: float = DEFAULT_STRONG_THRESHOLD,
+    weak_threshold: float = DEFAULT_WEAK_THRESHOLD,
 ) -> float:
     """
     Computes label classification accuracy based on score thresholds:
@@ -144,8 +153,8 @@ def calculate_label_accuracy(
 def compute_comprehensive_metrics(
     scored_examples: list[dict[str, Any]],
     score_key: str = "final_score",
-    strong_threshold: float = 75.0,
-    weak_threshold: float = 45.0,
+    strong_threshold: float = DEFAULT_STRONG_THRESHOLD,
+    weak_threshold: float = DEFAULT_WEAK_THRESHOLD,
 ) -> dict[str, Any]:
     """Computes all evaluation metrics for a set of scored examples."""
     means = calculate_mean_scores_per_label(scored_examples, score_key=score_key)

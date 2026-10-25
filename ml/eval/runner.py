@@ -15,7 +15,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ml.eval.ablation import run_ablation_analysis
 from ml.eval.calibration import run_calibration_study
@@ -55,7 +55,7 @@ class EvaluationArtifactCache:
         if p.exists():
             try:
                 with open(p, encoding="utf-8") as f:
-                    return json.load(f)
+                    return cast(dict[str, Any], json.load(f))
             except Exception:
                 return None
         return None
@@ -70,7 +70,7 @@ class EvaluationArtifactCache:
         if p.exists():
             try:
                 with open(p, encoding="utf-8") as f:
-                    return json.load(f)
+                    return cast(dict[str, Any], json.load(f))
             except Exception:
                 return None
         return None
@@ -87,7 +87,7 @@ def _cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     norm_b = sum(b * b for b in vec_b) ** 0.5
     if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
-    return max(0.0, min(1.0, dot / (norm_a * norm_b)))
+    return float(max(0.0, min(1.0, dot / (norm_a * norm_b))))
 
 
 def _extract_job_skills_heuristic(text: str) -> list[str]:

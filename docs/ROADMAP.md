@@ -47,8 +47,8 @@
 | 3A | Semantic chunking and embeddings | COMPLETE (committed, pushed) |
 | 3B | Hybrid retrieval, RRF, cross-encoder, job ingestion, match scoring | COMPLETE (committed) |
 | 3C-1 | Evaluation harness and extended skill taxonomy | COMPLETE |
-| 3C-2 | Score recalibration against labeled dataset | NEXT |
-| 4A | LLM gateway, safety layer, structured analysis | PLANNED |
+| 3C-2 | Score recalibration against labeled dataset | COMPLETE |
+| 4A | LLM gateway, safety layer, structured analysis | NEXT |
 | 4B | Fact-grounded STAR bullet rewriter | PLANNED |
 | 4C | Resume-only improvements and role suggestions | PLANNED |
 | 5 | Accounts and authentication (username/password) | PLANNED |
@@ -82,7 +82,7 @@ Docker Compose (`postgres:16` + pgvector, `redis:7`, `minio`, Fastify `backend`,
 Section-aware chunker (160-240 content tokens, ~20% overlap; capped below MiniLM's 256-token limit to avoid silent truncation), `all-MiniLM-L6-v2` 384-d vectors, HNSW cosine index, unique `(resumeId, chunkIndex)`, atomic idempotent persistence, `embedding-queue`.
 
 ### Phase 3B: Matching
-`POST /v1/jobs`, `GET /v1/jobs/:id`, `POST /v1/jobs/:id/match`, `GET /v1/jobs/:id/matches/:resumeId`, dual ownership checks (404 convention). Lexical (OR `tsquery`, `ts_rank_cd`), semantic (pgvector `<=>`), RRF (k=60), cross-encoder rerank with a bounded 180-token query, skill-gap analysis, idempotent `Match` upsert. Retrieval failures now raise. Calibration is **provisional** (shift=-3.5, temp=2.8).
+`POST /v1/jobs`, `GET /v1/jobs/:id`, `POST /v1/jobs/:id/match`, `GET /v1/jobs/:id/matches/:resumeId`, dual ownership checks (404 convention). Lexical (OR `tsquery`, `ts_rank_cd`), semantic (pgvector `<=>`), RRF (k=60), cross-encoder rerank with a bounded 180-token query, skill-gap analysis, idempotent `Match` upsert. Retrieval failures now raise. Production defaults: shift=-3.5, temp=2.8, w_ce=0.65, w_skill=0.25, w_vec=0.10 (candidate v2 evaluated with no clear gain; revisit with 100+ pairs).
 `finalScore = 0.65 x crossEncoder + 0.25 x skillCoverage + 0.10 x vector x 100`.
 
 ### Known facts to remember
@@ -93,7 +93,7 @@ Section-aware chunker (160-240 content tokens, ~20% overlap; capped below MiniLM
 
 ---
 
-## 4. Phase 3C: Evaluation harness and recalibration (NEXT)
+## 4. Phase 3C: Evaluation harness and recalibration (COMPLETE)
 
 **Goal:** turn matching quality into measured numbers, and fix the provisional calibration (medium fit scored about 86% vs strong about 98%, too close).
 

@@ -4,7 +4,7 @@ Phase 3B & 3C-1: Modular Match Scoring and Configurable Calibration.
 Provides deterministic composite scoring combining cross-encoder reranking,
 skill coverage, and semantic vector similarity.
 Supports configurable shift, temperature, and blend weights for evaluation and calibration
-while preserving existing production defaults:
+with production defaults:
 shift=-3.5, temp=2.8, w_ce=0.65, w_skill=0.25, w_vec=0.10.
 """
 

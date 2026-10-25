@@ -23,6 +23,14 @@ from ml.pipelines.matching.scorer import (
     calibrate_ce_logit,
 )
 
+# Phase 3B baseline parameters (legacy defaults)
+BASELINE_SHIFT = -3.5
+BASELINE_TEMP = 2.8
+BASELINE_W_CE = 0.65
+BASELINE_W_SKILL = 0.25
+BASELINE_W_VEC = 0.10
+
+
 
 def deterministic_train_heldout_split(
     examples: list[dict[str, Any]],
@@ -164,22 +172,52 @@ def run_calibration_study(
 
     fitted_params = fit_calibration_on_train(train_set)
 
-    # 1. Baseline on held-out split
+    # 1. Baseline on train split
+    baseline_train = []
+    for ex in train_set:
+        item = dict(ex)
+        item["score"] = score_with_params(
+            ex,
+            shift=BASELINE_SHIFT,
+            temp=BASELINE_TEMP,
+            w_ce=BASELINE_W_CE,
+            w_skill=BASELINE_W_SKILL,
+            w_vec=BASELINE_W_VEC,
+        )
+        baseline_train.append(item)
+    baseline_train_metrics = compute_comprehensive_metrics(baseline_train, score_key="score")
+
+    # 2. Calibrated on train split
+    calibrated_train = []
+    for ex in train_set:
+        item = dict(ex)
+        item["score"] = score_with_params(
+            ex,
+            shift=fitted_params["shift"],
+            temp=fitted_params["temp"],
+            w_ce=fitted_params["w_ce"],
+            w_skill=fitted_params["w_skill"],
+            w_vec=fitted_params["w_vec"],
+        )
+        calibrated_train.append(item)
+    calibrated_train_metrics = compute_comprehensive_metrics(calibrated_train, score_key="score")
+
+    # 3. Baseline on held-out split
     baseline_heldout = []
     for ex in heldout_set:
         item = dict(ex)
         item["score"] = score_with_params(
             ex,
-            shift=DEFAULT_SHIFT,
-            temp=DEFAULT_TEMP,
-            w_ce=DEFAULT_W_CE,
-            w_skill=DEFAULT_W_SKILL,
-            w_vec=DEFAULT_W_VEC,
+            shift=BASELINE_SHIFT,
+            temp=BASELINE_TEMP,
+            w_ce=BASELINE_W_CE,
+            w_skill=BASELINE_W_SKILL,
+            w_vec=BASELINE_W_VEC,
         )
         baseline_heldout.append(item)
     baseline_metrics = compute_comprehensive_metrics(baseline_heldout, score_key="score")
 
-    # 2. Calibrated on held-out split
+    # 4. Calibrated on held-out split
     calibrated_heldout = []
     for ex in heldout_set:
         item = dict(ex)
@@ -194,36 +232,49 @@ def run_calibration_study(
         calibrated_heldout.append(item)
     calibrated_metrics = compute_comprehensive_metrics(calibrated_heldout, score_key="score")
 
+    # Metrics precomputations
+    tr_base_ord = baseline_train_metrics["pairwise_ordering_accuracy"] * 100
+    tr_cal_ord = calibrated_train_metrics["pairwise_ordering_accuracy"] * 100
     base_ord = baseline_metrics["pairwise_ordering_accuracy"] * 100
     cal_ord = calibrated_metrics["pairwise_ordering_accuracy"] * 100
     ord_delta = cal_ord - base_ord
 
+    tr_base_sm = baseline_train_metrics["label_gaps"]["strong_to_medium"]
+    tr_cal_sm = calibrated_train_metrics["label_gaps"]["strong_to_medium"]
     base_sm = baseline_metrics["label_gaps"]["strong_to_medium"]
     cal_sm = calibrated_metrics["label_gaps"]["strong_to_medium"]
     sm_delta = cal_sm - base_sm
 
+    tr_base_mw = baseline_train_metrics["label_gaps"]["medium_to_weak"]
+    tr_cal_mw = calibrated_train_metrics["label_gaps"]["medium_to_weak"]
     base_mw = baseline_metrics["label_gaps"]["medium_to_weak"]
     cal_mw = calibrated_metrics["label_gaps"]["medium_to_weak"]
     mw_delta = cal_mw - base_mw
 
+    tr_base_s = baseline_train_metrics["mean_scores"].get("strong", 0.0)
+    tr_cal_s = calibrated_train_metrics["mean_scores"].get("strong", 0.0)
     base_s_mean = baseline_metrics["mean_scores"].get("strong", 0.0)
     cal_s_mean = calibrated_metrics["mean_scores"].get("strong", 0.0)
 
+    tr_base_m = baseline_train_metrics["mean_scores"].get("medium", 0.0)
+    tr_cal_m = calibrated_train_metrics["mean_scores"].get("medium", 0.0)
     base_m_mean = baseline_metrics["mean_scores"].get("medium", 0.0)
     cal_m_mean = calibrated_metrics["mean_scores"].get("medium", 0.0)
 
+    tr_base_w = baseline_train_metrics["mean_scores"].get("weak", 0.0)
+    tr_cal_w = calibrated_train_metrics["mean_scores"].get("weak", 0.0)
     base_w_mean = baseline_metrics["mean_scores"].get("weak", 0.0)
     cal_w_mean = calibrated_metrics["mean_scores"].get("weak", 0.0)
 
-    b_weights = f"{DEFAULT_W_CE}/{DEFAULT_W_SKILL}/{DEFAULT_W_VEC}"
+    b_weights = f"{BASELINE_W_CE}/{BASELINE_W_SKILL}/{BASELINE_W_VEC}"
     f_weights = f"{fitted_params['w_ce']}/{fitted_params['w_skill']}/{fitted_params['w_vec']}"
 
     md_report = [
-        "### Score Calibration Analysis (Held-Out Benchmark Split)",
+        "### Score Calibration Analysis (Train vs. Held-Out Splits)",
         "",
         (
-            "> **Note:** Conducted on synthetic benchmark pairs. "
-            "Production defaults remain unchanged in Phase 3C-1."
+            "> **Note:** Evaluated on synthetic benchmark pairs. "
+            "Optimization conducted on train split, evaluated on unseen held-out split."
         ),
         "",
         (
@@ -231,8 +282,8 @@ def run_calibration_study(
             f"**Held-Out Pairs:** {len(heldout_set)} (Seed: {seed})"
         ),
         (
-            f"- **Baseline Parameters:** shift={DEFAULT_SHIFT}, "
-            f"temp={DEFAULT_TEMP}, weights=({b_weights})"
+            f"- **Baseline Parameters:** shift={BASELINE_SHIFT}, "
+            f"temp={BASELINE_TEMP}, weights=({b_weights})"
         ),
         (
             f"- **Fitted Parameters:** shift={fitted_params['shift']}, "
@@ -240,28 +291,42 @@ def run_calibration_study(
         ),
         "",
         (
-            "| Metric | Baseline (Production Defaults) | "
-            "Fitted Candidate (Held-Out) | Margin Delta |"
+            "| Metric | Train (Baseline) | Train (Fitted) | "
+            "Held-Out (Baseline) | Held-Out (Fitted) | Held-Out Delta |"
         ),
-        "| :--- | :---: | :---: | :---: |",
-        f"| **Pairwise Ordering Acc** | {base_ord:.1f}% | {cal_ord:.1f}% | {ord_delta:+.1f}% |",
+        "| :--- | :---: | :---: | :---: | :---: | :---: |",
         (
-            f"| **Strong-to-Medium Gap** | {base_sm:+.1f} pts | "
-            f"{cal_sm:+.1f} pts | {sm_delta:+.1f} pts |"
+            f"| **Pairwise Ordering Acc** | {tr_base_ord:.1f}% | {tr_cal_ord:.1f}% | "
+            f"{base_ord:.1f}% | {cal_ord:.1f}% | {ord_delta:+.1f}% |"
         ),
         (
-            f"| **Medium-to-Weak Gap** | {base_mw:+.1f} pts | "
-            f"{cal_mw:+.1f} pts | {mw_delta:+.1f} pts |"
+            f"| **Strong-to-Medium Gap** | {tr_base_sm:+.1f} pts | {tr_cal_sm:+.1f} pts | "
+            f"{base_sm:+.1f} pts | {cal_sm:+.1f} pts | {sm_delta:+.1f} pts |"
         ),
-        f"| **Mean Score (Strong)** | {base_s_mean:.1f} | {cal_s_mean:.1f} | - |",
-        f"| **Mean Score (Medium)** | {base_m_mean:.1f} | {cal_m_mean:.1f} | - |",
-        f"| **Mean Score (Weak)** | {base_w_mean:.1f} | {cal_w_mean:.1f} | - |",
+        (
+            f"| **Medium-to-Weak Gap** | {tr_base_mw:+.1f} pts | {tr_cal_mw:+.1f} pts | "
+            f"{base_mw:+.1f} pts | {cal_mw:+.1f} pts | {mw_delta:+.1f} pts |"
+        ),
+        (
+            f"| **Mean Score (Strong)** | {tr_base_s:.1f} | {tr_cal_s:.1f} | "
+            f"{base_s_mean:.1f} | {cal_s_mean:.1f} | - |"
+        ),
+        (
+            f"| **Mean Score (Medium)** | {tr_base_m:.1f} | {tr_cal_m:.1f} | "
+            f"{base_m_mean:.1f} | {cal_m_mean:.1f} | - |"
+        ),
+        (
+            f"| **Mean Score (Weak)** | {tr_base_w:.1f} | {tr_cal_w:.1f} | "
+            f"{base_w_mean:.1f} | {cal_w_mean:.1f} | - |"
+        ),
     ]
 
     return {
         "train_count": len(train_set),
         "heldout_count": len(heldout_set),
         "fitted_params": fitted_params,
+        "baseline_train_metrics": baseline_train_metrics,
+        "calibrated_train_metrics": calibrated_train_metrics,
         "baseline_metrics": baseline_metrics,
         "calibrated_metrics": calibrated_metrics,
         "markdown_report": "\n".join(md_report),

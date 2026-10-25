@@ -22,7 +22,7 @@ from ml.eval.metrics import compute_comprehensive_metrics
 ABLATION_CONFIGS = [
     ("lexical_only", "Lexical Only (BM25)"),
     ("semantic_only", "Semantic Only (Dense Cosine)"),
-    ("rrf_only", "RRF Only (Rank Fusion)"),
+    ("rrf_only", "RRF Only (Internal Chunk Ranker)*"),
     ("rrf_cross_encoder", "RRF + Cross-Encoder"),
     ("plus_skill_gap", "RRF + Cross-Encoder + Skill-Gap"),
     ("full_blend", "Full Blend (Production)"),
@@ -128,6 +128,15 @@ def run_ablation_analysis(
             f"| **{name}** | {ordering} | {label_acc} | {m_strong} | {m_med} | "
             f"{m_weak} | {g_sm} | {g_mw} |"
         )
+
+    md_lines.append("")
+    md_lines.append(
+        "\\* *Note on RRF Only: RRF operates on chunk ranks (1 / (60 + rank)) within each "
+        "resume to select candidate passages for Cross-Encoder reranking. Because every resume "
+        "has a rank-1 chunk, intra-document RRF scores cluster near ~0.040 and do not act as an "
+        "independent cross-resume score. Cross-Encoder reranking provides the subsequent "
+        "cross-candidate discrimination.*"
+    )
 
     # Observations on marginal value of each stage
     observations: list[str] = []

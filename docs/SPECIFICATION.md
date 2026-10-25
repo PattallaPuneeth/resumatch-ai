@@ -475,7 +475,9 @@ Phase 3B --- Hybrid retrieval and reranking
      Applies deterministic tie-breaking sorted by `rrf_score DESC, chunk_id ASC`. Aggregates chunk ranks into resume-level RRF score: $max(chunk\_rrf) + 0.25 \times mean(top\_3\_chunks\_rrf)$.
   4. Cross-Encoder Reranking: Top 20 fused candidates evaluated against bounded job requirements using `cross-encoder/ms-marco-MiniLM-L-6-v2`. Bounded rerank query (max 180 tokens) guarantees candidate resume chunks (up to 254 tokens) are protected from 512-token sequence truncation. Normalizes raw cross-encoder logits to calibrated 0–100 match percentage using calibrated logistic scaling:
      $$P = \frac{100}{1 + e^{-(logit - shift) / temp}}$$
-     *Note on Calibration*: The current parameters (shift = -3.5, temp = 2.8) are provisional, tuned on a handful of representative examples (strong fit ~98%, medium ~86%, irrelevant ~11%), and will be recalibrated against the full labeled evaluation set in test-data/.
+     *Production Calibration Defaults*:
+     $$shift = -3.5, \quad temp = 2.8, \quad w_{ce} = 0.65, \quad w_{skill} = 0.25, \quad w_{vec} = 0.10$$
+     Evaluated against synthetic evaluation pairs. The v2 candidate parameters ($shift=-3.0, temp=1.8, w_{ce}=0.70, w_{skill}=0.20, w_{vec}=0.10$) were evaluated across train-only and Leave-One-Resume-Out splits, but showed no clear gain over baseline (ordering tied at 97.6%, held-out accuracy tied at 76.9%, and full 32-pair label accuracy lower at 84.4% vs 87.5%). Production defaults therefore remain at $shift=-3.5, temp=2.8, w_{ce}=0.65, w_{skill}=0.25, w_{vec}=0.10$. Neither parameter set is described as validated; full empirical recalibration will be conducted on 100+ real-world pairs.
   5. Skill-Gap Analysis: Normalizes candidate and job skills with alias mapping (e.g. `k8s` -> `kubernetes`, `postgres` -> `postgresql`), categorizing into `matched`, `partial`, and `missing` skills, and computing fractional coverage ratio.
   6. Idempotent Persistence: Persists results into `matches` table via atomic transaction with `ON CONFLICT ("resumeId", "jobId") DO UPDATE`.
   7. Backward Compatibility: Preserves Phase 3A `{ resumeId }` payload compatibility on `embedding-queue`.
@@ -495,7 +497,10 @@ Phase 3C-1 --- Evaluation Harness and Extended Skill Taxonomy (IMPLEMENTED)
   - CLI Entrypoint: `python -m ml.eval.run --dataset <path> [--output-dir <path>] [--cache-dir <path>]`.
   - Structured modules:
     - `dataset.py`: Comprehensive dataset loader with strict schema validation (missing files, invalid labels, missing columns, duplicate pairs).
-    - `metrics.py`: Computes Pairwise Ordering Accuracy, Label Classification Accuracy, per-tier Mean Scores, and Separation Margins ($Strong - Medium$, $Medium - Weak$).
+    - `metrics.py`: Computes Pairwise Ordering Accuracy, Label Classification Accuracy, per-tier Mean Scores, and Separation Margins ($Strong - Medium$, $Medium - Weak$). Canonical classification thresholds defined in `ml/eval/metrics.py`:
+      - **Strong Match**: $\text{score} \ge 75.0$ (`DEFAULT_STRONG_THRESHOLD = 75.0`)
+      - **Medium Match**: $45.0 \le \text{score} < 75.0$ (`DEFAULT_WEAK_THRESHOLD = 45.0`)
+      - **Weak Match**: $\text{score} < 45.0$
     - `ablation.py`: Evaluates 6 pipeline configurations (Lexical only, Semantic only, RRF only, RRF + Cross-Encoder, + Skill-Gap, Full Composite Blend) and exports structured ablation tables.
     - `calibration.py`: Performs deterministic stratified train/held-out splitting (seed=42) and grid-search parameter optimization against held-out benchmark pairs.
     - `runner.py`: End-to-end evaluation pipeline with SHA-256 disk-based artifact caching (`.eval_cache`) for sub-second repeat runs.
@@ -506,6 +511,25 @@ Phase 3C-1 --- Evaluation Harness and Extended Skill Taxonomy (IMPLEMENTED)
     - `labels.csv`: Labeled pairs with columns `resume,job,expected,reason`, where `expected` is strictly in `{"strong", "medium", "weak"}`.
     - Built-in fixture dataset provided under `ml/tests/fixtures/eval_dataset/` for deterministic CI regression testing.
   - Synthetic Data Labeling: All generated markdown reports and tables explicitly identify benchmark results as synthetic evaluation data.
+Phase 3C-2 --- Real-Data Evaluation and Recalibration Study (IMPLEMENTED)
+- Real-Data Evaluation on Synthetic Benchmark:
+  - Benchmark dataset `test-data/`: 8 resumes, 8 job descriptions, 32 labeled candidate pairs (8 Strong, 10 Medium, 14 Weak).
+  - Executed baseline evaluation using production defaults ($shift=-3.5, temp=2.8, w_{ce}=0.65, w_{skill}=0.25, w_{vec}=0.10$).
+  - Identified and resolved RRF anomaly: Clarified that RRF functions strictly as an intra-document candidate passage ranker ($1 / (60 + \text{rank})$) rather than an absolute cross-candidate fit score.
+- Parameter Study & Comparison:
+  - Evaluation setup: Stratified deterministic split (19 train pairs / 13 held-out pairs, seed=42) and Leave-One-Resume-Out (LORO) cross-validation across 8 resumes.
+  - Candidate v2 parameters ($shift = -3.0, temp = 1.8, w_{ce} = 0.70, w_{skill} = 0.20, w_{vec} = 0.10$) fit on train split only.
+  - Held-out evaluation (reported once, without tuning on held-out data):
+    - Pairwise Ordering Accuracy: 96.3% (tied with baseline 96.3%).
+    - Label Classification Accuracy: 76.9% (tied with baseline 76.9%).
+    - Strong-to-Medium Margin: +41.9 pts (vs baseline +34.2 pts).
+    - Medium-to-Weak Margin: +27.7 pts (vs baseline +25.9 pts).
+  - All 32 Pairs Comparison:
+    - Pairwise Ordering Accuracy: 97.6% (tied at 324 / 332 valid comparisons).
+    - Label Classification Accuracy: Baseline = 87.5% (28 / 32 correct) vs Candidate v2 = 84.4% (27 / 32 correct).
+    - Separation Margins: Baseline = +28.2 pts / +34.2 pts; Candidate v2 = +33.5 pts / +39.5 pts.
+  - Conclusion: Candidate v2 evaluated with no clear gain over current defaults under proper splits (label accuracy lower overall, tied on held-out). Production defaults remain at $shift=-3.5, temp=2.8, w_{ce}=0.65, w_{skill}=0.25, w_{vec}=0.10$. Revisit with 100+ pairs. Neither parameter set is described as validated.
+  - End-to-End Live Cluster Verification: Jane Doe fixture match score verified at 83.39 (Cross-Encoder score 88.46%, Skill Coverage 75.0%, Vector Similarity 71.37%).
 Phase 4 --- Fact-grounded STAR bullet rewriter
 - Implement POST /v1/rewriter/bullet to accept a candidate's
   original experience bullet and target-job keywords/description.
