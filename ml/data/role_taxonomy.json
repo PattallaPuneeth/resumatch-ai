@@ -1,0 +1,242 @@
+[
+  {
+    "id": "backend-engineer",
+    "title": "Backend Engineer",
+    "description": "Designs, implements, and maintains scalable server-side systems, RESTful and GraphQL APIs, and robust database architectures.",
+    "coreSkills": ["python", "nodejs", "postgresql", "fastapi", "docker", "redis", "rest api", "microservices"]
+  },
+  {
+    "id": "frontend-engineer",
+    "title": "Frontend Engineer",
+    "description": "Develops responsive, accessible, and high-performance user interfaces and web applications using modern component libraries.",
+    "coreSkills": ["react", "typescript", "javascript", "html/css", "nextjs", "testing", "rest api"]
+  },
+  {
+    "id": "full-stack-engineer",
+    "title": "Full Stack Engineer",
+    "description": "Builds end-to-end features spanning responsive browser interfaces, API endpoints, relational/NoSQL datastores, and cloud deployments.",
+    "coreSkills": ["react", "typescript", "nodejs", "python", "postgresql", "docker", "rest api", "git"]
+  },
+  {
+    "id": "devops-engineer",
+    "title": "DevOps Engineer",
+    "description": "Automates continuous integration and deployment pipelines, container orchestration, and cloud infrastructure as code.",
+    "coreSkills": ["docker", "kubernetes", "ci/cd", "aws", "terraform", "linux", "git", "ansible"]
+  },
+  {
+    "id": "site-reliability-engineer",
+    "title": "Site Reliability Engineer (SRE)",
+    "description": "Ensures uptime, resilience, and observability of distributed systems through automation, SLO tracking, and incident postmortems.",
+    "coreSkills": ["kubernetes", "linux", "prometheus", "grafana", "python", "go", "docker", "networking"]
+  },
+  {
+    "id": "cloud-architect",
+    "title": "Cloud Architect",
+    "description": "Architects multi-region cloud foundations, governance, migration strategies, and secure enterprise infrastructure.",
+    "coreSkills": ["aws", "gcp", "azure", "terraform", "kubernetes", "security", "microservices", "networking"]
+  },
+  {
+    "id": "data-engineer",
+    "title": "Data Engineer",
+    "description": "Constructs reliable batch and streaming data pipelines, scalable analytical data warehouses, and automated ETL workflows.",
+    "coreSkills": ["python", "sql", "postgresql", "spark", "airflow", "snowflake", "bigquery", "kafka"]
+  },
+  {
+    "id": "machine-learning-engineer",
+    "title": "Machine Learning Engineer",
+    "description": "Deploys, optimizes, and serves machine learning models in production environments with scalable inference pipelines.",
+    "coreSkills": ["python", "machine learning", "pytorch", "tensorflow", "docker", "fastapi", "kubernetes", "sql"]
+  },
+  {
+    "id": "data-scientist",
+    "title": "Data Scientist",
+    "description": "Applies statistical modeling, exploratory analysis, and predictive machine learning to solve strategic business challenges.",
+    "coreSkills": ["python", "machine learning", "pandas", "sql", "statistics", "data visualization", "scikit-learn"]
+  },
+  {
+    "id": "platform-engineer",
+    "title": "Platform Engineer",
+    "description": "Builds internal developer platforms, self-service tooling, and automated deployment infrastructure for engineering teams.",
+    "coreSkills": ["kubernetes", "docker", "go", "python", "terraform", "ci/cd", "linux", "aws"]
+  },
+  {
+    "id": "qa-automation-engineer",
+    "title": "QA Automation Engineer",
+    "description": "Designs automated end-to-end, integration, and regression test suites across browsers, mobile devices, and backend APIs.",
+    "coreSkills": ["testing", "python", "javascript", "typescript", "selenium", "jest", "ci/cd", "git"]
+  },
+  {
+    "id": "security-engineer",
+    "title": "Security Engineer",
+    "description": "Protects infrastructure and applications through vulnerability assessments, threat modeling, IAM policy enforcement, and compliance.",
+    "coreSkills": ["security", "linux", "python", "networking", "aws", "docker", "kubernetes", "penetration testing"]
+  },
+  {
+    "id": "cloud-security-engineer",
+    "title": "Cloud Security Engineer",
+    "description": "Secures multi-tenant cloud environments with least-privilege IAM, posture management, encryption, and audit monitoring.",
+    "coreSkills": ["security", "aws", "gcp", "azure", "terraform", "kubernetes", "linux", "ci/cd"]
+  },
+  {
+    "id": "database-administrator",
+    "title": "Database Administrator (DBA)",
+    "description": "Optimizes query performance, replication, high availability, backup verification, and schema migrations across database clusters.",
+    "coreSkills": ["postgresql", "sql", "mysql", "redis", "linux", "performance tuning", "backup and recovery"]
+  },
+  {
+    "id": "mlops-engineer",
+    "title": "MLOps Engineer",
+    "description": "Operationalizes model lifecycle management, feature stores, continuous training pipelines, and real-time model monitoring.",
+    "coreSkills": ["machine learning", "python", "docker", "kubernetes", "ci/cd", "airflow", "aws", "prometheus"]
+  },
+  {
+    "id": "data-analyst",
+    "title": "Data Analyst",
+    "description": "Extracts insights from structured data, designs executive KPI dashboards, and conducts descriptive statistical analyses.",
+    "coreSkills": ["sql", "python", "pandas", "tableau", "power bi", "data visualization", "statistics"]
+  },
+  {
+    "id": "mobile-engineer-react-native",
+    "title": "Mobile Engineer (React Native)",
+    "description": "Builds cross-platform iOS and Android applications with native bridges, responsive state management, and offline caching.",
+    "coreSkills": ["react", "typescript", "javascript", "mobile development", "rest api", "testing", "git"]
+  },
+  {
+    "id": "ios-engineer",
+    "title": "iOS Engineer",
+    "description": "Develops native iOS applications using Swift and UIKit/SwiftUI with fluid animations, memory safety, and Core Data.",
+    "coreSkills": ["swift", "ios", "xcode", "mobile development", "rest api", "git", "testing"]
+  },
+  {
+    "id": "android-engineer",
+    "title": "Android Engineer",
+    "description": "Constructs robust native Android mobile experiences leveraging Kotlin, Jetpack Compose, Coroutines, and Room datastores.",
+    "coreSkills": ["kotlin", "android", "mobile development", "rest api", "git", "testing", "java"]
+  },
+  {
+    "id": "systems-software-engineer",
+    "title": "Systems Software Engineer",
+    "description": "Programs low-level system services, network protocols, operating system drivers, and memory-constrained runtime engines.",
+    "coreSkills": ["c++", "c", "rust", "linux", "networking", "multithreading", "git"]
+  },
+  {
+    "id": "distributed-systems-engineer",
+    "title": "Distributed Systems Engineer",
+    "description": "Engineers high-throughput distributed state machines, consensus protocols, partitioned datastores, and message brokers.",
+    "coreSkills": ["go", "java", "c++", "distributed systems", "kafka", "redis", "networking", "microservices"]
+  },
+  {
+    "id": "infrastructure-engineer",
+    "title": "Infrastructure Engineer",
+    "description": "Provisions and maintains compute, networking, storage hardware, and virtualized private/hybrid cloud fabrics.",
+    "coreSkills": ["linux", "networking", "terraform", "ansible", "docker", "kubernetes", "aws", "security"]
+  },
+  {
+    "id": "api-integration-engineer",
+    "title": "API / Integration Engineer",
+    "description": "Connects third-party SaaS platforms and enterprise applications via resilient webhooks, ETL connectors, and REST/GraphQL gateways.",
+    "coreSkills": ["rest api", "graphql", "python", "nodejs", "typescript", "postgresql", "redis"]
+  },
+  {
+    "id": "solutions-architect",
+    "title": "Solutions Architect",
+    "description": "Translates complex enterprise business needs into technical architectures, client deliverables, and scalable system topologies.",
+    "coreSkills": ["aws", "azure", "microservices", "cloud architect", "rest api", "security", "docker"]
+  },
+  {
+    "id": "technical-lead",
+    "title": "Technical Lead",
+    "description": "Guides engineering architecture, conducts high-standard code reviews, aligns agile sprints, and mentors software developers.",
+    "coreSkills": ["microservices", "system design", "python", "typescript", "postgresql", "ci/cd", "agile", "git"]
+  },
+  {
+    "id": "engineering-manager",
+    "title": "Engineering Manager",
+    "description": "Leads software engineering teams, oversees hiring and career progression, drives roadmap execution, and improves delivery velocity.",
+    "coreSkills": ["agile", "system design", "hiring", "leadership", "project management", "software architecture"]
+  },
+  {
+    "id": "business-intelligence-engineer",
+    "title": "Business Intelligence (BI) Engineer",
+    "description": "Designs data marts, semantic models, and automated reporting systems to democratize metrics across business functions.",
+    "coreSkills": ["sql", "tableau", "power bi", "snowflake", "bigquery", "data modeling", "python"]
+  },
+  {
+    "id": "data-architect",
+    "title": "Data Architect",
+    "description": "Defines enterprise data models, data governance, master data management frameworks, and lakehouse storage tiers.",
+    "coreSkills": ["sql", "data modeling", "snowflake", "bigquery", "spark", "postgresql", "cloud architect"]
+  },
+  {
+    "id": "network-engineer",
+    "title": "Network Engineer",
+    "description": "Configures enterprise routers, switches, firewalls, BGP peering, SD-WAN, and VPN tunnels for secure corporate communications.",
+    "coreSkills": ["networking", "cisco", "linux", "firewalls", "tcp/ip", "security", "python"]
+  },
+  {
+    "id": "it-systems-administrator",
+    "title": "IT Systems Administrator",
+    "description": "Maintains corporate servers, Active Directory / LDAP identities, virtualization clusters, and endpoint device configurations.",
+    "coreSkills": ["linux", "windows server", "active directory", "networking", "bash", "powershell", "security"]
+  },
+  {
+    "id": "build-and-release-engineer",
+    "title": "Build and Release Engineer",
+    "description": "Standardizes artifact build workflows, packaging pipelines, dependency registries, and deployment gate automations.",
+    "coreSkills": ["ci/cd", "git", "docker", "linux", "bash", "python", "jenkins", "kubernetes"]
+  },
+  {
+    "id": "big-data-engineer",
+    "title": "Big Data Engineer",
+    "description": "Processes petabyte-scale data lakes using distributed computing frameworks, columnar storage formats, and streaming topologies.",
+    "coreSkills": ["spark", "hadoop", "kafka", "python", "sql", "aws", "snowflake"]
+  },
+  {
+    "id": "nlp-engineer",
+    "title": "Natural Language Processing (NLP) Engineer",
+    "description": "Builds text parsing, information extraction, vector semantic search, and generative language model applications.",
+    "coreSkills": ["python", "machine learning", "pytorch", "transformers", "nlp", "fastapi", "docker"]
+  },
+  {
+    "id": "computer-vision-engineer",
+    "title": "Computer Vision Engineer",
+    "description": "Develops visual processing algorithms, object detection, image segmentation, and edge video analytics models.",
+    "coreSkills": ["python", "c++", "pytorch", "opencv", "machine learning", "docker", "cuda"]
+  },
+  {
+    "id": "search-retrieval-engineer",
+    "title": "Search & Information Retrieval Engineer",
+    "description": "Tunes dense vector and sparse inverted-index search rankings, relevance metrics, query tokenization, and re-ranking pipelines.",
+    "coreSkills": ["elasticsearch", "python", "postgresql", "machine learning", "rest api", "docker", "fastapi"]
+  },
+  {
+    "id": "microservices-architect",
+    "title": "Microservices Architect",
+    "description": "Designs event-driven service architectures, API federation, asynchronous messaging backbones, and fault-tolerant boundaries.",
+    "coreSkills": ["microservices", "kafka", "kubernetes", "docker", "rest api", "graphql", "redis"]
+  },
+  {
+    "id": "application-security-engineer",
+    "title": "Application Security (AppSec) Engineer",
+    "description": "Conducts SAST/DAST audits, secure code reviews, dependency supply chain scanning, and OWASP vulnerability remediations.",
+    "coreSkills": ["security", "owasp", "penetration testing", "python", "javascript", "ci/cd", "docker"]
+  },
+  {
+    "id": "web-application-developer",
+    "title": "Web Application Developer",
+    "description": "Implements interactive dynamic web portals, modular frontend components, and lightweight backend services.",
+    "coreSkills": ["javascript", "typescript", "react", "html/css", "nodejs", "rest api", "git"]
+  },
+  {
+    "id": "firmware-embedded-engineer",
+    "title": "Firmware / Embedded Engineer",
+    "description": "Programs bare-metal microcontrollers, RTOS kernels, communication buses (SPI/I2C/CAN), and sensor hardware drivers.",
+    "coreSkills": ["c", "c++", "rtos", "embedded systems", "linux", "git", "hardware debugging"]
+  },
+  {
+    "id": "blockchain-smart-contract-developer",
+    "title": "Blockchain / Smart Contract Developer",
+    "description": "Writes gas-optimized smart contracts, decentralized protocol logic, and Web3 cryptographic signature integrations.",
+    "coreSkills": ["solidity", "typescript", "javascript", "ethereum", "web3", "testing", "security"]
+  }
+]

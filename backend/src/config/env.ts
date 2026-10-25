@@ -67,7 +67,10 @@ export const EnvSchema = z.object({
     .string({
       required_error: 'INTERNAL_API_TOKEN is required and must be at least 32 characters',
     })
-    .min(32, 'INTERNAL_API_TOKEN must be at least 32 characters'),
+    .min(32, 'INTERNAL_API_TOKEN must be at least 32 characters')
+    .refine((val) => !val.toLowerCase().includes('change_me'), {
+      message: 'INTERNAL_API_TOKEN cannot contain CHANGE_ME placeholder',
+    }),
   EMBEDDING_DIMENSION: z.coerce.number().int().positive().default(384),
 });
 

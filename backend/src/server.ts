@@ -9,6 +9,7 @@ import { healthRoutes } from './routes/health.js';
 import { jobsRoutes } from './routes/jobs.js';
 import { resumesRoutes } from './routes/resumes.js';
 import { rewriterRoutes } from './routes/rewriter.js';
+import { improvementsRoutes } from './routes/improvements.js';
 
 export function buildServer(): FastifyInstance {
   const isDev = env.NODE_ENV === 'development';
@@ -86,6 +87,7 @@ export function buildServer(): FastifyInstance {
   app.register(analysesRoutes);
   app.register(jobsRoutes);
   app.register(rewriterRoutes);
+  app.register(improvementsRoutes);
 
   return app;
 }

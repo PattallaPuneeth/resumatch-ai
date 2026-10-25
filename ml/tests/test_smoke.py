@@ -218,3 +218,23 @@ def test_rewriter_endpoint_fails_closed_when_token_unset(
     )
     assert res_none.status_code == 401
 
+    # Case 4: CHANGE_ME placeholder
+    monkeypatch.setattr(
+        settings, "internal_api_token", "CHANGE_ME_GENERATE_RANDOM_AT_LEAST_32_CHARS"
+    )
+    res_placeholder = client.post(
+        "/v1/rewriter/bullet",
+        json=payload,
+        headers={"X-Internal-Token": "CHANGE_ME_GENERATE_RANDOM_AT_LEAST_32_CHARS"},
+    )
+    assert res_placeholder.status_code == 401
+
+
+def test_settings_internal_api_token_rejects_change_me() -> None:
+    from ml.config import Settings
+    with pytest.raises(ValueError, match="CHANGE_ME"):
+        Settings(INTERNAL_API_TOKEN="CHANGE_ME_GENERATE_RANDOM_AT_LEAST_32_CHARS")
+    with pytest.raises(ValueError, match="CHANGE_ME"):
+        Settings(INTERNAL_API_TOKEN="custom_change_me_token_over_32_characters_long")
+
+

@@ -24,8 +24,11 @@ class Settings(BaseSettings):
     @field_validator("internal_api_token")
     @classmethod
     def validate_internal_api_token(cls, v: str) -> str:
-        if v and len(v.strip()) < 32:
-            raise ValueError("INTERNAL_API_TOKEN must be at least 32 characters long")
+        if v:
+            if len(v.strip()) < 32:
+                raise ValueError("INTERNAL_API_TOKEN must be at least 32 characters long")
+            if "change_me" in v.lower():
+                raise ValueError("INTERNAL_API_TOKEN cannot contain CHANGE_ME placeholder")
         return v
 
     database_url: str = Field(

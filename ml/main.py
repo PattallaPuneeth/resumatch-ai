@@ -8,6 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from ml.config import settings
 from ml.db import check_database_health
 from ml.models.analysis import AnalysisRequest
+from ml.pipelines.improvements.models import (
+    ImprovementsRequest,
+    ImprovementsResponse,
+)
+from ml.pipelines.improvements.service import ResumeImprovementsService
 from ml.pipelines.rewriter.models import (
     BulletRewriteRequest,
     RewriterServiceResponse,
@@ -38,8 +43,24 @@ app.add_middleware(
 @app.on_event("startup")
 async def verify_startup_configuration() -> None:
     token = (settings.internal_api_token or "").strip()
-    if settings.env != "test" and len(token) < 32:
-        raise RuntimeError("INTERNAL_API_TOKEN must be set to at least 32 characters at startup.")
+    if settings.env != "test" and (len(token) < 32 or "change_me" in token.lower()):
+        raise RuntimeError(
+            "INTERNAL_API_TOKEN must be at least 32 characters and cannot contain CHANGE_ME."
+        )
+
+
+def verify_internal_token(x_internal_token: str) -> None:
+    expected_token = (settings.internal_api_token or "").strip()
+    if (
+        not expected_token
+        or len(expected_token) < 32
+        or "change_me" in expected_token.lower()
+        or not secrets.compare_digest(x_internal_token, expected_token)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-Internal-Token header",
+        )
 
 
 class AnalysisQueuedResponse(BaseModel):
@@ -81,11 +102,7 @@ def run_analysis(
     """
     Trigger async multi-stage resume analysis. Validates internal service token.
     """
-    if x_internal_token != settings.internal_api_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing X-Internal-Token header",
-        )
+    verify_internal_token(x_internal_token)
 
     return AnalysisQueuedResponse(
         status="ACCEPTED",
@@ -140,16 +157,7 @@ async def rewrite_bullet_endpoint(
     Fact-grounded STAR bullet rewriter endpoint (Phase 4B).
     Validates internal service token and enforces strict factual grounding.
     """
-    expected_token = (settings.internal_api_token or "").strip()
-    if (
-        not expected_token
-        or len(expected_token) < 32
-        or not secrets.compare_digest(x_internal_token, expected_token)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing X-Internal-Token header",
-        )
+    verify_internal_token(x_internal_token)
 
     try:
         result = await _rewriter_service.rewrite_bullet(payload)
@@ -169,4 +177,29 @@ async def rewrite_bullet_endpoint(
         )
 
     return result
+
+
+_improvements_service = ResumeImprovementsService()
+
+
+@app.post(
+    "/v1/resumes/{resume_id}/improvements",
+    status_code=status.HTTP_200_OK,
+    response_model=ImprovementsResponse,
+)
+async def resume_improvements_endpoint(
+    resume_id: str,
+    payload: ImprovementsRequest,
+    x_internal_token: str = Header(..., alias="X-Internal-Token"),
+) -> ImprovementsResponse:
+    """
+    Resume-only improvements and role suggestions endpoint (Phase 4C).
+    Validates internal service token and returns deterministic findings and ML-ranked roles.
+    """
+    verify_internal_token(x_internal_token)
+    if payload.resumeId != resume_id:
+        payload.resumeId = resume_id
+
+    return await _improvements_service.generate_improvements(payload)
+
 

@@ -44,4 +44,19 @@ describe('Environment Configuration - INTERNAL_API_TOKEN', () => {
       expect(issue?.message).toContain('at least 32 characters');
     }
   });
+
+  it('refuses to start when INTERNAL_API_TOKEN contains CHANGE_ME placeholder', () => {
+    const invalidEnv = {
+      ...validBaseEnv,
+      INTERNAL_API_TOKEN: 'CHANGE_ME_GENERATE_RANDOM_AT_LEAST_32_CHARS',
+    };
+
+    expect(() => loadEnv(invalidEnv)).toThrow('Environment configuration error');
+    const result = EnvSchema.safeParse(invalidEnv);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path.includes('INTERNAL_API_TOKEN'));
+      expect(issue?.message).toContain('CHANGE_ME placeholder');
+    }
+  });
 });

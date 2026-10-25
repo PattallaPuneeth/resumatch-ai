@@ -42,16 +42,15 @@ class BulletRewriterService:
         self.gateway = gateway or llm_gateway
         self.verifier = verifier or BulletRewriteVerifier()
 
-    def _restore_pii_in_text(self, text: str, redaction: RedactionResult) -> str:
+    @staticmethod
+    def _restore_pii_in_text(text: str, redaction: RedactionResult) -> str:
         """Restores PII placeholders back to original strings using RedactionResult mapping."""
         if not text:
             return text
         restored = text
-        mapping = getattr(redaction, "replacement_map", None) or getattr(redaction, "mapping", {})
-        if mapping:
-            for placeholder, original in mapping.items():
-                if placeholder in restored:
-                    restored = restored.replace(placeholder, original)
+        for placeholder, original in redaction.replacement_map.items():
+            if placeholder in restored:
+                restored = restored.replace(placeholder, original)
         return restored
 
     async def rewrite_bullet(

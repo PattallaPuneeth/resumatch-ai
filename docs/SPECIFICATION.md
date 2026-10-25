@@ -548,6 +548,41 @@ Phase 4 --- Fact-grounded STAR bullet rewriter
   merely to force a STAR format.
 - Add tests for valid grounded rewrites, invented metrics, unsupported
   tools, unsupported credentials, and absent evidence.
+Phase 4C --- Resume-only improvements and role suggestions (IMPLEMENTED)
+- Endpoint: POST /v1/resumes/:resumeId/improvements (Synchronous, stateless).
+  - Authenticated via JWT (preHandler: app.authenticate).
+  - Ownership: Enforces userId isolation; returns 404 on unowned resumes (IDOR protection).
+  - Status Validation: Resume must be in PARSED status and have rawText; returns RFC 7807 422 if not.
+  - Fail-Closed ML Communication: Calls internal ML endpoint POST /v1/resumes/:resumeId/improvements with X-Internal-Token header (rejects missing/short/CHANGE_ME tokens with 401).
+- Static Curated Role Taxonomy:
+  - Externalized in `ml/data/role_taxonomy.json` containing 40 common software, data, and IT engineering roles.
+  - Each role provides `id`, `title`, 1-2 sentence `description`, and canonical `coreSkills` aligned with `skill_taxonomy.json`.
+- ML-Ranked Role Suggestions:
+  - Vector Representation: Computes mean of existing 384-dimensional pgvector chunk vectors for `resumeId` from `resume_chunks`. Does not re-embed the resume.
+  - Role Vectors: Embedded lazily with the singleton `SentenceTransformer` (`sentence-transformers/all-MiniLM-L6-v2`) and cached in memory.
+  - Ranking: Cosine similarity against role vectors; returns top 5 with ML similarity score (0.0..1.0), `matchedSkills`, and `missingSkills`.
+- Deterministic ATS Hazard Remediation:
+  - Transforms stored Phase 2C hazards (`ParsedResume.atsHazards`) and ATS score (`ParsedResume.atsScore`) into prioritized, plain-language `AtsFix` items.
+  - Always returns `atsScore` (float 0.0..100.0).
+- Deterministic Content Findings:
+  - Scans `rawText` and produces findings with exact character spans (`startChar`, `endChar`, `quote` where `rawText[start:end] == quote`):
+    - `MISSING_SECTION`: Missing standard Experience, Education, or Skills headers.
+    - `WEAK_PHRASE`: Passive phrasing ("responsible for", "worked on", "assisted with", etc.).
+    - `OVERLY_LONG_BULLET`: Bullets exceeding 200 characters.
+    - `NO_ACTION_VERB`: Bullets lacking a recognized strong action verb.
+    - `NO_METRIC_OR_NUMBER`: Bullets lacking quantifiable metrics or percentages.
+    - `REPEATED_OPENING_VERB`: Bullets reusing identical opening verbs across the resume.
+- Schema-Validated LLM Synthesis & Graceful Fallback:
+  - Redacts PII from candidate text before building prompt.
+  - Wraps untrusted text in cryptographically random delimiters (`<<<DATA_{uuid}>>> ... <<</DATA_{uuid}>>>`).
+  - Synthesizes findings into `summary` and `prioritizedNextSteps`. Never alters scores or invents roles.
+  - Grounding Verifier: Verifies `evidenceQuotes` against source text; rejects hallucinated quotes.
+  - Fail-Open Resilience: If all LLM tiers fail or the verifier rejects, the request succeeds with HTTP 200, returning all deterministic findings and roles with `llmStatus = 'UNAVAILABLE'`.
+  - Caching: Responses cached in Redis by `hash(rawText + prompt_version)`.
+  - Logging: Logs only provider, model, tokens, and latency; never PII or raw text.
+- Known Limitations:
+  - Requires pre-computed chunk embeddings in `resume_chunks` for optimal role matching (falls back to single-passage embedding if absent).
+  - Role taxonomy is statically curated; does not dynamically fetch external job postings (reserved for Phase 7).
 Phase 5 --- Full-stack integration, deployment, and hardening
 - Replace feature stubs only when the corresponding implementation is
   complete and tested. No dummy logic.

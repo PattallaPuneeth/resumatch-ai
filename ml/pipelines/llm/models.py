@@ -116,3 +116,14 @@ class LLMRewriterResponse(BaseModel):
 
     options: list[LLMRewriterOption] = Field(default_factory=list)
 
+
+class LLMImprovementsOutput(BaseModel):
+    """Raw LLM payload schema for resume improvements synthesis."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, alias_generator=to_camel)
+
+    summary: str
+    prioritized_next_steps: list[str] = Field(default_factory=list, alias="prioritizedNextSteps")
+    evidence_quotes: list[str] = Field(default_factory=list, alias="evidenceQuotes")
+
+

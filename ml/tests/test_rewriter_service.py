@@ -11,6 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from ml.pipelines.llm.gateway import LLMGateway, RewriterGatewayResult
+from ml.pipelines.llm.safety import redact_pii
 from ml.pipelines.rewriter.models import (
     BulletRewriteRequest,
     LLMRewriterOption,
@@ -299,6 +300,29 @@ async def test_service_pii_restoration(
     assert resp.options[0].needs_user_input is True
     assert len(resp.options[0].evidence_spans) == 1
     assert "alex.smith@example.com" in resp.options[0].evidence_spans[0].quote
+
+
+def test_restore_pii_in_text_with_real_redact_pii_output() -> None:
+    """
+    Direct unit test for _restore_pii_in_text ensuring it reads RedactionResult.replacement_map
+    directly and properly restores placeholders produced by real redact_pii().
+    """
+    raw_text = (
+        "Jane Doe, email jane.doe@example.com, phone 555-0199, living at 123 Elm St."
+    )
+    redaction = redact_pii(raw_text, candidate_name="Jane Doe")
+    assert len(redaction.replacement_map) > 0
+
+    # Build text using the real placeholders
+    text_with_placeholders = f"Contact candidate at {redaction.redacted_text}"
+    restored = BulletRewriterService._restore_pii_in_text(text_with_placeholders, redaction)
+
+    assert "jane.doe@example.com" in restored
+    assert "555-0199" in restored
+    assert "123 Elm St" in restored
+    assert "Jane Doe" in restored
+    for placeholder in redaction.replacement_map.keys():
+        assert placeholder not in restored
 
 
 @pytest.mark.asyncio

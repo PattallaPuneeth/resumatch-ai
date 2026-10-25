@@ -1,0 +1,134 @@
+import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import { env } from '../config/env.js';
+import { prisma } from '../db/prisma.js';
+
+export const improvementsParamsSchema = z.object({
+  resumeId: z.string().uuid('Invalid resume UUID'),
+});
+
+/**
+ * Resume-only improvements and role suggestions route (Phase 4C).
+ * Stateless endpoint providing ATS hazard remediation, content findings,
+ * ML-ranked role suggestions, and LLM explanation.
+ */
+export const improvementsRoutes: FastifyPluginAsync = async (app) => {
+  app.post(
+    '/v1/resumes/:resumeId/improvements',
+    {
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute',
+        },
+      },
+      preHandler: app.authenticate,
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+      const userId: string = user.userId || user.sub;
+
+      const paramsParse = improvementsParamsSchema.safeParse(request.params);
+      if (!paramsParse.success) {
+        return reply.status(422).send({
+          type: 'https://api.resumatch.ai/errors/validation-error',
+          title: 'Unprocessable Entity',
+          status: 422,
+          statusCode: 422,
+          error: 'Unprocessable Entity',
+          message: paramsParse.error.errors.map((e) => e.message).join('; '),
+          detail: paramsParse.error.errors.map((e) => e.message).join('; '),
+        });
+      }
+
+      const { resumeId } = paramsParse.data;
+
+      // 1. Verify resume ownership (404 convention for IDOR protection)
+      const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+      if (!resume || resume.userId !== userId) {
+        return reply.status(404).send({
+          type: 'https://api.resumatch.ai/errors/not-found',
+          title: 'Not Found',
+          status: 404,
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Resume not found',
+          detail: 'Resume not found',
+        });
+      }
+
+      // 2. Verify resume status is PARSED
+      if (resume.status !== 'PARSED') {
+        return reply.status(422).send({
+          type: 'https://api.resumatch.ai/errors/invalid-state',
+          title: 'Unprocessable Entity',
+          status: 422,
+          statusCode: 422,
+          error: 'Unprocessable Entity',
+          message: `Resume must be in PARSED status to generate improvements. Current status: ${resume.status}`,
+          detail: `Resume must be in PARSED status to generate improvements. Current status: ${resume.status}`,
+        });
+      }
+
+      // 3. Verify ParsedResume exists with extracted text
+      const parsedResume = await prisma.parsedResume.findUnique({ where: { resumeId } });
+      if (!parsedResume || !parsedResume.rawText) {
+        return reply.status(422).send({
+          type: 'https://api.resumatch.ai/errors/no-text',
+          title: 'Unprocessable Entity',
+          status: 422,
+          statusCode: 422,
+          error: 'Unprocessable Entity',
+          message: 'Parsed resume text is missing or empty',
+          detail: 'Parsed resume text is missing or empty',
+        });
+      }
+
+      // 4. Invoke Python ML improvements service
+      try {
+        const mlUrl = `${env.ML_SERVICE_URL}/v1/resumes/${resumeId}/improvements`;
+        const mlRes = await fetch(mlUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Token': env.INTERNAL_API_TOKEN,
+          },
+          body: JSON.stringify({
+            resumeId,
+            resumeRawText: parsedResume.rawText,
+            atsScore: parsedResume.atsScore,
+            atsHazards: parsedResume.atsHazards || [],
+            candidateSkills: parsedResume.skills || null,
+          }),
+        });
+
+        if (!mlRes.ok) {
+          const errData = (await mlRes.json().catch(() => ({}))) as any;
+          return reply.status(mlRes.status).send({
+            type: 'https://api.resumatch.ai/errors/improvements-error',
+            title: 'Improvements Error',
+            status: mlRes.status,
+            statusCode: mlRes.status,
+            error: 'Improvements Error',
+            message: errData.detail || 'Failed to generate resume improvements',
+            detail: errData.detail || 'Failed to generate resume improvements',
+          });
+        }
+
+        const data = await mlRes.json();
+        return reply.status(200).send(data);
+      } catch (err: any) {
+        request.log.error({ err, resumeId }, 'Failed to connect to ML improvements service');
+        return reply.status(503).send({
+          type: 'https://api.resumatch.ai/errors/service-unavailable',
+          title: 'Service Unavailable',
+          status: 503,
+          statusCode: 503,
+          error: 'Service Unavailable',
+          message: 'ML improvements service is currently unavailable',
+          detail: 'ML improvements service is currently unavailable',
+        });
+      }
+    }
+  );
+};

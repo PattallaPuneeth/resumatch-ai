@@ -354,6 +354,9 @@ class TestFailoverGateway:
         resp_429.status_code = 429
         resp_429_headers: dict[str, str] = {}
         resp_429.headers = resp_429_headers
+        resp_429.json.return_value = {
+            "error": {"code": "RESOURCE_EXHAUSTED", "message": "Rate limit exceeded"}
+        }
 
         resp_200 = MagicMock(spec=httpx.Response)
         resp_200.status_code = 200
@@ -377,12 +380,13 @@ class TestFailoverGateway:
             assert res.provider == "groq"
             assert mock_client.post.call_count == 2
 
-            # Verify exact required log message
-            expected_log = (
-                "[LLM Failover] Google AI Studio rate-limited. Activating 60s cooldown. "
-                "Switching to Groq Primary..."
-            )
-            assert expected_log in caplog.text
+            # Verify structured failover log format
+            assert (
+                'Tier Google AI Studio failed (HTTP 429, code: RESOURCE_EXHAUSTED, '
+                'message: "Rate limit exceeded"'
+            ) in caplog.text
+            assert "Activating 60s cooldown. Switching to Groq Primary..." in caplog.text
+            assert "test-gemini-key" not in caplog.text
 
     @pytest.mark.asyncio
     async def test_failover_401_disables_tier_permanently_no_cooldown(
@@ -394,7 +398,9 @@ class TestFailoverGateway:
 
         resp_401 = MagicMock(spec=httpx.Response)
         resp_401.status_code = 401
-        resp_401.text = "Unauthorized"
+        resp_401.json.return_value = {
+            "error": {"code": "INVALID_API_KEY", "message": "API key invalid"}
+        }
 
         resp_200 = MagicMock(spec=httpx.Response)
         resp_200.status_code = 200
@@ -409,12 +415,18 @@ class TestFailoverGateway:
             mock_get_redis.return_value = mock_redis
 
             # Call 1: Tier 1 fails 401, Tier 2 succeeds
-            res1 = await gateway.execute(
-                redaction=redaction,
-                redacted_jd=SAMPLE_JOB_DESCRIPTION,
-                http_client=mock_client,
-            )
+            with caplog.at_level(logging.ERROR):
+                res1 = await gateway.execute(
+                    redaction=redaction,
+                    redacted_jd=SAMPLE_JOB_DESCRIPTION,
+                    http_client=mock_client,
+                )
             assert res1.provider == "groq"
+            assert (
+                'Tier Google AI Studio disabled permanently (HTTP 401, code: INVALID_API_KEY, '
+                'message: "API key invalid"'
+            ) in caplog.text
+            assert "test-gemini-key" not in caplog.text
 
             # Call 2: Tier 1 MUST be skipped immediately (permanently disabled)
             res2 = await gateway.execute(
@@ -602,12 +614,12 @@ class TestFailoverGateway:
         assert "No LLM provider keys configured" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_rewriter_gateway_400_permanently_disables_tier(
+    async def test_rewriter_gateway_400_fails_over_without_permanent_disable(
         self, mock_env_keys: None, caplog: pytest.LogCaptureFixture
     ) -> None:
         """
-        Verifies that HTTP 400 in execute_rewriter permanently disables the failing tier
-        and switches to next tier.
+        Verifies that HTTP 400 in execute_rewriter fails over to the next tier
+        for this request only without permanently disabling the tier.
         """
         gateway = LLMGateway()
         gateway.reset_state()
@@ -624,7 +636,16 @@ class TestFailoverGateway:
 
         resp_400 = MagicMock(spec=httpx.Response)
         resp_400.status_code = 400
-        resp_400.text = "Bad Request: invalid parameter"
+        resp_400.json.return_value = {
+            "error": {
+                "status": "INVALID_ARGUMENT",
+                "message": "Invalid parameter provided in request",
+            }
+        }
+        resp_400.text = (
+            '{"error": {"status": "INVALID_ARGUMENT", '
+            '"message": "Invalid parameter provided in request"}}'
+        )
 
         resp_200 = MagicMock(spec=httpx.Response)
         resp_200.status_code = 200
@@ -649,8 +670,16 @@ class TestFailoverGateway:
 
         assert res.provider == "groq"
         assert len(res.llm_response.options) == 1
-        expected_log = "[LLM Failover] Tier Google AI Studio disabled permanently (HTTP 400)."
-        assert expected_log in caplog.text
+        # Tier 1 must NOT be permanently disabled on 400
+        assert gateway._permanently_disabled.get(1, False) is False
+
+        # Failover log check
+        expected_substr = (
+            "[LLM Failover] Tier Google AI Studio failed (HTTP 400, code: INVALID_ARGUMENT"
+        )
+        assert expected_substr in caplog.text
+        assert "Invalid parameter provided in request" in caplog.text
+        assert "Switching to Groq Primary..." in caplog.text
 
     @pytest.mark.asyncio
     async def test_rewriter_gateway_429_activates_cooldown_and_fails_over(
@@ -675,6 +704,15 @@ class TestFailoverGateway:
         resp_429 = MagicMock(spec=httpx.Response)
         resp_429.status_code = 429
         resp_429.headers = {"Retry-After": "60"}
+        resp_429.json.return_value = {
+            "error": {
+                "status": "RESOURCE_EXHAUSTED",
+                "message": (
+                    "Quota exceeded for quota metric 'Queries' and limit 'Queries per minute'"
+                ),
+            }
+        }
+        resp_429.text = '{"error": {"status": "RESOURCE_EXHAUSTED"}}'
 
         resp_200 = MagicMock(spec=httpx.Response)
         resp_200.status_code = 200
@@ -699,4 +737,61 @@ class TestFailoverGateway:
 
         assert res.provider == "groq"
         assert len(res.llm_response.options) == 1
-        assert "Google AI Studio rate-limited. Activating 60s cooldown." in caplog.text
+        assert "Tier Google AI Studio failed (HTTP 429, code: RESOURCE_EXHAUSTED" in caplog.text
+        assert "Activating 60s cooldown. Switching to Groq Primary..." in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_failover_logging_exact_cause_and_no_keys(
+        self, mock_env_keys: None, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """
+        Asserts that failover log contains exact cause (status, provider code, sanitized message,
+        elapsed ms, configured timeout) and never leaks API keys.
+        """
+        gateway = LLMGateway()
+        gateway.reset_state()
+        redaction = redact_pii(SAMPLE_RAW_RESUME, candidate_name="Jane Doe")
+
+        long_msg = "A" * 300
+        resp_503 = MagicMock(spec=httpx.Response)
+        resp_503.status_code = 503
+        resp_503.headers = httpx.Headers()
+        resp_503.json.return_value = {
+            "error": {
+                "status": "UNAVAILABLE",
+                "message": long_msg,
+            }
+        }
+        resp_503.text = long_msg
+
+        resp_200 = MagicMock(spec=httpx.Response)
+        resp_200.status_code = 200
+        resp_200.json.return_value = make_openai_chat_response(VALID_ANALYSIS_DICT)
+
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.post.side_effect = [resp_503, resp_200]
+
+        with patch("ml.pipelines.llm.gateway.get_redis_client") as mock_get_redis:
+            mock_redis = AsyncMock()
+            mock_redis.get.return_value = None
+            mock_get_redis.return_value = mock_redis
+
+            with caplog.at_level(logging.WARNING):
+                await gateway.execute(
+                    redaction=redaction,
+                    redacted_jd=SAMPLE_JOB_DESCRIPTION,
+                    http_client=mock_client,
+                )
+
+        # Log must have status 503, code UNAVAILABLE, and message truncated to 200 chars
+        assert "HTTP 503" in caplog.text
+        assert "code: UNAVAILABLE" in caplog.text
+        assert "elapsed:" in caplog.text
+        assert "timeout: 15s" in caplog.text
+        # Truncated message check
+        assert "A" * 190 in caplog.text
+        assert "A" * 250 not in caplog.text
+        # No keys logged
+        assert "test-gemini-key" not in caplog.text
+        assert "test-groq-key" not in caplog.text
+        assert "test-openrouter-key" not in caplog.text

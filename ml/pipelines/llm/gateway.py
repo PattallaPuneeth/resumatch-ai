@@ -33,6 +33,7 @@ from ml.pipelines.llm.grounding import (
 )
 from ml.pipelines.llm.models import (
     LLMAnalysisResponse,
+    LLMImprovementsOutput,
     LLMRewriterResponse,
     VerifiedStrengthItem,
 )
@@ -80,6 +81,17 @@ class GatewayExecutionResult:
 @dataclass
 class RewriterGatewayResult:
     llm_response: LLMRewriterResponse
+    provider: str
+    model: str
+    tokens_prompt: int
+    tokens_completion: int
+    latency_ms: int
+    cached: bool = False
+
+
+@dataclass
+class ImprovementsGatewayResult:
+    llm_response: LLMImprovementsOutput
     provider: str
     model: str
     tokens_prompt: int
@@ -164,6 +176,31 @@ class LLMGateway:
         except Exception as e:
             logger.debug("Redis rewriter cache set error: %s", e)
 
+    def _compute_improvements_cache_key(self, prompt_version: str, cache_key_inputs: str) -> str:
+        raw_key = f"{prompt_version}:{cache_key_inputs}"
+        digest = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+        return f"llm:improvements:cache:{digest}"
+
+    async def _check_improvements_cache(self, cache_key: str) -> LLMImprovementsOutput | None:
+        try:
+            r = get_redis_client()
+            cached_data = await r.get(cache_key)
+            if cached_data:
+                parsed = json.loads(cached_data)
+                return LLMImprovementsOutput.model_validate(parsed)
+        except Exception as e:
+            logger.debug("Redis improvements cache check error (proceeding without cache): %s", e)
+        return None
+
+    async def _save_improvements_cache(
+        self, cache_key: str, response: LLMImprovementsOutput
+    ) -> None:
+        try:
+            r = get_redis_client()
+            await r.set(cache_key, response.model_dump_json(), ex=self.settings.cache_ttl_seconds)
+        except Exception as e:
+            logger.debug("Redis improvements cache set error: %s", e)
+
     def _build_prompts(
         self,
         redacted_resume: str,
@@ -205,6 +242,35 @@ class LLMGateway:
         )
 
         return system_prompt, user_prompt
+
+    @staticmethod
+    def _extract_error_details(response: httpx.Response) -> tuple[str, str]:
+        """
+        Safely extracts error code/status and a sanitized, truncated message (max 200 chars)
+        from provider error response without logging sensitive headers, keys, or bodies.
+        """
+        error_code = "UNKNOWN"
+        raw_message = ""
+        try:
+            data = response.json()
+            if isinstance(data, dict):
+                err = data.get("error")
+                if isinstance(err, dict):
+                    error_code = str(err.get("status") or err.get("code") or "UNKNOWN")
+                    raw_message = str(err.get("message") or "")
+                elif isinstance(err, str):
+                    raw_message = err
+        except Exception:
+            raw_message = response.text or ""
+
+        if not raw_message:
+            raw_message = response.reason_phrase or "HTTP error"
+
+        # Sanitize message: strip excess whitespace and truncate to 200 chars
+        sanitized = " ".join(raw_message.split())
+        if len(sanitized) > 200:
+            sanitized = sanitized[:197] + "..."
+        return error_code, sanitized
 
     def _clean_json_output(self, raw_text: str) -> dict[str, Any]:
         """Strips markdown code fences and parses JSON."""
@@ -331,22 +397,45 @@ class LLMGateway:
                     )
                     latency_ms = int((time.monotonic() - call_start) * 1000)
 
-                    # 1. Permanent Failures: 400, 401, 403, 404
-                    if response.status_code in (400, 401, 403, 404):
-                        async with self._lock:
-                            self._permanently_disabled[tier.tier] = True
-                        if response.status_code == 404:
-                            tier.log_model_404()
+                    # 1. Bad Request: HTTP 400
+                    # (per-request: bad params, context too long, safety block)
+                    # Must NOT permanently disable tier; fail over for this request only.
+                    if response.status_code == 400:
+                        err_code, err_msg = self._extract_error_details(response)
                         logger.error(
-                            "[LLM Failover] Tier %s disabled permanently (HTTP %d). "
-                            "Switching to %s...",
+                            "[LLM Failover] Tier %s failed (HTTP 400, code: %s, message: \"%s\", "
+                            "elapsed: %dms, timeout: %ds). Switching to %s...",
                             tier.name,
-                            response.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
                             next_tier_name,
                         )
                         continue
 
-                    # 2. Rate Limits or Server Errors: 429, 5xx
+                    # 2. Permanent Failures: 401, 403, 404
+                    if response.status_code in (401, 403, 404):
+                        async with self._lock:
+                            self._permanently_disabled[tier.tier] = True
+                        if response.status_code == 404:
+                            tier.log_model_404()
+                        err_code, err_msg = self._extract_error_details(response)
+                        logger.error(
+                            "[LLM Failover] Tier %s disabled permanently "
+                            "(HTTP %d, code: %s, message: \"%s\", elapsed: %dms, timeout: %ds). "
+                            "Switching to %s...",
+                            tier.name,
+                            response.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
+                            next_tier_name,
+                        )
+                        continue
+
+                    # 3. Rate Limits or Server Errors: 429, 5xx
                     if response.status_code == 429 or response.status_code >= 500:
                         retry_after_hdr = None
                         if hasattr(response, "headers") and response.headers is not None:
@@ -365,10 +454,18 @@ class LLMGateway:
                         async with self._lock:
                             self._disabled_until[tier.tier] = time.monotonic() + cooldown_s
 
+                        err_code, err_msg = self._extract_error_details(response)
                         logger.warning(
-                            "[LLM Failover] %s rate-limited. Activating 60s cooldown. "
+                            "[LLM Failover] Tier %s failed (HTTP %d, code: %s, message: \"%s\", "
+                            "elapsed: %dms, timeout: %ds). Activating %.0fs cooldown. "
                             "Switching to %s...",
                             tier.name,
+                            response.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
+                            cooldown_s,
                             next_tier_name,
                         )
                         continue
@@ -386,7 +483,7 @@ class LLMGateway:
                     tokens_prompt = usage.get("prompt_tokens", 0)
                     tokens_completion = usage.get("completion_tokens", 0)
 
-                    # 3. JSON & Schema Validation
+                    # 4. JSON & Schema Validation
                     try:
                         parsed_dict = self._clean_json_output(raw_content)
                         llm_resp = LLMAnalysisResponse.model_validate(parsed_dict)
@@ -399,7 +496,7 @@ class LLMGateway:
                         )
                         continue
 
-                    # 4. Grounding Verification
+                    # 5. Grounding Verification
                     try:
                         grounding = verify_evidence_grounding(
                             llm_resp,
@@ -430,16 +527,35 @@ class LLMGateway:
                         cached=False,
                     )
 
-                except (httpx.TimeoutException, httpx.NetworkError):
+                except httpx.TimeoutException:
+                    elapsed_ms = int((time.monotonic() - call_start) * 1000)
                     async with self._lock:
                         self._disabled_until[tier.tier] = (
                             time.monotonic() + self.settings.cooldown_duration_s
                         )
-
                     logger.warning(
-                        "[LLM Failover] %s rate-limited. Activating 60s cooldown. "
+                        "[LLM Failover] Tier %s timed out (timeout after %ds, elapsed: %dms). "
                         "Switching to %s...",
                         tier.name,
+                        int(round(call_timeout)),
+                        elapsed_ms,
+                        next_tier_name,
+                    )
+                    continue
+
+                except httpx.NetworkError as net_err:
+                    elapsed_ms = int((time.monotonic() - call_start) * 1000)
+                    async with self._lock:
+                        self._disabled_until[tier.tier] = (
+                            time.monotonic() + self.settings.cooldown_duration_s
+                        )
+                    logger.warning(
+                        "[LLM Failover] Tier %s network error (%s, elapsed: %dms, timeout: %.1fs). "
+                        "Switching to %s...",
+                        tier.name,
+                        type(net_err).__name__,
+                        elapsed_ms,
+                        call_timeout,
                         next_tier_name,
                     )
                     continue
@@ -547,22 +663,45 @@ class LLMGateway:
                     )
                     latency_ms = int((time.monotonic() - call_start) * 1000)
 
-                    # 1. Permanent Failures: 400, 401, 403, 404
-                    if res.status_code in (400, 401, 403, 404):
-                        async with self._lock:
-                            self._permanently_disabled[tier.tier] = True
-                        if res.status_code == 404:
-                            tier.log_model_404()
+                    # 1. Bad Request: HTTP 400
+                    # (per-request: bad params, context too long, safety block)
+                    # Must NOT permanently disable tier; fail over for this request only.
+                    if res.status_code == 400:
+                        err_code, err_msg = self._extract_error_details(res)
                         logger.error(
-                            "[LLM Failover] Tier %s disabled permanently (HTTP %d). "
-                            "Switching to %s...",
+                            "[LLM Failover] Tier %s failed (HTTP 400, code: %s, message: \"%s\", "
+                            "elapsed: %dms, timeout: %ds). Switching to %s...",
                             tier.name,
-                            res.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
                             next_tier_name,
                         )
                         continue
 
-                    # 2. Rate Limits or Server Errors: 429, 5xx
+                    # 2. Permanent Failures: 401, 403, 404
+                    if res.status_code in (401, 403, 404):
+                        async with self._lock:
+                            self._permanently_disabled[tier.tier] = True
+                        if res.status_code == 404:
+                            tier.log_model_404()
+                        err_code, err_msg = self._extract_error_details(res)
+                        logger.error(
+                            "[LLM Failover] Tier %s disabled permanently "
+                            "(HTTP %d, code: %s, message: \"%s\", elapsed: %dms, timeout: %ds). "
+                            "Switching to %s...",
+                            tier.name,
+                            res.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
+                            next_tier_name,
+                        )
+                        continue
+
+                    # 3. Rate Limits or Server Errors: 429, 5xx
                     if res.status_code == 429 or res.status_code >= 500:
                         retry_after_hdr = None
                         if hasattr(res, "headers") and res.headers is not None:
@@ -581,10 +720,18 @@ class LLMGateway:
                         async with self._lock:
                             self._disabled_until[tier.tier] = time.monotonic() + cooldown_s
 
+                        err_code, err_msg = self._extract_error_details(res)
                         logger.warning(
-                            "[LLM Failover] %s rate-limited. Activating 60s cooldown. "
+                            "[LLM Failover] Tier %s failed (HTTP %d, code: %s, message: \"%s\", "
+                            "elapsed: %dms, timeout: %ds). Activating %.0fs cooldown. "
                             "Switching to %s...",
                             tier.name,
+                            res.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
+                            cooldown_s,
                             next_tier_name,
                         )
                         continue
@@ -626,15 +773,279 @@ class LLMGateway:
                         cached=False,
                     )
 
-                except (httpx.TimeoutException, httpx.NetworkError):
+                except httpx.TimeoutException:
+                    elapsed_ms = int((time.monotonic() - call_start) * 1000)
                     async with self._lock:
                         self._disabled_until[tier.tier] = (
                             time.monotonic() + self.settings.cooldown_duration_s
                         )
                     logger.warning(
-                        "[LLM Failover] %s rate-limited or timed out. Activating 60s cooldown. "
+                        "[LLM Failover] Tier %s timed out (timeout after %ds, elapsed: %dms). "
                         "Switching to %s...",
                         tier.name,
+                        int(round(call_timeout)),
+                        elapsed_ms,
+                        next_tier_name,
+                    )
+                    continue
+
+                except httpx.NetworkError as net_err:
+                    elapsed_ms = int((time.monotonic() - call_start) * 1000)
+                    async with self._lock:
+                        self._disabled_until[tier.tier] = (
+                            time.monotonic() + self.settings.cooldown_duration_s
+                        )
+                    logger.warning(
+                        "[LLM Failover] Tier %s network error (%s, elapsed: %dms, timeout: %.1fs). "
+                        "Switching to %s...",
+                        tier.name,
+                        type(net_err).__name__,
+                        elapsed_ms,
+                        call_timeout,
+                        next_tier_name,
+                    )
+                    continue
+
+        finally:
+            if should_close_client:
+                await client.aclose()
+
+    async def execute_improvements(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        prompt_version: str,
+        cache_key_inputs: str,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> ImprovementsGatewayResult:
+        """
+        Executes an improvements explanation request across tiered LLM providers.
+        """
+        cache_key = self._compute_improvements_cache_key(prompt_version, cache_key_inputs)
+        cached_resp = await self._check_improvements_cache(cache_key)
+        if cached_resp is not None:
+            logger.info("Improvements cache hit for key %s", cache_key)
+            return ImprovementsGatewayResult(
+                llm_response=cached_resp,
+                provider="cache",
+                model="cache",
+                tokens_prompt=0,
+                tokens_completion=0,
+                latency_ms=0,
+                cached=True,
+            )
+
+        client = http_client
+        should_close_client = False
+        if client is None:
+            client = httpx.AsyncClient(headers={"User-Agent": "ResuMatch-Gateway/1.0"})
+            should_close_client = True
+
+        start_monotonic = time.monotonic()
+        deadline = start_monotonic + self.settings.overall_deadline_s
+        tried_tiers_in_request: set[int] = set()
+
+        try:
+            while True:
+                now = time.monotonic()
+                if now >= deadline:
+                    raise LLMUnavailableError("Overall LLM request deadline exceeded")
+
+                available_tiers = [
+                    t
+                    for t in self._get_available_tiers(now)
+                    if t.tier not in tried_tiers_in_request
+                ]
+                if not available_tiers:
+                    raise LLMUnavailableError(
+                        "All LLM tiers are currently exhausted or cooling down"
+                    )
+
+                tier = available_tiers[0]
+                tried_tiers_in_request.add(tier.tier)
+                next_tier_name = (
+                    available_tiers[1].name if len(available_tiers) > 1 else "next tier"
+                )
+                api_key = tier.get_api_key()
+                model_id = tier.get_model()
+
+                if not api_key:
+                    async with self._lock:
+                        self._permanently_disabled[tier.tier] = True
+                    continue
+
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                if tier.provider == "openrouter":
+                    headers["HTTP-Referer"] = "https://resumatch.ai"
+                    headers["X-Title"] = "ResuMatch AI"
+
+                payload: dict[str, Any] = {
+                    "model": model_id,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": 0.0,
+                    "max_tokens": self.settings.max_tokens,
+                }
+                if tier.supports_json_mode:
+                    payload["response_format"] = {"type": "json_object"}
+
+                remaining_time = max(0.1, deadline - time.monotonic())
+                call_timeout = min(self.settings.per_call_timeout_s, remaining_time)
+
+                endpoint_url = f"{tier.base_url.rstrip('/')}/chat/completions"
+                call_start = time.monotonic()
+
+                try:
+                    res = await client.post(
+                        endpoint_url,
+                        headers=headers,
+                        json=payload,
+                        timeout=call_timeout,
+                    )
+                    latency_ms = int((time.monotonic() - call_start) * 1000)
+
+                    # 1. Bad Request: HTTP 400 (per-request)
+                    if res.status_code == 400:
+                        err_code, err_msg = self._extract_error_details(res)
+                        logger.error(
+                            "[LLM Failover] Tier %s failed (HTTP 400, code: %s, message: \"%s\", "
+                            "elapsed: %dms, timeout: %ds). Switching to %s...",
+                            tier.name,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
+                            next_tier_name,
+                        )
+                        continue
+
+                    # 2. Permanent Failures: 401, 403, 404
+                    if res.status_code in (401, 403, 404):
+                        async with self._lock:
+                            self._permanently_disabled[tier.tier] = True
+                        if res.status_code == 404:
+                            tier.log_model_404()
+                        err_code, err_msg = self._extract_error_details(res)
+                        logger.error(
+                            "[LLM Failover] Tier %s disabled permanently "
+                            "(HTTP %d, code: %s, message: \"%s\", elapsed: %dms, timeout: %ds). "
+                            "Switching to %s...",
+                            tier.name,
+                            res.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
+                            next_tier_name,
+                        )
+                        continue
+
+                    # 3. Rate Limits or Server Errors: 429, 5xx
+                    if res.status_code == 429 or res.status_code >= 500:
+                        retry_after_hdr = None
+                        if hasattr(res, "headers") and res.headers is not None:
+                            retry_after_hdr = res.headers.get("Retry-After")
+
+                        cooldown_s = self.settings.cooldown_duration_s
+                        if retry_after_hdr:
+                            try:
+                                parsed_s = float(retry_after_hdr)
+                                cooldown_s = max(
+                                    self.settings.cooldown_duration_s, min(parsed_s, 300.0)
+                                )
+                            except ValueError:
+                                pass
+
+                        async with self._lock:
+                            self._disabled_until[tier.tier] = time.monotonic() + cooldown_s
+
+                        err_code, err_msg = self._extract_error_details(res)
+                        logger.warning(
+                            "[LLM Failover] Tier %s failed (HTTP %d, code: %s, message: \"%s\", "
+                            "elapsed: %dms, timeout: %ds). Activating %.0fs cooldown. "
+                            "Switching to %s...",
+                            tier.name,
+                            res.status_code,
+                            err_code,
+                            err_msg,
+                            latency_ms,
+                            int(round(call_timeout)),
+                            cooldown_s,
+                            next_tier_name,
+                        )
+                        continue
+
+                    res.raise_for_status()
+
+                    res_json = res.json()
+                    choices = res_json.get("choices", [])
+                    if not choices:
+                        logger.warning("Tier %s returned empty choices list", tier.name)
+                        continue
+
+                    raw_content = choices[0].get("message", {}).get("content", "")
+                    usage = res_json.get("usage", {})
+                    tokens_prompt = usage.get("prompt_tokens", 0)
+                    tokens_completion = usage.get("completion_tokens", 0)
+
+                    try:
+                        parsed_dict = self._clean_json_output(raw_content)
+                        llm_resp = LLMImprovementsOutput.model_validate(parsed_dict)
+                    except (json.JSONDecodeError, ValidationError) as parse_err:
+                        logger.warning(
+                            "Tier %s failed schema validation: %s. Switching to %s...",
+                            tier.name,
+                            parse_err,
+                            next_tier_name,
+                        )
+                        continue
+
+                    await self._save_improvements_cache(cache_key, llm_resp)
+
+                    return ImprovementsGatewayResult(
+                        llm_response=llm_resp,
+                        provider=tier.provider,
+                        model=model_id,
+                        tokens_prompt=tokens_prompt,
+                        tokens_completion=tokens_completion,
+                        latency_ms=latency_ms,
+                        cached=False,
+                    )
+
+                except httpx.TimeoutException:
+                    elapsed_ms = int((time.monotonic() - call_start) * 1000)
+                    async with self._lock:
+                        self._disabled_until[tier.tier] = (
+                            time.monotonic() + self.settings.cooldown_duration_s
+                        )
+                    logger.warning(
+                        "[LLM Failover] Tier %s timed out (timeout after %ds, elapsed: %dms). "
+                        "Switching to %s...",
+                        tier.name,
+                        int(round(call_timeout)),
+                        elapsed_ms,
+                        next_tier_name,
+                    )
+                    continue
+
+                except httpx.NetworkError as net_err:
+                    elapsed_ms = int((time.monotonic() - call_start) * 1000)
+                    async with self._lock:
+                        self._disabled_until[tier.tier] = (
+                            time.monotonic() + self.settings.cooldown_duration_s
+                        )
+                    logger.warning(
+                        "[LLM Failover] Tier %s network error (%s, elapsed: %dms, timeout: %.1fs). "
+                        "Switching to %s...",
+                        tier.name,
+                        type(net_err).__name__,
+                        elapsed_ms,
+                        call_timeout,
                         next_tier_name,
                     )
                     continue
