@@ -1,3 +1,4 @@
+import secrets
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, status
@@ -7,6 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from ml.config import settings
 from ml.db import check_database_health
 from ml.models.analysis import AnalysisRequest
+from ml.pipelines.rewriter.models import (
+    BulletRewriteRequest,
+    RewriterServiceResponse,
+)
+from ml.pipelines.rewriter.service import BulletRewriterService
 
 app = FastAPI(
     title=settings.app_name,
@@ -27,6 +33,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def verify_startup_configuration() -> None:
+    token = (settings.internal_api_token or "").strip()
+    if settings.env != "test" and len(token) < 32:
+        raise RuntimeError("INTERNAL_API_TOKEN must be set to at least 32 characters at startup.")
 
 
 class AnalysisQueuedResponse(BaseModel):
@@ -76,7 +89,7 @@ def run_analysis(
 
     return AnalysisQueuedResponse(
         status="ACCEPTED",
-        analysis_id=payload.analysis_id,
+        analysisId=payload.analysis_id,
         message=f"Analysis pipeline queued for resume {payload.resume_id}",
         stage="QUEUED",
     )
@@ -110,12 +123,50 @@ def rerank_stub() -> dict[str, Any]:
     }
 
 
-@app.post("/v1/rewriter/bullet", status_code=status.HTTP_501_NOT_IMPLEMENTED)
-def rewriter_stub() -> dict[str, Any]:
-    return {
-        "statusCode": 501,
-        "error": "Not Implemented",
-        "message": (
-            "Fact-grounded bullet rewriting pipeline is not yet implemented. Available in Phase 2."
-        ),
-    }
+_rewriter_service = BulletRewriterService()
+
+
+
+@app.post(
+    "/v1/rewriter/bullet",
+    status_code=status.HTTP_200_OK,
+    response_model=RewriterServiceResponse,
+)
+async def rewrite_bullet_endpoint(
+    payload: BulletRewriteRequest,
+    x_internal_token: str = Header(..., alias="X-Internal-Token"),
+) -> RewriterServiceResponse:
+    """
+    Fact-grounded STAR bullet rewriter endpoint (Phase 4B).
+    Validates internal service token and enforces strict factual grounding.
+    """
+    expected_token = (settings.internal_api_token or "").strip()
+    if (
+        not expected_token
+        or len(expected_token) < 32
+        or not secrets.compare_digest(x_internal_token, expected_token)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-Internal-Token header",
+        )
+
+    try:
+        result = await _rewriter_service.rewrite_bullet(payload)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(ve),
+        ) from ve
+
+    if result.status == "HALLUCINATION_DETECTED":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "HALLUCINATION_DETECTED: No rewritten options could be verified "
+                "against source facts."
+            ),
+        )
+
+    return result
+

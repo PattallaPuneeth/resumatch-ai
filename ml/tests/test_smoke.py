@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from ml.config import settings
@@ -123,9 +124,9 @@ def test_pydantic_match_result_schema() -> None:
         gaps=["Docker"],
         evidence=[
             EvidenceItem(
-                chunk_id="c-1",
+                chunkId="c-1",
                 snippet="Experienced with FastAPI and pgvector",
-                relevance_score=0.94,
+                relevanceScore=0.94,
                 reason="Direct semantic match on tech stack",
             )
         ],
@@ -138,7 +139,7 @@ def test_pydantic_match_result_schema() -> None:
 
 def test_stage_event_schema() -> None:
     event = StageEvent(
-        analysis_id="a-1",
+        analysisId="a-1",
         stage="MATCHING",
         progress=0.75,
         message="Executing cross-encoder reranking",
@@ -152,7 +153,6 @@ def test_stubs_501() -> None:
         "/v1/embeddings",
         "/v1/parser/extract",
         "/v1/matching/rerank",
-        "/v1/rewriter/bullet",
     ]
     for ep in endpoints:
         res = client.post(ep)
@@ -160,3 +160,61 @@ def test_stubs_501() -> None:
         data = res.json()
         assert data["statusCode"] == 501
         assert data["error"] == "Not Implemented"
+
+
+def test_rewriter_endpoint_auth() -> None:
+    """Verifies that /v1/rewriter/bullet requires valid X-Internal-Token."""
+    payload = {
+        "resumeId": "11111111-1111-4111-a111-111111111111",
+        "originalBullet": "Managed microservices",
+        "resumeRawText": "Managed microservices",
+    }
+    # Missing header -> 422
+    res_missing = client.post("/v1/rewriter/bullet", json=payload)
+    assert res_missing.status_code == 422
+
+    # Invalid token -> 401
+    res_invalid = client.post(
+        "/v1/rewriter/bullet",
+        json=payload,
+        headers={"X-Internal-Token": "invalid-token"},
+    )
+    assert res_invalid.status_code == 401
+
+
+def test_rewriter_endpoint_fails_closed_when_token_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verifies that if INTERNAL_API_TOKEN is unset or empty, requests are rejected (never open)."""
+    payload = {
+        "resumeId": "11111111-1111-4111-a111-111111111111",
+        "originalBullet": "Managed microservices",
+        "resumeRawText": "Managed microservices",
+    }
+    # Case 1: Empty string
+    monkeypatch.setattr(settings, "internal_api_token", "")
+    res_empty = client.post(
+        "/v1/rewriter/bullet",
+        json=payload,
+        headers={"X-Internal-Token": ""},
+    )
+    assert res_empty.status_code == 401
+
+    # Case 2: Whitespace only
+    monkeypatch.setattr(settings, "internal_api_token", "   ")
+    res_whitespace = client.post(
+        "/v1/rewriter/bullet",
+        json=payload,
+        headers={"X-Internal-Token": "   "},
+    )
+    assert res_whitespace.status_code == 401
+
+    # Case 3: None/unset
+    monkeypatch.setattr(settings, "internal_api_token", None)
+    res_none = client.post(
+        "/v1/rewriter/bullet",
+        json=payload,
+        headers={"X-Internal-Token": "some-token"},
+    )
+    assert res_none.status_code == 401
+

@@ -38,7 +38,7 @@ RE_URL = re.compile(
     re.IGNORECASE,
 )
 RE_ADDRESS = re.compile(
-    r"\b\d{1,5}\s+[A-Za-z0-9\s.,]{2,30}\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct|Circle|Cir|Terrace|Ter|Place|Pl|Parkway|Pkwy|Plaza)\b",
+    r"\b\d{1,5}\s+[A-Za-z\s.,]{2,30}\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct|Circle|Cir|Terrace|Ter|Place|Pl|Parkway|Pkwy|Plaza)\b",
     re.IGNORECASE,
 )
 RE_DOB = re.compile(
@@ -54,14 +54,21 @@ RE_BIAS_CUES = re.compile(
 
 # Injection detection patterns
 RE_INJECTION_PATTERNS = [
-    re.compile(r"ignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions", re.IGNORECASE),
-    re.compile(r"disregard\s+(?:all\s+)?(?:previous|prior|above)\s+instructions", re.IGNORECASE),
-    re.compile(r"system\s+prompt", re.IGNORECASE),
-    re.compile(r"you\s+are\s+now\s+(?:a|an)\b", re.IGNORECASE),
-    re.compile(r"give\s+(?:this\s+candidate\s+)?a\s+perfect\s+score", re.IGNORECASE),
-    re.compile(r"say\s+(?:they|he|she)\s+ha(?:ve|s)\s+\d+\s+years", re.IGNORECASE),
-    re.compile(r"forget\s+(?:all\s+)?(?:rules|instructions)", re.IGNORECASE),
-    re.compile(r"bypass\s+(?:verification|grounding|safety)", re.IGNORECASE),
+    re.compile(
+        r"ignore\s+(?:all\s+)?(?:(?:previous|prior|above)\s+)?instructions.*",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"disregard\s+(?:all\s+)?(?:(?:previous|prior|above)\s+)?instructions.*",
+        re.IGNORECASE,
+    ),
+    re.compile(r"system\s+prompt.*", re.IGNORECASE),
+    re.compile(r"you\s+are\s+now\s+(?:a|an)\b.*", re.IGNORECASE),
+    re.compile(r"give\s+(?:this\s+candidate\s+)?a\s+perfect\s+score.*", re.IGNORECASE),
+    re.compile(r"say\s+(?:i|they|he|she)\s+(?:ha(?:ve|s)|am)\s+\d+\s+years.*", re.IGNORECASE),
+    re.compile(r"add\s+\d+\s+years\s+(?:of\s+)?experience.*", re.IGNORECASE),
+    re.compile(r"forget\s+(?:all\s+)?(?:rules|instructions).*", re.IGNORECASE),
+    re.compile(r"bypass\s+(?:verification|grounding|safety).*", re.IGNORECASE),
 ]
 
 
@@ -71,6 +78,12 @@ class RedactionResult:
     redacted_text: str
     offset_map: list[int] = field(default_factory=list)
     placeholders_used: set[str] = field(default_factory=set)
+    replacement_map: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def mapping(self) -> dict[str, str]:
+        """Alias for replacement_map mapping placeholders to original strings."""
+        return self.replacement_map
 
     def map_quote_to_original(self, quote: str) -> tuple[int, int] | None:
         """
@@ -117,6 +130,14 @@ def detect_prompt_injection(text: str) -> bool:
         if pattern.search(text):
             return True
     return False
+
+
+def strip_prompt_injection(text: str) -> str:
+    """Strips known prompt injection command patterns from untrusted candidate text."""
+    stripped = text
+    for pattern in RE_INJECTION_PATTERNS:
+        stripped = pattern.sub("", stripped)
+    return stripped
 
 
 def redact_pii(
@@ -184,9 +205,25 @@ def redact_pii(
     redacted_chars: list[str] = []
     offset_map: list[int] = []
     placeholders_used: set[str] = set()
+    replacement_map: dict[str, str] = {}
+    counts: dict[str, int] = {}
 
     orig_idx = 0
     for start, end, placeholder in non_overlapping:
+        orig_slice = text[start:end]
+        replacement_map[placeholder] = orig_slice
+        base = placeholder.strip("[]")
+        counts[base] = counts.get(base, 0) + 1
+        replacement_map[f"[{base}_{counts[base]}]"] = orig_slice
+        if "EMAIL" in base:
+            replacement_map[f"[EMAIL_{counts[base]}]"] = orig_slice
+        elif "PHONE" in base:
+            replacement_map[f"[PHONE_{counts[base]}]"] = orig_slice
+        elif "NAME" in base:
+            replacement_map[f"[NAME_{counts[base]}]"] = orig_slice
+        elif "URL" in base:
+            replacement_map[f"[URL_{counts[base]}]"] = orig_slice
+
         # Append untouched characters up to span
         while orig_idx < start:
             redacted_chars.append(text[orig_idx])
@@ -212,6 +249,7 @@ def redact_pii(
         redacted_text="".join(redacted_chars),
         offset_map=offset_map,
         placeholders_used=placeholders_used,
+        replacement_map=replacement_map,
     )
 
 

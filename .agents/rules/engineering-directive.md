@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # ResuMatch AI — Permanent Engineering Directive
 
 Treat this as a permanent directive for the entire `PattallaPuneeth/resumatch-ai` project.
@@ -36,3 +40,10 @@ A phase is complete only when its acceptance criteria are implemented, relevant 
 At the end of each phase, report the changes, tests and actual results, security/reliability checks, Git status, unresolved issues, and one verdict: `VERIFIED`, `PARTIALLY VERIFIED`, or `BLOCKED`.
 
 **Product direction:** ResuMatch AI must demonstrate that I can engineer a secure, reliable, measurable backend system whose AI capabilities are part of the solution—not the entire solution.
+## Standard close-out (every phase)
+- Prove each change with raw command output (grep/Select-String, test names, counts). Never claim a file contains something without showing it.
+- List every file touched outside the phase's scope as deviations. "None" only if git diff --stat confirms it.
+- Run one real end-to-end check through the actual HTTP path (backend to ML), not only mocked tests.
+- Security items (IDOR, secrets/defaults, PII in logs/prompts, input caps): PASS/FAIL with evidence.
+- Rebuild images (no docker cp). Full test suites, tsc, prisma validate. Ruff/mypy on changed files only.
+- Report exact test counts and the number of live LLM provider attempts, including failed ones.

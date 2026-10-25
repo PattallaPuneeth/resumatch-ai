@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,10 +16,17 @@ class Settings(BaseSettings):
     log_level: str = Field(default="info", alias="LOG_LEVEL")
 
     internal_api_token: str = Field(
-        default="resumatch-ml-secret-key-phase1",
+        default="",
         alias="INTERNAL_API_TOKEN",
-        description="Shared secret token for Node <-> ML internal authentication",
+        description="Shared secret token for Node <-> ML internal authentication (min 32 chars)",
     )
+
+    @field_validator("internal_api_token")
+    @classmethod
+    def validate_internal_api_token(cls, v: str) -> str:
+        if v and len(v.strip()) < 32:
+            raise ValueError("INTERNAL_API_TOKEN must be at least 32 characters long")
+        return v
 
     database_url: str = Field(
         default="postgresql://resumatch_user:resumatch_password@localhost:5432/resumatch",

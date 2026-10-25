@@ -831,3 +831,65 @@ All scores (matchScore, atsScore, sub-scores, verdict band, skill gap lists) are
 - `GET /v1/jobs/:id/analysis/:resumeId`
   - Response: 200 OK with full Analysis model (id, jobId, resumeId, status, score, skillGap, atsFindings, result, llmStatus, provider, model, promptVersion, tokensPrompt, tokensCompletion, latencyMs, fabricatedEvidenceRate, injectionSuspected).
   - Ownership: 404 Not Found if requested by non-owner.
+
+15. Phase 4B Specification: Fact-Grounded STAR Bullet Rewriter
+15.1 Architecture & Pipeline Flow
+The bullet rewriter transforms existing resume bullet points into high-impact STAR (Situation, Task, Action, Result) format while strictly preventing hallucinations.
+Flow:
+1. Client sends `POST /v1/rewriter/bullet` to Backend with JWT authentication.
+2. Backend verifies ownership of resumeId and optional jobId (404 convention on mismatch).
+3. Backend fetches `ParsedResume.rawText` and asserts `originalBullet` is an exact substring (max 500 chars, 422 if missing).
+4. Backend securely calls internal ML service endpoint `POST /v1/rewriter/bullet` with `X-Internal-Token` (shared secret configured via `INTERNAL_API_TOKEN`, required min 32 chars, no default, validated on startup).
+5. ML service runs `BulletRewriterService`:
+   - Redacts PII using `PIIRedactionService` from 4A before LLM call.
+   - Wraps bullet and context in cryptographic per-request UUID delimiters (untrusted data framing).
+   - Generates 2-3 STAR rewrite options via `LLMGateway` (temperature 0, prompt version `2026-10-25-v2`, SHA-256 caching with prompt version, strict instruction not to add verbs, scope, or claims beyond original bullet).
+   - Restores redaction placeholders in output.
+   - Verifies each option with `BulletRewriteVerifier`:
+     - Every number, metric, and percentage must exist in rawText or originalBullet.
+     - Every tool/technology must resolve to an exact skill or canonical alias present in rawText or originalBullet.
+     - No unsupported degree/credential claims.
+     - Evidence quotes must map to exact character spans in rawText.
+     - Explicit bracketed placeholders (e.g., `[add metric]`, `[insert %]`) are permitted and mark `needsUserInput = true`.
+      - Known limitation: The verifier checks numbers/tools/credentials/degrees only, and does not detect qualitative claim inflation (known limitation).
+   - Filters ungrounded options. If 0 options survive, returns RFC 7807 422 `HALLUCINATION_DETECTED`.
+   - Logs provider, model, tokens, latency only; never logs bullet text or PII.
+
+15.2 API Contracts
+- `POST /v1/rewriter/bullet`
+  - Request Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+  - Request Body:
+    ```json
+    {
+      "resumeId": "UUID",
+      "originalBullet": "string (1-500 chars, exact substring of resume rawText)",
+      "targetSkill": "string (optional)",
+      "jobId": "UUID (optional, owned by user)"
+    }
+    ```
+  - Response (200 OK):
+    ```json
+    {
+      "status": "SUCCESS",
+      "originalBullet": "Managed cloud migration to AWS.",
+      "options": [
+        {
+          "text": "Led migration of legacy systems to AWS, reducing downtime by [insert %].",
+          "evidenceSpans": [
+            { "startChar": 120, "endChar": 151, "quote": "Managed cloud migration to AWS." }
+          ],
+          "needsUserInput": true
+        }
+      ],
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "tokensPrompt": 683,
+      "tokensCompletion": 468,
+      "latencyMs": 1498
+    }
+    ```
+  - Error Responses:
+    - 400 Bad Request: Zod validation failure.
+    - 401 Unauthorized: Missing or invalid JWT.
+    - 404 Not Found: Resume or job not found or owned by another user.
+    - 422 Unprocessable Content: Bullet not found in resume rawText (`BULLET_NOT_IN_RESUME`) or all options rejected by verifier (`HALLUCINATION_DETECTED`).

@@ -97,3 +97,22 @@ class StructuredAnalysisResult(BaseModel):
     latency_ms: int = 0
     fabricated_evidence_rate: float = 0.0
     injection_suspected: bool = False
+
+
+class LLMRewriterOption(BaseModel):
+    """Raw rewrite option as parsed from LLM JSON response."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, alias_generator=to_camel)
+
+    text: str
+    evidence_quotes: list[str] = Field(default_factory=list)
+    needs_user_input: bool = False
+
+
+class LLMRewriterResponse(BaseModel):
+    """Raw LLM payload schema for bullet rewriter."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    options: list[LLMRewriterOption] = Field(default_factory=list)
+

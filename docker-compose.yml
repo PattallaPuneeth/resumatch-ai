@@ -134,6 +134,7 @@ services:
       ML_SERVICE_URL: http://ml:8000
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-in-production}
       RESUME_CAP_PER_USER: ${RESUME_CAP_PER_USER:-50}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
     ports:
       - "127.0.0.1:4000:4000"
     healthcheck:
@@ -172,6 +173,7 @@ services:
       GROQ_MODEL_PRIMARY: ${GROQ_MODEL_PRIMARY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
       GROQ_MODEL_EMERGENCY: ${GROQ_MODEL_EMERGENCY:-}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:

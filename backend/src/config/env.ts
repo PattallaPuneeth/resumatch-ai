@@ -63,6 +63,11 @@ export const EnvSchema = z.object({
 
   // Python ML Service
   ML_SERVICE_URL: z.string().url().default('http://localhost:8000'),
+  INTERNAL_API_TOKEN: z
+    .string({
+      required_error: 'INTERNAL_API_TOKEN is required and must be at least 32 characters',
+    })
+    .min(32, 'INTERNAL_API_TOKEN must be at least 32 characters'),
   EMBEDDING_DIMENSION: z.coerce.number().int().positive().default(384),
 });
 

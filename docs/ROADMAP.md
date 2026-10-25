@@ -128,8 +128,8 @@ The LLM is introduced here, behind one gateway, with safety built in first. Prov
 **Acceptance:** schema-valid output on every call; faithfulness check enforced (`HALLUCINATION_DETECTED` on failure); injection test passes; cost/tokens recorded.
 **Security:** key only in env/secret store, never logged; redaction tests; no PII in logs or LLM prompts.
 
-### 4B: Fact-grounded STAR bullet rewriter (existing spec Phase 4)
-`POST /v1/rewriter/bullet`; STAR bullets; verifier (`ml/pipelines/rewriter/verifier.py`): every metric, percentage, tool, credential, and claim must map to an exact character span in `ParsedResume.rawText` or the original bullet; otherwise reject with `HALLUCINATION_DETECTED`. Never invent numbers.
+### 4B: Fact-grounded STAR bullet rewriter [COMPLETE - VERIFIED]
+`POST /v1/rewriter/bullet`; STAR bullets; verifier (`ml/pipelines/rewriter/verifier.py`): every metric, percentage, tool, credential, and claim must map to an exact character span in `ParsedResume.rawText` or the original bullet; otherwise reject with `HALLUCINATION_DETECTED`. Never invent numbers. Verified with 100% mocked unit tests + 1 live smoke test under `RUN_LIVE_LLM=1`.
 
 ### 4C: Resume-only improvements and role suggestions
 When no JD is attached: ATS-focused fixes (from Phase 2C hazards and score), content improvements, and **suggested roles/job titles** derived from the resume (embedding similarity to a role taxonomy, ML-ranked). LLM only explains the findings. ATS score always shown.
