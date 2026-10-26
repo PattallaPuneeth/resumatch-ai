@@ -13,11 +13,17 @@ from ml.pipelines.improvements.models import (
     ImprovementsResponse,
 )
 from ml.pipelines.improvements.service import ResumeImprovementsService
+from ml.pipelines.matching.suggestions_scorer import (
+    ScoreCandidateListingsRequest,
+    ScoreCandidateListingsResponse,
+    SuggestionsScoringService,
+)
 from ml.pipelines.rewriter.models import (
     BulletRewriteRequest,
     RewriterServiceResponse,
 )
 from ml.pipelines.rewriter.service import BulletRewriterService
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -203,3 +209,28 @@ async def resume_improvements_endpoint(
     return await _improvements_service.generate_improvements(payload)
 
 
+_suggestions_scorer = SuggestionsScoringService()
+
+
+@app.post(
+    "/v1/matching/score-listings",
+    status_code=status.HTTP_200_OK,
+    response_model=ScoreCandidateListingsResponse,
+)
+def score_candidate_listings_endpoint(
+    payload: ScoreCandidateListingsRequest,
+    x_internal_token: str = Header(..., alias="X-Internal-Token"),
+) -> ScoreCandidateListingsResponse:
+    """
+    Candidate job listing scoring endpoint (Phase 7).
+    Validates internal service token and calculates deterministic match scores
+    and skill gap alignments against a candidate resume.
+    """
+    verify_internal_token(x_internal_token)
+    try:
+        return _suggestions_scorer.score_listings(payload)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(ve),
+        ) from ve

@@ -139,6 +139,8 @@ services:
       RESUME_CAP_PER_USER: ${RESUME_CAP_PER_USER:-50}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       USAGE_DEFAULT_PLAN: ${USAGE_DEFAULT_PLAN:-unlimited}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      JOB_SOURCE_ALLOWLIST: ${JOB_SOURCE_ALLOWLIST:-boards.greenhouse.io,jobs.lever.co,jobs.ashbyhq.com}
     ports:
       - "127.0.0.1:4000:4000"
     healthcheck:

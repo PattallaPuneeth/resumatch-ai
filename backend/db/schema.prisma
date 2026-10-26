@@ -295,3 +295,20 @@ model UserUsage {
   @@index([userId])
   @@map("user_usage")
 }
+
+model JobListingCache {
+  id          String   @id @default(uuid())
+  urlHash     String   @unique
+  contentHash String
+  sourceUrl   String   @db.Text
+  title       String
+  company     String
+  location    String?
+  cleanedText String   @db.Text
+  fetchedAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([urlHash])
+  @@index([expiresAt])
+  @@map("job_listing_cache")
+}

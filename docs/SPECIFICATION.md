@@ -1138,3 +1138,159 @@ Flow:
     ```
 
 ---
+
+## 18. Phase 7: Job Suggestions via Swappable JobSource (Firecrawl & Mock Fallback)
+
+### 18.1 Architectural Overview & Core Decisions
+1. **Swappable JobSource Abstraction:**
+   - External job discovery is isolated behind the `JobSource` interface:
+     ```typescript
+     export interface JobSource {
+       searchJobs(query: JobSearchQuery, options?: JobSourceOptions): Promise<RawJobListing[]>;
+     }
+     ```
+   - Two implementations:
+     - `MockJobSource`: Returns deterministic, high-quality fixtures for unit/integration tests and local development without requiring external credentials.
+     - `FirecrawlJobSource`: Queries Firecrawl's search endpoint with strict timeout, retry, sanitization, and SSRF restrictions.
+   - **Factory Selection:** `getJobSource()` selects `FirecrawlJobSource` only when `FIRECRAWL_API_KEY` is present and `NODE_ENV !== 'test'`. Otherwise, it falls back to `MockJobSource` without throwing or crashing.
+   - Firecrawl is explicitly designated as **TEMPORARY** and swappable for an enterprise licensed job API (e.g. Adzuna, Jooble, Indeed Sponsored API) in a future phase without modifying downstream ranking or API contracts.
+2. **Score Integrity Invariant:**
+   - All match scores (0–100), rankings, and skill-gap breakdowns are calculated exclusively by the deterministic Python ML pipeline (BM25, dense sentence-transformers vectors, RRF, cross-encoder, and skill-gap taxonomy).
+   - The LLM **never** touches, fabricates, or adjusts match scores.
+   - Phase 7 requires **zero** live LLM calls.
+
+### 18.2 Legal, Source Policy & Scraping Restrictions
+1. **Permanent Built-in Denylist:**
+   - Scraping-prohibited sites (`linkedin.com`, `indeed.com`, and all subdomains) are permanently hardcoded on a denylist. Any URL matching the denylist is rejected immediately and never fetched, indexed, or returned, even if accidentally specified in an allowlist.
+2. **Configurable Domain Allowlist:**
+   - Live external searches are strictly constrained to a configurable domain allowlist (`JOB_SOURCE_ALLOWLIST`).
+   - Default allowlist is conservative: `boards.greenhouse.io`, `jobs.lever.co`, `jobs.ashbyhq.com`. Each entry is marked: *verify terms before enabling in production*.
+   - If `JOB_SOURCE_ALLOWLIST` is unconfigured or empty, live search returns 0 results and mock remains default.
+3. **Robots.txt & Rate Limiting:**
+   - Any direct crawler requests must identify with `User-Agent: ResuMatchBot/1.0 (+https://resumatch.ai/bot)` and respect `robots.txt` disallow rules and per-domain crawl delays.
+4. **Data Minimization & TTL Cache:**
+   - Only sanitized summary text, title, company, location, source URL, URL hash, and content hash are retained. Full raw HTML is immediately discarded.
+   - Scraped listings are cached in the PostgreSQL `job_listing_cache` table with a 24-hour time-to-live (`expiresAt`). Cache hits require zero external network requests.
+
+### 18.3 Security & Guardrails
+1. **SSRF Guard (`ssrfGuard.ts`):**
+   - Every outbound URL is validated against SSRF attacks on initial request and on every HTTP redirect hop.
+   - Restricts protocols to `http:` and `https:`.
+   - Resolves host DNS and strictly blocks:
+     - IPv4 loopback (`127.0.0.0/8`, `0.0.0.0`)
+     - RFC 1918 private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+     - Link-local addresses (`169.254.0.0/16`, including AWS/GCP metadata `169.254.169.254`)
+     - Carrier-Grade NAT (`100.64.0.0/10`)
+     - IPv6 loopback (`::1`), ULA (`fc00::/7`), link-local (`fe80::/10`), IPv4-mapped IPv6 (`::ffff:0:0/96`)
+   - Rejects URLs containing credentials (`http://user:pass@host`) and non-standard ports (allowed: 80, 443).
+   - Enforces domain allowlist and permanent denylist.
+2. **Untrusted Content Sanitizer (`sanitizer.ts`):**
+   - Scraped text is treated as untrusted user input.
+   - Strips `<script>`, `<style>`, `<iframe>`, `<object>`, `<embed>`, and all HTML tags.
+   - Unescapes HTML entities, removes ASCII control characters (preserving standard whitespace), and bounds length to 10,000 characters.
+   - Neutralizes prompt-injection patterns (`system:`, `ignore previous instructions`, `assistant:`, etc.).
+   - Text is never rendered as HTML in responses and never used as instructions.
+3. **Tenant Isolation:**
+   - `POST /v1/resumes/:id/suggestions` validates that `resumeId` belongs to the authenticated user (`request.user.sub`).
+   - If `jobId` is provided, it validates that `jobId` belongs to the authenticated user.
+   - Nonexistent or foreign IDs return HTTP 404 RFC 7807 (preventing IDOR enumeration).
+   - Requires `resume.status === 'PARSED'` (otherwise returns HTTP 422 RFC 7807).
+
+### 18.4 Two Suggestion Modes & Ranking Pipeline
+1. **Without JD (Explore Mode):**
+   - Queries are derived from the candidate's `ParsedResume`:
+     - Primary query: candidate's target title or most recent experience title + top technical skills.
+     - Secondary query: ML-suggested roles from Phase 4C role taxonomy (`ml/data/role_taxonomy.json`).
+     - Optional request overrides: `location` (e.g. "Remote") and `seniority` (e.g. "Senior").
+   - Bounds total derived queries to maximum 3.
+2. **With JD (Similar Roles Mode):**
+   - Queries are derived from the target `Job` record (`job.title`, top required skills, domain) and resume skills.
+   - Bounds total derived queries to maximum 3.
+3. **Deduplication:**
+   - Normalizes URLs, computes SHA-256 `urlHash`, and dedupes across queries by `urlHash` and by composite `(title.toLowerCase(), company.toLowerCase(), location.toLowerCase())`.
+4. **Scoring via ML Service:**
+   - Backend calls `POST /v1/matching/score-listings` on ML service.
+   - ML service runs Phase 3 pipeline on each candidate listing against the resume's embedded chunks in `resume_chunks`:
+     - BM25 lexical search (`search_lexical`)
+     - pgvector dense semantic search (`search_semantic`)
+     - Reciprocal Rank Fusion (`fuse_ranks`, $k=60$)
+     - Cross-Encoder reranking (`rerank_candidates`)
+     - Skill-gap analysis (`analyze_skill_gap`)
+     - Calibrated composite blend (`compute_match_scores`)
+   - Returns top $N$ listings (default 10, max 10) sorted by ML match score descending.
+
+### 18.5 Usage Metering & Quotas
+1. **Meter:** `job_suggestions` (monthly counter, reset at first of month UTC).
+2. **Guard:** `withMeter(request, reply, 'job_suggestions', async () => { ... })`.
+3. **Order of Operations:**
+   - Auth, IDOR ownership, and input validation executed first. 4xx validation errors do **not** consume quota.
+   - Quota check and atomic consumption (1 unit) executed before calling any external network search.
+   - At 100%: emits HTTP 429 RFC 7807 `usage-limit-exceeded`, `meter: "job_suggestions"`, with zero external calls.
+   - If external search fails (timeout or 5xx after 1 retry): refunds 1 unit and returns 5xx problem details.
+
+### 18.6 API Contracts
+
+#### `POST /v1/resumes/:id/suggestions`
+- **Headers:** `Authorization: Bearer <token>` or session cookie
+- **Request Body:**
+  ```json
+  {
+    "jobId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "location": "Remote",
+    "seniority": "Senior",
+    "limit": 10
+  }
+  ```
+  *(All body fields are optional. `jobId` switches between Explore and Similar Roles modes).*
+
+- **Response (200 OK):**
+  ```json
+  {
+    "resumeId": "11111111-1111-1111-1111-111111111111",
+    "totalFound": 2,
+    "suggestions": [
+      {
+        "title": "Senior Backend Engineer",
+        "company": "Acme Tech",
+        "location": "Remote",
+        "sourceUrl": "https://careers.acme.example.com/jobs/101",
+        "matchScore": 86.4,
+        "matchedSkills": ["python", "fastapi", "postgresql", "docker"],
+        "missingSkills": ["kubernetes"],
+        "fetchedAt": "2026-10-26T12:00:00.000Z"
+      }
+    ]
+  }
+  ```
+
+- **Response (200 OK — Empty Results):**
+  ```json
+  {
+    "resumeId": "11111111-1111-1111-1111-111111111111",
+    "totalFound": 0,
+    "suggestions": [],
+    "message": "No matching job suggestions found for the provided criteria."
+  }
+  ```
+
+- **Response (429 Too Many Requests — Usage Limit Exceeded):**
+  ```json
+  {
+    "type": "https://api.resumatch.ai/errors/usage-limit-exceeded",
+    "title": "Usage Limit Exceeded",
+    "status": 429,
+    "statusCode": 429,
+    "error": "Too Many Requests",
+    "message": "Usage limit reached for meter \"job_suggestions\". Current usage: 5/5. Next reset: 2026-11-01T00:00:00.000Z.",
+    "detail": "Usage limit reached for meter \"job_suggestions\". Current usage: 5/5. Next reset: 2026-11-01T00:00:00.000Z.",
+    "instance": "/v1/resumes/11111111-1111-1111-1111-111111111111/suggestions",
+    "meter": "job_suggestions",
+    "used": 5,
+    "limit": 5,
+    "resetAt": "2026-11-01T00:00:00.000Z",
+    "timestamp": "2026-10-26T12:00:00.000Z",
+    "requestId": "req-1"
+  }
+  ```
+
+---

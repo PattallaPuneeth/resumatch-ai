@@ -110,7 +110,12 @@ export const EnvSchema = z.object({
 
   // Usage & Metering (Phase 6)
   USAGE_DEFAULT_PLAN: z.string().default('unlimited'),
+
+  // Job Suggestions & Scraping (Phase 7)
+  FIRECRAWL_API_KEY: z.string().optional(),
+  JOB_SOURCE_ALLOWLIST: z.string().default('boards.greenhouse.io,jobs.lever.co,jobs.ashbyhq.com'),
 });
+
 
 export type Env = z.infer<typeof EnvSchema>;
 

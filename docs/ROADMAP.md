@@ -165,14 +165,31 @@ Replaces the dev token minting used in tests.
 
 ## 8. Phase 7: Job suggestions (Firecrawl)
 
-1. A `JobSource` interface with a Firecrawl implementation (temporary). Swappable later for a licensed job API without touching the rest.
-2. Flow: resume to derived search queries (titles/skills, ML-derived) to Firecrawl fetch to normalize, chunk, embed to rank with the existing hybrid retrieval and cross-encoder to return the top N with ML scores.
-3. Cache and de-duplicate scraped jobs; respect rate limits and robots/terms; record source URL and fetch time; bounded cost per request.
-4. Available both with a JD (similar jobs) and without (roles to apply for). Metered with the Phase 6 meter and 50/70/90 alerts.
-5. Payment for this feature is optional and belongs to Phase 11.
-**Security:** scraped content is untrusted (sanitize, never rendered as HTML, never treated as instructions); SSRF protection (allowlist, no internal addresses); API key in secrets; timeouts and size caps; fail the job rather than return partial junk.
+1. A `JobSource` interface with a Firecrawl implementation (temporary). Swappable later for a licensed job API without touching the rest of the system.
+2. **Factory & Fallback:** `getJobSource()` selects `FirecrawlJobSource` only when `FIRECRAWL_API_KEY` is configured and `NODE_ENV !== 'test'`; otherwise defaults to deterministic `MockJobSource` without crashing.
+3. **Legal & Source Policy (Strict):**
+   - **Built-in Denylist:** Scraping-prohibited sites (`linkedin.com`, `indeed.com`, and all subdomains) are permanently blocked, even if misconfigured in an allowlist.
+   - **Configurable Allowlist:** Live Firecrawl searches are strictly constrained to a configurable domain allowlist (`JOB_SOURCE_ALLOWLIST`). Default list is conservative (`boards.greenhouse.io`, `jobs.lever.co`, `jobs.ashbyhq.com`), marked "human must verify terms before enabling". If the allowlist is empty, live search returns 0 results and mock remains default.
+   - **Robots & Terms:** Respects robots.txt directives and per-domain rate limits; identifies via clear User-Agent (`ResuMatchBot/1.0 (+https://resumatch.ai/bot)`).
+   - **Data Minimization & TTL:** Only cleaned text, title, company, location, URL hash, and content hash are stored in `JobListingCache` with a 24-hour TTL (`expiresAt`).
+4. **Security & Guardrails:**
+   - **SSRF Protection:** Outbound URLs re-validated on every redirect hop; blocks private/loopback/link-local/CGNAT/IPv6 addresses, URL credentials, and non-standard ports.
+   - **Sanitization:** Scraped content is untrusted; strips script/style/iframe/HTML tags, decodes entities, removes control chars, caps length at 10,000 chars, neutralizes prompt-injection patterns. Never rendered as HTML, never treated as instructions.
+   - **Tenant Isolation:** Foreign or nonexistent `resumeId` or `jobId` returns 404 RFC 7807. Default-deny auth hook enforced.
+5. **Flow & Ranking Pipeline (Two Modes):**
+   - **Without JD:** Derives up to 3 queries from `ParsedResume` (titles, skills, ML role taxonomy) and optional location/seniority overrides.
+   - **With JD:** Derives up to 3 queries from target `Job` and resume to find similar jobs.
+   - **Deduplication:** By URL hash and composite title+company+location key.
+   - **Scoring:** ML endpoint `POST /v1/matching/score-listings` uses existing Phase 3 pipeline (BM25, dense vector, RRF, cross-encoder, skill-gap, calibrated blend). Score integrity: LLM never alters or fabricates scores.
+   - **Top N:** Returns top N (default 10, max 10) sorted by ML score.
+6. **Metering & Quotas:**
+   - Guarded by `withMeter('job_suggestions')`. Consumes 1 unit atomically after validation and before external search.
+   - At 100%: returns HTTP 429 RFC 7807 `usage-limit-exceeded` with zero external calls.
+   - On 5xx/timeout failure: refunds 1 unit and fails request.
+7. **Payment:** Payment for this feature is optional and belongs to Phase 11.
 
 ---
+
 
 ## 9. Phase 8: Product UI
 

@@ -13,9 +13,11 @@ import { resumesRoutes } from './routes/resumes.js';
 import { rewriterRoutes } from './routes/rewriter.js';
 import { improvementsRoutes } from './routes/improvements.js';
 import { usageRoutes } from './routes/usage.js';
+import { suggestionsRoutes } from './routes/suggestions.js';
 
 export function buildServer(): FastifyInstance {
   const isDev = env.NODE_ENV === 'development';
+
 
   const app = Fastify({
     trustProxy: env.TRUST_PROXY,
@@ -99,5 +101,6 @@ export function buildServer(): FastifyInstance {
   app.register(rewriterRoutes);
   app.register(improvementsRoutes);
   app.register(usageRoutes);
+  app.register(suggestionsRoutes);
   return app;
 }
