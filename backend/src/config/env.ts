@@ -115,10 +115,79 @@ export const EnvSchema = z.object({
   FIRECRAWL_API_KEY: z.string().optional(),
   JOB_SOURCE_ALLOWLIST: z.string().default('boards.greenhouse.io,jobs.lever.co,jobs.ashbyhq.com'),
   JOB_SOURCE_MAX_QUERIES: z.coerce.number().int().positive().default(1),
+
+  // Production Boot Guard Controls (Phase 9 - C5)
+  ALLOW_DEV_DEFAULTS: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return false;
+    })
+    .default(false),
+  ENFORCE_PRODUCTION_BOOT_GUARD: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return false;
+    })
+    .default(false),
 });
 
-
 export type Env = z.infer<typeof EnvSchema>;
+
+export function validateProductionBootGuard(
+  envData: Env,
+  options?: { enforceStrict?: boolean }
+): { valid: boolean; errors: string[] } {
+  const shouldEnforce =
+    options?.enforceStrict ||
+    envData.ENFORCE_PRODUCTION_BOOT_GUARD ||
+    (envData.NODE_ENV === 'production' && !envData.ALLOW_DEV_DEFAULTS);
+
+  if (!shouldEnforce) {
+    return { valid: true, errors: [] };
+  }
+
+  const errors: string[] = [];
+
+  if (envData.DATABASE_URL.includes('resumatch_password')) {
+    errors.push('DATABASE_URL contains default password "resumatch_password"');
+  }
+
+  if (envData.S3_ACCESS_KEY === 'minioadmin' || envData.S3_SECRET_KEY === 'minioadmin') {
+    errors.push('S3 credentials use default "minioadmin"');
+  }
+
+  if (envData.MINIO_ACCESS_KEY === 'minioadmin' || envData.MINIO_SECRET_KEY === 'minioadmin') {
+    errors.push('MINIO credentials use default "minioadmin"');
+  }
+
+  if (
+    !envData.INTERNAL_API_TOKEN ||
+    envData.INTERNAL_API_TOKEN.length < 32 ||
+    envData.INTERNAL_API_TOKEN.toLowerCase().includes('change_me')
+  ) {
+    errors.push('INTERNAL_API_TOKEN is weak, placeholder, or < 32 characters');
+  }
+
+  if (
+    !envData.JWT_SECRET ||
+    envData.JWT_SECRET.length < 32 ||
+    envData.JWT_SECRET.toLowerCase().includes('local-dev')
+  ) {
+    errors.push('JWT_SECRET is weak, placeholder, or < 32 characters');
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Production boot guard failed:\n- ${errors.join('\n- ')}`);
+  }
+
+  return { valid: true, errors: [] };
+}
 
 export function loadEnv(overrideEnv?: Record<string, string | undefined>): Env {
   const result = EnvSchema.safeParse(overrideEnv ?? process.env);
@@ -127,7 +196,14 @@ export function loadEnv(overrideEnv?: Record<string, string | undefined>): Env {
     console.error('❌ Environment validation failed:', JSON.stringify(formattedErrors, null, 2));
     throw new Error('Environment configuration error');
   }
-  return result.data;
+
+  const envData = result.data;
+  // If strict boot guard is explicitly requested or running in strict production, validate secrets
+  if (envData.ENFORCE_PRODUCTION_BOOT_GUARD) {
+    validateProductionBootGuard(envData);
+  }
+
+  return envData;
 }
 
 export const env: Env = loadEnv();

@@ -135,3 +135,56 @@ describe('Environment Configuration - JWT_SECRET (Phase 5)', () => {
     }
   });
 });
+
+describe('Environment Configuration - Production Boot Guard (Phase 9 - C5)', () => {
+  const prodBaseEnv: Record<string, string> = {
+    NODE_ENV: 'production',
+    PORT: '4000',
+    HOST: '0.0.0.0',
+    DATABASE_URL: 'postgresql://prod_user:StrongProdPass123!@db.prod.internal:5432/resumatch',
+    REDIS_URL: 'redis://redis.prod.internal:6379',
+    S3_ACCESS_KEY: 'prod_custom_s3_key_12345',
+    S3_SECRET_KEY: 'prod_custom_s3_secret_67890',
+    MINIO_ACCESS_KEY: 'prod_custom_s3_key_12345',
+    MINIO_SECRET_KEY: 'prod_custom_s3_secret_67890',
+    JWT_SECRET: 'super-strong-production-jwt-secret-9876543210123456789',
+    INTERNAL_API_TOKEN: 'super-strong-production-internal-token-987654321',
+    ALLOW_DEV_DEFAULTS: 'false',
+    ENFORCE_PRODUCTION_BOOT_GUARD: 'true',
+  };
+
+  it('boots cleanly in production mode with strong unique secrets', () => {
+    const loaded = loadEnv(prodBaseEnv);
+    expect(loaded.NODE_ENV).toBe('production');
+  });
+
+  it('refuses to boot in production when DATABASE_URL uses default resumatch_password', () => {
+    const weakEnv = {
+      ...prodBaseEnv,
+      DATABASE_URL: 'postgresql://resumatch_user:resumatch_password@localhost:5432/resumatch',
+    };
+
+    expect(() => loadEnv(weakEnv)).toThrow('Production boot guard failed');
+    expect(() => loadEnv(weakEnv)).toThrow('resumatch_password');
+  });
+
+  it('refuses to boot in production when S3 credentials use default minioadmin', () => {
+    const weakEnv = {
+      ...prodBaseEnv,
+      S3_ACCESS_KEY: 'minioadmin',
+      S3_SECRET_KEY: 'minioadmin',
+    };
+
+    expect(() => loadEnv(weakEnv)).toThrow('Production boot guard failed');
+    expect(() => loadEnv(weakEnv)).toThrow('minioadmin');
+  });
+
+  it('refuses to boot in production when INTERNAL_API_TOKEN is weak or placeholder', () => {
+    const weakEnv = {
+      ...prodBaseEnv,
+      INTERNAL_API_TOKEN: 'CHANGE_ME_IN_PRODUCTION_KEY_123456789',
+    };
+
+    expect(() => loadEnv(weakEnv)).toThrow('Environment configuration error');
+  });
+});

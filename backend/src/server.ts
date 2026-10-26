@@ -16,9 +16,8 @@ import { usageRoutes } from './routes/usage.js';
 import { suggestionsRoutes } from './routes/suggestions.js';
 import { logJobSourceStatus } from './services/jobSource/factory.js';
 
-export function buildServer(): FastifyInstance {
+export function buildServer(options?: { onRoute?: (routeOptions: any) => void }): FastifyInstance {
   const isDev = env.NODE_ENV === 'development';
-
 
   const app = Fastify({
     trustProxy: env.TRUST_PROXY,
@@ -37,6 +36,27 @@ export function buildServer(): FastifyInstance {
       : {
           level: env.LOG_LEVEL,
         },
+  });
+
+  if (options?.onRoute) {
+    app.addHook('onRoute', options.onRoute);
+  }
+
+  // Global Security Headers (C3 - Transport & Headers Hardening)
+  app.addHook('onSend', async (_request, reply, _payload) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), browsing-topics=()');
+    reply.header('Cross-Origin-Opener-Policy', 'same-origin');
+    reply.header('Cross-Origin-Resource-Policy', 'same-origin');
+    reply.header('X-Permitted-Cross-Domain-Policies', 'none');
+    if (env.NODE_ENV === 'production') {
+      reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    if (!reply.getHeader('Cache-Control')) {
+      reply.header('Cache-Control', 'no-store, max-age=0');
+    }
   });
 
   const ALLOWED_ORIGINS = new Set(
