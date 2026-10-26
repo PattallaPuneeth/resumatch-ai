@@ -151,13 +151,15 @@ Replaces the dev token minting used in tests.
 
 ## 7. Phase 6: Usage metering, displayed limits, 50/70/90 alerts (REQUIRED)
 
-**Required.** Limits and alerts are fully built and displayed. Real users default to unlimited for now (shown as "Unlimited"). Payment is not part of this phase.
-1. Meters per user: **analyses/questions**, **job-suggestion runs**, **resume storage**. Atomic counters (transactional, race-safe), period reset logic for later plans.
-2. A `Plan` concept with configurable limits; the default plan is **unlimited** (no limit). Limits are config/data, not code.
-3. API returns usage state (`used`, `limit`, `percent`, `threshold`); thresholds **50%, 70%, 90%** each produce a separate alert state; 100% blocks the action with a clear message.
-4. Test with a limited test plan so alerts and blocking are verified even though real users are unlimited.
-5. One resume can be matched against any number of JDs (no per-resume cap).
-**Security:** limits enforced server-side only; counters not client-controlled; tests for race conditions and bypass attempts.
+**Status:** Backend implementation and verification COMPLETE.
+1. Meters per user: **analyses** (monthly; covers rewriter, improvements, analysis creation), **job_suggestions** (monthly; defined, wired in Phase 7), **resume_storage_bytes** (lifetime gauge). Atomic consumption via PostgreSQL single conditional upsert (`INSERT ... ON CONFLICT DO UPDATE WHERE used + amount <= limit RETURNING used`), race-safe integer math (`used * 100 >= limit * T`).
+2. Plans are DATA: `Plan(key, name, limits JSON)`. Seeded with `unlimited` (default for all users) and `demo` (`analyses: 10`, `job_suggestions: 5`, `resume_storage_bytes: 5242880`). Storage gauge backfilled additively from non-failed resumes (`INSERT ... SELECT`).
+3. API endpoint `GET /v1/usage` (read-only, `Cache-Control: no-store`): returns `plan`, `planName`, `period`, `periodStart`, `resetAt`, and per-meter `used`, `limit`, `unlimited`, `percent`, `activeThreshold` (null|50|70|90|100), `crossedThresholds`, and `blocked`.
+4. Order of operations: Consume AFTER auth, ownership, and validation and BEFORE expensive call. Automatic refunds on 5xx, timeout, or 422 HALLUCINATION_DETECTED. No refund on deterministic results (`llmStatus: UNAVAILABLE`).
+5. Storage hooks: Pre-checked at `POST /v1/resumes/upload-url`, atomically consumed at `POST /v1/resumes/:id/complete`, subtracted at `DELETE /v1/resumes/:id`, and cascade deleted at `DELETE /v1/account`.
+6. Administrative plan assignment: strictly via `backend/scripts/setPlan.ts` (outside `src/`, excluded from Docker image).
+7. One resume can be matched against any number of JDs (no per-resume cap; matching is unmetered).
+**Security:** Limits enforced server-side only; counters not client-controlled; race-safe atomic conditional upserts; verified with concurrency tests.
 
 ---
 

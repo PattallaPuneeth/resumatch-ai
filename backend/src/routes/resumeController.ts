@@ -15,6 +15,8 @@ import { resumeParsingQueue } from '../queues/bullmq.js';
 import type { ResumeParsingJobPayload } from '../queues/bullmq.js';
 import { env } from '../config/env.js';
 import { withResumeCoordinationLock } from '../utils/coordinationLock.js';
+import { usageService } from '../services/usageService.js';
+import { sendUsageLimitExceeded } from '../services/meterGuard.js';
 
 // ---------------------------------------------------------------------------
 // Supported formats per Section 2B of the specification
@@ -116,6 +118,21 @@ export async function handleRequestUploadUrl(
       timestamp: new Date().toISOString(),
       requestId: request.id,
     });
+  }
+
+  // Enforce resume storage byte limit per user plan
+  const usage = await usageService.getUsage(userId);
+  const storageLimit = usage.meters.resume_storage_bytes.limit;
+  const currentStorage = usage.meters.resume_storage_bytes.used;
+  if (storageLimit !== null && (currentStorage + sizeBytes > storageLimit)) {
+    sendUsageLimitExceeded(reply, request, {
+      allowed: false,
+      meter: 'resume_storage_bytes',
+      used: currentStorage,
+      limit: storageLimit,
+      resetAt: null,
+    });
+    return;
   }
 
   // Sanitize original filename — strip path components, keep only safe chars
@@ -277,7 +294,22 @@ export async function handleCompleteUpload(
       return { kind: 'HASH_ERROR' as const, error: hashErr };
     }
 
-    // Step 5: Transition to UPLOADED, persist sha256 and actual size
+    // Step 5: Enforce storage limits and consume from resume_storage_bytes gauge
+    const consumeRes = await usageService.consume(userId, 'resume_storage_bytes', actualSize);
+    if (!consumeRes.allowed) {
+      await tx.resume.update({
+        where: { id: resumeId },
+        data: {
+          status: 'FAILED',
+          errorCode: 'USAGE_LIMIT_EXCEEDED',
+          errorMessage: `Storage limit reached (${consumeRes.used}/${consumeRes.limit} bytes).`,
+        },
+      });
+      await deleteStorageObject(resume.storageKey).catch(() => {});
+      return { kind: 'STORAGE_LIMIT_EXCEEDED' as const, consumeRes };
+    }
+
+    // Step 6: Transition to UPLOADED, persist sha256 and actual size
     await tx.resume.update({
       where: { id: resumeId },
       data: {
@@ -295,6 +327,11 @@ export async function handleCompleteUpload(
   });
 
   // Handle outcomes outside the lock transaction
+  if (outcome.kind === 'STORAGE_LIMIT_EXCEEDED') {
+    sendUsageLimitExceeded(reply, request, outcome.consumeRes);
+    return;
+  }
+
   if (outcome.kind === 'NOT_FOUND') {
     return reply.status(404).send({
       statusCode: 404,
@@ -783,6 +820,15 @@ export async function handleDeleteResume(
         timestamp: new Date().toISOString(),
         requestId: request.id,
       });
+    }
+  }
+
+  // Decrement storage gauge for deleted resume holding storage (only if upload completed, not UPLOAD_PENDING)
+  if (resume.sizeBytes && resume.sizeBytes > 0 && resume.status !== 'UPLOAD_PENDING') {
+    try {
+      await usageService.subtractStorage(userId, resume.sizeBytes);
+    } catch (gaugeErr) {
+      request.log.warn({ err: gaugeErr, resumeId, sizeBytes: resume.sizeBytes }, 'Failed to decrement storage gauge');
     }
   }
 

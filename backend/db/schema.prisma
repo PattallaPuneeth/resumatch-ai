@@ -16,6 +16,8 @@ model User {
   passwordHash  String?
   fullName      String?
   role          String         @default("CANDIDATE")
+  planKey       String         @default("unlimited")
+  plan          Plan           @relation(fields: [planKey], references: [key])
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -24,6 +26,7 @@ model User {
   recoveryCodes RecoveryCode[]
   resumes       Resume[]
   jobs          Job[]
+  usages        UserUsage[]
 
   @@map("users")
 }
@@ -265,4 +268,30 @@ model AuditLog {
   @@index([event])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model Plan {
+  key       String   @id
+  name      String
+  limits    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+
+  @@map("plans")
+}
+
+model UserUsage {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meter     String
+  period    String
+  used      BigInt   @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, meter, period])
+  @@index([userId])
+  @@map("user_usage")
 }

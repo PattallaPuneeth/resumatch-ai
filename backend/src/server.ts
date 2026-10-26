@@ -12,6 +12,7 @@ import { jobsRoutes } from './routes/jobs.js';
 import { resumesRoutes } from './routes/resumes.js';
 import { rewriterRoutes } from './routes/rewriter.js';
 import { improvementsRoutes } from './routes/improvements.js';
+import { usageRoutes } from './routes/usage.js';
 
 export function buildServer(): FastifyInstance {
   const isDev = env.NODE_ENV === 'development';
@@ -97,6 +98,6 @@ export function buildServer(): FastifyInstance {
   app.register(jobsRoutes);
   app.register(rewriterRoutes);
   app.register(improvementsRoutes);
-
+  app.register(usageRoutes);
   return app;
 }

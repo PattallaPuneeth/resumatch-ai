@@ -1016,3 +1016,125 @@ Flow:
    - `@fastify/cookie`: `^11.1.3` (Session and CSRF cookie management with SameSite and HttpOnly protection)
    - `@fastify/jwt`: `^9.1.0` (JWT token signing, verification, and claims decoding)
    - `@node-rs/argon2`: `^2.2.2` (Native SIMD-accelerated Argon2id password hashing and constant-time verification)
+
+## 17. Phase 6: Usage Metering, Displayed Limits, and Alerts
+
+### 17.1 Architectural Overview & Core Decisions
+1. **Meters & Reset Cadence:**
+   - `analyses`: Monthly counter. Tracks analysis creation (`POST /v1/jobs/:id/analysis`) and every LLM-backed interactive request (`POST /v1/rewriter/bullet`, `POST /v1/resumes/:resumeId/improvements`). Reset cadence: calendar month UTC (`YYYY-MM`). Period starts at first day of month 00:00:00 UTC; `resetAt` is first day of next month 00:00:00 UTC.
+   - `job_suggestions`: Monthly counter. Defined in schema and usage response; consumption wired in Phase 7.
+   - `resume_storage_bytes`: Lifetime gauge. Tracks total bytes of active resumes uploaded. Period identifier: `lifetime`; `resetAt` is `null`; `periodStart` is `null`.
+2. **Plans as Data:**
+   - Stored in database table `plans` with columns `key` (PK), `name`, `limits` (JSONB), `createdAt`, `updatedAt`. Missing or `null` limits indicate unlimited usage.
+   - Seeded in additive migration `20261026000000_phase6_usage_metering_and_plans`:
+     - `unlimited`: `name`: "Unlimited", `limits`: `{ "analyses": null, "job_suggestions": null, "resume_storage_bytes": null }`. Default for all new and existing users.
+     - `demo`: `name`: "Demo", `limits`: `{ "analyses": 10, "job_suggestions": 5, "resume_storage_bytes": 5242880 }`.
+   - `User` table has `planKey` column with default `'unlimited'` and foreign key relation to `plans.key`.
+   - **Storage Gauge Backfill:** Executed additively in migration SQL via `INSERT INTO "user_usage" ... SELECT ... FROM "resumes" WHERE "status" != 'FAILED' GROUP BY "userId" ON CONFLICT DO NOTHING;`.
+3. **Metered Actions & Unmetered Boundaries:**
+   - Metered actions: `POST /v1/rewriter/bullet`, `POST /v1/resumes/:resumeId/improvements`, and `POST /v1/jobs/:id/analysis`. Cache hits still count (metering applies to user actions).
+   - Unmetered boundaries: ML-only reads, resume listing/downloading, and match scoring (`POST /v1/jobs/:id/match`) are NOT metered. One resume can be matched against any number of JDs without consumption.
+4. **Order of Operations & Refund Invariants:**
+   - Consumption occurs **AFTER** authentication, ownership checks, and body validation, and **BEFORE** invoking downstream LLM or queue execution.
+   - Automatic refund occurs when downstream execution produces no usable result (HTTP 5xx, network timeout, or HTTP 422 `HALLUCINATION_DETECTED`).
+   - Downstream responses returning deterministic results (including `llmStatus: UNAVAILABLE`) are considered successful feature execution and are **NOT** refunded.
+5. **Storage Lifecycle Hooks & Physical Storage Rule:**
+   - `POST /v1/resumes/upload-url`: Rejects requests immediately with HTTP 429 if `currentStorage + declaredSizeBytes > limit`.
+   - `POST /v1/resumes/:id/complete`: Atomically consumes `actualSize` under the coordination lock. If storage limit is exceeded, deletes the uploaded object from S3, updates resume status to `FAILED` with `errorCode: STORAGE_LIMIT_EXCEEDED`, and returns HTTP 429 RFC 7807.
+   - **Physical Storage Invariant:** `resume_storage_bytes` tracks active physical storage held in S3. If background document parsing fails (`status: FAILED`), the S3 object is preserved so the user can inspect or download the file; therefore, `FAILED` resumes remain counted in `resume_storage_bytes`.
+   - `DELETE /v1/resumes/:id`: Deletes the S3 object, removes the database row, and subtracts `resume.sizeBytes` from `resume_storage_bytes` for any resume holding storage (only if upload completed, i.e., `status != 'UPLOAD_PENDING'`, including `FAILED` resumes).
+   - `DELETE /v1/account`: Cascades deletion of all user records, removing all associated `user_usage` records via database FK cascade.
+6. **Async Analysis Quota Lifecycle & Known Limit:**
+   - Synchronous metered routes (`rewriter`, `improvements`): Downstream 5xx, timeouts, or 422 `HALLUCINATION_DETECTED` trigger immediate in-process refunds.
+   - Asynchronous analysis (`POST /v1/jobs/:id/analysis`): 1 unit of `analyses` is consumed upon HTTP 202 acceptance. If BullMQ enqueue fails, it is refunded immediately before returning 503.
+   - Worker LLM outages trigger Phase 4A graceful degradation: `process_analysis` persists deterministic analysis with `llm_status: UNAVAILABLE` (considered successful feature delivery; not refunded).
+   - **Known Limit:** If an unrecoverable catastrophic failure occurs in the worker pipeline after HTTP 202 (e.g. database down during persistence, worker hard killed across all BullMQ retries), no analysis row is stored and the consumed quota unit is not asynchronously refunded. Asynchronous dead-letter queue reconciliation is slated for a future background reconciliation worker.
+7. **Atomic Conditional Consumption & Integer Math:**
+   - Atomic conditional upsert in PostgreSQL:
+     ```sql
+     INSERT INTO "user_usage" ("id", "userId", "meter", "period", "used", "createdAt", "updatedAt")
+     SELECT gen_random_uuid()::text, $1, $2, $3, $4::bigint, NOW(), NOW()
+     WHERE $4::bigint <= $5::bigint
+     ON CONFLICT ("userId", "meter", "period")
+     DO UPDATE SET "used" = "user_usage"."used" + $4::bigint, "updatedAt" = NOW()
+     WHERE "user_usage"."used" + $4::bigint <= $5::bigint
+     RETURNING "used";
+     ```
+   - Threshold calculation uses integer math: `used * 100 >= limit * T`. Thresholds: 50, 70, 90, 100.
+   - At 100% (or `used >= limit`): emits HTTP 429 RFC 7807 problem details with `type: 'https://api.resumatch.ai/errors/usage-limit-exceeded'`. Downstream action is never invoked.
+8. **Read-Only API & Administration:**
+   - `GET /v1/usage`: Authenticated, read-only endpoint with `Cache-Control: no-store`.
+   - No HTTP route may alter counters or reassign plans. Plan reassignment is strictly administrative via host script `backend/scripts/setPlan.ts` (excluded from production Docker build).
+
+### 17.2 API Contracts (for Phase 8 UI Integration)
+- `GET /v1/usage`
+  - Headers: `Authorization: Bearer <token>` or session cookie
+  - Response (200 OK, `Cache-Control: no-store`):
+    ```json
+    {
+      "plan": "demo",
+      "planName": "Demo",
+      "period": "2026-10",
+      "periodStart": "2026-10-01T00:00:00.000Z",
+      "resetAt": "2026-11-01T00:00:00.000Z",
+      "meters": {
+        "analyses": {
+          "used": 5,
+          "limit": 10,
+          "unlimited": false,
+          "percent": 50,
+          "activeThreshold": 50,
+          "crossedThresholds": [50],
+          "blocked": false,
+          "periodStart": "2026-10-01T00:00:00.000Z",
+          "resetAt": "2026-11-01T00:00:00.000Z"
+        },
+        "job_suggestions": {
+          "used": 0,
+          "limit": 5,
+          "unlimited": false,
+          "percent": 0,
+          "activeThreshold": null,
+          "crossedThresholds": [],
+          "blocked": false,
+          "periodStart": "2026-10-01T00:00:00.000Z",
+          "resetAt": "2026-11-01T00:00:00.000Z"
+        },
+        "resume_storage_bytes": {
+          "used": 102400,
+          "limit": 5242880,
+          "unlimited": false,
+          "percent": 1,
+          "activeThreshold": null,
+          "crossedThresholds": [],
+          "blocked": false,
+          "periodStart": null,
+          "resetAt": null
+        }
+      }
+    }
+    ```
+- HTTP 429 RFC 7807 Usage Limit Exceeded (Emitted when blocked):
+  - Status: `429 Too Many Requests`
+  - Header: `Content-Type: application/problem+json; charset=utf-8`
+  - Body:
+    ```json
+    {
+      "type": "https://api.resumatch.ai/errors/usage-limit-exceeded",
+      "title": "Usage Limit Exceeded",
+      "status": 429,
+      "statusCode": 429,
+      "error": "Too Many Requests",
+      "message": "Usage limit reached for meter \"analyses\". Current usage: 10/10. Next reset: 2026-11-01T00:00:00.000Z.",
+      "detail": "Usage limit reached for meter \"analyses\". Current usage: 10/10. Next reset: 2026-11-01T00:00:00.000Z.",
+      "instance": "/v1/rewriter/bullet",
+      "meter": "analyses",
+      "used": 10,
+      "limit": 10,
+      "resetAt": "2026-11-01T00:00:00.000Z",
+      "timestamp": "2026-10-26T09:30:00.000Z",
+      "requestId": "req-1"
+    }
+    ```
+
+---

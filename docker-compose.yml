@@ -138,6 +138,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://127.0.0.1:3000}
       RESUME_CAP_PER_USER: ${RESUME_CAP_PER_USER:-50}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      USAGE_DEFAULT_PLAN: ${USAGE_DEFAULT_PLAN:-unlimited}
     ports:
       - "127.0.0.1:4000:4000"
     healthcheck:

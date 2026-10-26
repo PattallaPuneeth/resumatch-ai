@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { prisma } from '../db/prisma.js';
+import { withMeter } from '../services/meterGuard.js';
+import { usageService } from '../services/usageService.js';
 
 export const improvementsParamsSchema = z.object({
   resumeId: z.string().uuid('Invalid resume UUID'),
@@ -84,51 +86,75 @@ export const improvementsRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      // 4. Invoke Python ML improvements service
-      try {
-        const mlUrl = `${env.ML_SERVICE_URL}/v1/resumes/${resumeId}/improvements`;
-        const mlRes = await fetch(mlUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Token': env.INTERNAL_API_TOKEN,
-          },
-          body: JSON.stringify({
-            resumeId,
-            resumeRawText: parsedResume.rawText,
-            atsScore: parsedResume.atsScore,
-            atsHazards: parsedResume.atsHazards || [],
-            candidateSkills: parsedResume.skills || null,
-          }),
-        });
+      // 4. Invoke Python ML improvements service guarded by usage metering
+      await withMeter(request, reply, 'analyses', async () => {
+        try {
+          const mlUrl = `${env.ML_SERVICE_URL}/v1/resumes/${resumeId}/improvements`;
+          const mlRes = await fetch(mlUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Internal-Token': env.INTERNAL_API_TOKEN,
+            },
+            body: JSON.stringify({
+              resumeId,
+              resumeRawText: parsedResume.rawText,
+              atsScore: parsedResume.atsScore,
+              atsHazards: parsedResume.atsHazards || [],
+              candidateSkills: parsedResume.skills || null,
+            }),
+          });
 
-        if (!mlRes.ok) {
-          const errData = (await mlRes.json().catch(() => ({}))) as any;
-          return reply.status(mlRes.status).send({
-            type: 'https://api.resumatch.ai/errors/improvements-error',
-            title: 'Improvements Error',
-            status: mlRes.status,
-            statusCode: mlRes.status,
-            error: 'Improvements Error',
-            message: errData.detail || 'Failed to generate resume improvements',
-            detail: errData.detail || 'Failed to generate resume improvements',
+          if (mlRes.status === 422) {
+            const errData = (await mlRes.json().catch(() => ({}))) as any;
+            await usageService.refund(userId, 'analyses', 1);
+            return reply.status(422).send({
+              type: 'https://api.resumatch.ai/errors/hallucination-detected',
+              title: 'Hallucination Detected',
+              status: 422,
+              statusCode: 422,
+              error: 'Unprocessable Entity',
+              message:
+                errData.detail ||
+                'HALLUCINATION_DETECTED: No improvements could be verified against source facts.',
+              detail:
+                errData.detail ||
+                'HALLUCINATION_DETECTED: No improvements could be verified against source facts.',
+            });
+          }
+
+          if (!mlRes.ok) {
+            if (mlRes.status >= 500) {
+              await usageService.refund(userId, 'analyses', 1);
+            }
+            const errData = (await mlRes.json().catch(() => ({}))) as any;
+            return reply.status(mlRes.status).send({
+              type: 'https://api.resumatch.ai/errors/improvements-error',
+              title: 'Improvements Error',
+              status: mlRes.status,
+              statusCode: mlRes.status,
+              error: 'Improvements Error',
+              message: errData.detail || 'Failed to generate resume improvements',
+              detail: errData.detail || 'Failed to generate resume improvements',
+            });
+          }
+
+          const data = await mlRes.json();
+          return reply.status(200).send(data);
+        } catch (err: any) {
+          await usageService.refund(userId, 'analyses', 1);
+          request.log.error({ err, resumeId }, 'Failed to connect to ML improvements service');
+          return reply.status(503).send({
+            type: 'https://api.resumatch.ai/errors/service-unavailable',
+            title: 'Service Unavailable',
+            status: 503,
+            statusCode: 503,
+            error: 'Service Unavailable',
+            message: 'ML improvements service is currently unavailable',
+            detail: 'ML improvements service is currently unavailable',
           });
         }
-
-        const data = await mlRes.json();
-        return reply.status(200).send(data);
-      } catch (err: any) {
-        request.log.error({ err, resumeId }, 'Failed to connect to ML improvements service');
-        return reply.status(503).send({
-          type: 'https://api.resumatch.ai/errors/service-unavailable',
-          title: 'Service Unavailable',
-          status: 503,
-          statusCode: 503,
-          error: 'Service Unavailable',
-          message: 'ML improvements service is currently unavailable',
-          detail: 'ML improvements service is currently unavailable',
-        });
-      }
+      });
     }
   );
 };

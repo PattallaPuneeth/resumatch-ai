@@ -107,6 +107,9 @@ export const EnvSchema = z.object({
       message: 'INTERNAL_API_TOKEN cannot contain CHANGE_ME placeholder',
     }),
   EMBEDDING_DIMENSION: z.coerce.number().int().positive().default(384),
+
+  // Usage & Metering (Phase 6)
+  USAGE_DEFAULT_PLAN: z.string().default('unlimited'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

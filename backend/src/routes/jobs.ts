@@ -2,6 +2,8 @@ import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db/prisma.js';
 import { analysisQueue, embeddingQueue, matchScoringQueue } from '../queues/bullmq.js';
+import { withMeter } from '../services/meterGuard.js';
+import { usageService } from '../services/usageService.js';
 
 // ---------------------------------------------------------------------------
 // Validation Schemas
@@ -394,33 +396,36 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      // Enqueue analysis job
-      try {
-        await analysisQueue.add(
-          `analysis-${jobId}-${resumeId}`,
-          {
-            jobId,
-            resumeId,
-          },
-          {
-            jobId: `analysis-${jobId}-${resumeId}`,
-          }
-        );
-      } catch (queueErr) {
-        request.log.error({ err: queueErr, jobId, resumeId }, 'Failed to enqueue structured analysis job');
-        return reply.status(503).send({
-          statusCode: 503,
-          error: 'Service Unavailable',
-          message: 'Failed to enqueue structured analysis task',
-        });
-      }
+      // Enqueue analysis job guarded by usage metering
+      await withMeter(request, reply, 'analyses', async () => {
+        try {
+          await analysisQueue.add(
+            `analysis-${jobId}-${resumeId}`,
+            {
+              jobId,
+              resumeId,
+            },
+            {
+              jobId: `analysis-${jobId}-${resumeId}`,
+            }
+          );
+        } catch (queueErr) {
+          await usageService.refund(userId, 'analyses', 1);
+          request.log.error({ err: queueErr, jobId, resumeId }, 'Failed to enqueue structured analysis job');
+          return reply.status(503).send({
+            statusCode: 503,
+            error: 'Service Unavailable',
+            message: 'Failed to enqueue structured analysis task',
+          });
+        }
 
-      return reply.status(202).send({
-        statusCode: 202,
-        message: 'Structured analysis job enqueued',
-        jobId,
-        resumeId,
-        status: 'QUEUED',
+        return reply.status(202).send({
+          statusCode: 202,
+          message: 'Structured analysis job enqueued',
+          jobId,
+          resumeId,
+          status: 'QUEUED',
+        });
       });
     }
   );

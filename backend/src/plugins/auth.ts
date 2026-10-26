@@ -272,7 +272,7 @@ const authPlugin: FastifyPluginAsync = async (app) => {
 
   // Global Default-Deny Hook:
   // Every route not in the explicit PUBLIC allowlist requires authentication.
-  app.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     if (isPublicRoute(request.method, request.url)) {
       return;
     }

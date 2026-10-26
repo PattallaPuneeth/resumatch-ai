@@ -1233,5 +1233,50 @@ describe('Phase 5: Accounts and Authentication Suite', () => {
         expect(jsonStr).not.toContain('UniqueSuperPassword');
       }
     });
+
+    it('rejects unauthenticated requests with malformed or oversized body with 401 before body parsing', async () => {
+      // 1. Malformed JSON payload to protected route
+      const malformedRes = await app.inject({
+        method: 'POST',
+        url: '/v1/resumes/upload-url',
+        headers: {
+          'content-type': 'application/json',
+        },
+        payload: '{ invalid json payload :: not closed',
+      });
+      expect(malformedRes.statusCode).toBe(401);
+      expect(malformedRes.json().error).toBe('Unauthorized');
+
+      // 2. Oversized payload (> default 1MB / small limits) to protected route
+      const oversizedPayload = JSON.stringify({
+        filename: 'resume.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 1024,
+        extraData: 'A'.repeat(5 * 1024 * 1024), // 5MB payload
+      });
+
+      const oversizedRes = await app.inject({
+        method: 'POST',
+        url: '/v1/resumes/upload-url',
+        headers: {
+          'content-type': 'application/json',
+        },
+        payload: oversizedPayload,
+      });
+      expect(oversizedRes.statusCode).toBe(401);
+      expect(oversizedRes.json().error).toBe('Unauthorized');
+
+      // 3. Malformed JSON to another protected route (e.g. /v1/rewriter/bullet)
+      const rewriterRes = await app.inject({
+        method: 'POST',
+        url: '/v1/rewriter/bullet',
+        headers: {
+          'content-type': 'application/json',
+        },
+        payload: '<<<not a json object>>>',
+      });
+      expect(rewriterRes.statusCode).toBe(401);
+      expect(rewriterRes.json().error).toBe('Unauthorized');
+    });
   });
 });
