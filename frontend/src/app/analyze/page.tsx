@@ -17,6 +17,8 @@ import { AnalyzeSelector, JDInputData, MatchHistoryItem } from '@/components/Ana
 import { ModeAResults } from '@/components/ModeAResults';
 import { ModeBResults } from '@/components/ModeBResults';
 import { JobSuggestionsList } from '@/components/JobSuggestionsList';
+import { BulletEditor } from '@/components/BulletEditor';
+import { MatchHistoryList } from '@/components/MatchHistoryList';
 import {
   Sparkles,
   RefreshCw,
@@ -51,13 +53,22 @@ function AnalyzePageContent() {
 
   // Cancellation ref for leave-safe polling
   const isCancelledRef = useRef(false);
+  const resultsRegionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    document.title = 'Analyze & Match | ResuMatch AI';
     isCancelledRef.current = false;
     return () => {
       isCancelledRef.current = true;
     };
   }, []);
+
+  // Move focus to result region when results arrive for screen readers
+  useEffect(() => {
+    if (modeAResults || modeBAnalysis) {
+      resultsRegionRef.current?.focus();
+    }
+  }, [modeAResults, modeBAnalysis]);
 
   // 1. Fetch user's resumes
   const {
@@ -92,6 +103,39 @@ function AnalyzePageContent() {
     queryKey: ['usage'],
     queryFn: () => apiClient.usage.get(),
   });
+
+  // 3. Fetch active resume detail (to extract parsed experience bullets for BulletEditor)
+  const { data: resumeDetailData } = useQuery({
+    queryKey: ['resume-detail', selectedResumeId],
+    queryFn: () => (selectedResumeId ? apiClient.resumes.get(selectedResumeId) : null),
+    enabled: !!selectedResumeId,
+  });
+
+  const resumeBullets = React.useMemo(() => {
+    if (!resumeDetailData?.parsedResume) return [];
+    const exp = resumeDetailData.parsedResume.experience as any[];
+    if (Array.isArray(exp) && exp.length > 0) {
+      const extracted = exp.flatMap((item: any) =>
+        Array.isArray(item.bullets) ? item.bullets.filter((b: any) => typeof b === 'string' && b.trim().length > 0) : []
+      );
+      if (extracted.length > 0) return extracted;
+    }
+    if (resumeDetailData.parsedResume.rawText) {
+      return resumeDetailData.parsedResume.rawText
+        .split('\n')
+        .map((l: string) => l.trim().replace(/^[•\-\*]\s*/, ''))
+        .filter((l: string) => l.length >= 20 && l.length <= 400);
+    }
+    return [];
+  }, [resumeDetailData]);
+
+  // 4. Fetch jobs list for context selection
+  const { data: jobsListData } = useQuery({
+    queryKey: ['jobs-list'],
+    queryFn: () => apiClient.jobs.list({ limit: 50 }),
+  });
+
+  const jobsList = React.useMemo(() => jobsListData?.jobs || [], [jobsListData?.jobs]);
 
   // Switch resume resets active results for previous resume
   const handleSelectResume = (id: string) => {
@@ -273,20 +317,27 @@ function AnalyzePageContent() {
   };
 
   // Select an existing match from history to display its results immediately
-  const handleSelectHistoryMatch = async (item: MatchHistoryItem) => {
+  const handleSelectHistoryMatch = async (jobIdOrItem: string | MatchHistoryItem) => {
     if (!selectedResumeId) return;
 
+    const jobId = typeof jobIdOrItem === 'string' ? jobIdOrItem : jobIdOrItem.jobId;
+
     setIsSubmitting(true);
-    setProgressStep(`Loading saved match for ${item.title}...`);
+    setProgressStep('Loading match evaluation results...');
     setErrorMessage(null);
-    setCurrentJobId(item.jobId);
+    setCurrentJobId(jobId);
+    setSelectedMode('B');
 
     try {
-      const match = await apiClient.jobs.getMatch(item.jobId, selectedResumeId);
-      const analysis = await apiClient.jobs.getAnalysis(item.jobId, selectedResumeId);
-
+      const match = await apiClient.jobs.getMatch(jobId, selectedResumeId);
       setModeBMatch(match);
-      setModeBAnalysis(analysis);
+
+      try {
+        const analysis = await apiClient.jobs.getAnalysis(jobId, selectedResumeId);
+        setModeBAnalysis(analysis);
+      } catch {
+        setModeBAnalysis(null);
+      }
     } catch (err: any) {
       setErrorMessage(
         err.detail || err.message || 'Failed to load historical match details.'
@@ -319,7 +370,7 @@ function AnalyzePageContent() {
         {/* Reused 8A Usage Panel */}
         <UsagePanel />
 
-        {/* Analyze Selector (Resume Picker, Mode Switch, JD Paste, History) */}
+        {/* Analyze Selector (Resume Picker, Mode Switch, JD Paste) */}
         <AnalyzeSelector
           resumes={resumes}
           selectedResumeId={selectedResumeId}
@@ -336,6 +387,18 @@ function AnalyzePageContent() {
           onSelectHistoryMatch={handleSelectHistoryMatch}
           usageData={usageData}
         />
+
+        {/* Persistent Match & JD History List */}
+        {selectedResumeId && (
+          <MatchHistoryList
+            resumeId={selectedResumeId}
+            activeJobId={currentJobId}
+            onSelectMatch={handleSelectHistoryMatch}
+            onAddJobClick={() => {
+              setSelectedMode('B');
+            }}
+          />
+        )}
 
         {/* In-Flight Progress State */}
         {isSubmitting && (
@@ -369,7 +432,12 @@ function AnalyzePageContent() {
 
         {/* Mode A Results */}
         {selectedMode === 'A' && modeAResults && (
-          <div className="space-y-8 animate-in fade-in duration-300">
+          <div
+            ref={resultsRegionRef}
+            tabIndex={-1}
+            aria-label="Mode A Analysis Results"
+            className="space-y-8 animate-in fade-in duration-300 focus:outline-none"
+          >
             <ModeAResults data={modeAResults} />
 
             {/* Suggestions Panel for Mode A */}
@@ -385,7 +453,12 @@ function AnalyzePageContent() {
 
         {/* Mode B Results */}
         {selectedMode === 'B' && modeBAnalysis && (
-          <div className="space-y-8 animate-in fade-in duration-300">
+          <div
+            ref={resultsRegionRef}
+            tabIndex={-1}
+            aria-label="Mode B Analysis Results"
+            className="space-y-8 animate-in fade-in duration-300 focus:outline-none"
+          >
             <ModeBResults analysis={modeBAnalysis} matchResult={modeBMatch} />
 
             {/* Suggestions Panel for Mode B */}
@@ -398,6 +471,17 @@ function AnalyzePageContent() {
               />
             )}
           </div>
+        )}
+
+        {/* Interactive Bullet Editor (Available for all PARSED resumes) */}
+        {selectedResumeId && (
+          <BulletEditor
+            resumeId={selectedResumeId}
+            bullets={resumeBullets}
+            jobs={jobsList}
+            analysesMeter={usageData?.meters?.analyses}
+            onUsageChange={refetchUsage}
+          />
         )}
       </main>
     </div>

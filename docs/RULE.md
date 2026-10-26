@@ -37,3 +37,9 @@ At the end of each phase, report the changes, tests and actual results, security
 
 **Product direction:** ResuMatch AI must demonstrate that I can engineer a secure, reliable, measurable backend system whose AI capabilities are part of the solution—not the entire solution.
 
+## STANDING EXTERNAL-CALL BUDGET
+
+- **S2. LLM PROVIDER = OPENROUTER ONLY:** Maximum 4 LLM provider HTTP requests in total for this entire task (retries and failover count). Gemini, Groq and every other direct provider must be disabled for any live action. If OpenRouter fails, do NOT fall back to another provider; stop and report.
+- **S3. FIRECRAWL HARD CAP = 20 CREDITS:** For this task, counted from now. You cannot see credits, so assume the WORST CASE observed: 11 credits per /search request. Therefore at most ONE live Firecrawl /search request is allowed (a second could reach 22). A live run is allowed only if ALL are true: fan-out forced to exactly 1 query, result limit 3, page scraping/formats disabled (search only), and a code-level guard exists that rejects anything beyond that. If you cannot prove all four with a mocked test first, do ZERO live Firecrawl calls. After the one live request, STOP and tell me to check my Firecrawl dashboard; do not run another.
+- **S4. Count real provider requests, not API calls:** One of our API calls can fan out into several provider requests. Your ledger must be built from `docker compose logs --since <start> | Select-String -NotMatch '/health'` (backend + ml + ml-worker), listing every outbound provider request with timestamp. If you cannot see a provider request in logs, add non-secret logging (provider, endpoint, query count, limit; never keys or payload text) so you can.
+

@@ -21,6 +21,11 @@ function LoginForm() {
 
   const nextPath = sanitizeNextRedirect(searchParams.get('next'), '/dashboard');
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'Sign In | ResuMatch AI';
+  }, []);
+
   // If already authenticated, redirect to destination
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {

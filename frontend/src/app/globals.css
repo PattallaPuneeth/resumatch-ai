@@ -50,6 +50,87 @@
   }
 }
 
+@layer utilities {
+  .page-enter {
+    animation: pageFadeSlide 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .stagger-item {
+    animation: itemEnter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .stagger-item:nth-child(1) { animation-delay: 0ms; }
+  .stagger-item:nth-child(2) { animation-delay: 40ms; }
+  .stagger-item:nth-child(3) { animation-delay: 80ms; }
+  .stagger-item:nth-child(4) { animation-delay: 120ms; }
+  .stagger-item:nth-child(5) { animation-delay: 160ms; }
+  .stagger-item:nth-child(6) { animation-delay: 200ms; }
+
+  .animate-float {
+    animation: subtleFloat 3s ease-in-out infinite;
+  }
+
+  .mobile-menu-enter {
+    animation: mobileMenuSlide 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .reveal-stagger {
+    animation: revealFade 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes pageFadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes itemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes subtleFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes mobileMenuSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealFade {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -58,5 +139,13 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .page-enter,
+  .stagger-item,
+  .animate-float,
+  .mobile-menu-enter,
+  .reveal-stagger {
+    animation: none !important;
+    transform: none !important;
   }
 }

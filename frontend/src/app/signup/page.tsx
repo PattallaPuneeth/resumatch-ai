@@ -27,6 +27,9 @@ function SignupForm() {
       router.replace(nextPath);
     }
   }, [isAuthenticated, isAuthLoading, router, nextPath, recoveryCodes]);
+  useEffect(() => {
+    document.title = 'Create Account | ResuMatch AI';
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

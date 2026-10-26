@@ -19,6 +19,10 @@ export default function AccountPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = 'Account Settings | ResuMatch AI';
+  }, []);
+
+  useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/login?next=/account');
     }

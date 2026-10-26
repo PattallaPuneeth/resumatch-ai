@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ImprovementsResponse } from '@/lib/apiClient';
+import { ScoreGauge } from '@/components/ui/ScoreGauge';
 import {
   Award,
   AlertTriangle,
@@ -51,8 +52,9 @@ export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right">
+        <div className="flex items-center gap-4">
+          <ScoreGauge score={atsScore} maxScore={100} label="ATS Score" statusBand={scoreBand} size="sm" />
+          <div className="hidden sm:block text-right">
             <div
               data-testid="mode-a-ats-score"
               className="text-3xl font-extrabold font-mono text-primary tracking-tight"

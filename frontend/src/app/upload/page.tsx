@@ -72,17 +72,8 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load saved token from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('resumatch_auth_token');
-    if (saved) {
-      setToken(saved);
-    }
-  }, []);
-
   const handleTokenChange = (val: string) => {
     setToken(val);
-    localStorage.setItem('resumatch_auth_token', val);
   };
 
   const loadUserResumes = useCallback(async () => {

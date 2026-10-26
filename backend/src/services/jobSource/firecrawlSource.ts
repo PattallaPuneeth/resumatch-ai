@@ -45,7 +45,8 @@ export class FirecrawlJobSource implements JobSource {
     }
 
     const timeoutMs = options?.timeoutMs ?? 15000;
-    const maxResults = options?.maxResults ?? query.limit ?? 10;
+    // Hard cap maxResults to at most 3 to enforce strict credit budgeting
+    const maxResults = Math.min(3, Math.max(1, options?.maxResults ?? query.limit ?? 3));
     const allowlist = options?.allowlist ?? [];
 
     const searchQuery = [query.query, query.location, query.seniority, 'jobs']
@@ -53,7 +54,7 @@ export class FirecrawlJobSource implements JobSource {
       .join(' ')
       .trim();
 
-    // 1. Execute search with 1 retry on 5xx / network timeout
+    // 1. Execute search with 1 retry on 5xx / network timeout (scrape options disabled)
     const apiResponse = await this.executeWithRetry(
       searchQuery,
       maxResults,
@@ -139,6 +140,19 @@ export class FirecrawlJobSource implements JobSource {
       const timer = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
+        // Non-secret outbound logging for ledger and auditability
+        console.log(
+          JSON.stringify({
+            level: 30,
+            time: Date.now(),
+            provider: 'firecrawl',
+            endpoint: this.endpoint,
+            limit,
+            scrape: false,
+            msg: `[FIRECRAWL] Outbound search request: limit=${limit}, scrape=false`,
+          })
+        );
+
         const response = await fetch(this.endpoint, {
           method: 'POST',
           headers: {
@@ -149,9 +163,6 @@ export class FirecrawlJobSource implements JobSource {
           body: JSON.stringify({
             query,
             limit,
-            scrapeOptions: {
-              formats: ['markdown'],
-            },
           }),
           signal: controller.signal,
         });

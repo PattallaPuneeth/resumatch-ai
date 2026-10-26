@@ -1177,8 +1177,7 @@ describe('Phase 5: Accounts and Authentication Suite', () => {
           category = 'PUBLIC_AUTH';
         } else if (
           ['/resumes', '/jobs', '/analyses'].some((p) => route.url.startsWith(p)) ||
-          (route.url === '/v1/jobs/:id' && route.method === 'DELETE') ||
-          (route.url === '/v1/jobs' && route.method === 'GET')
+          (route.url === '/v1/jobs/:id' && route.method === 'DELETE')
         ) {
           category = 'LEGACY_STUB';
         } else if (route.url.startsWith('/v1/')) {

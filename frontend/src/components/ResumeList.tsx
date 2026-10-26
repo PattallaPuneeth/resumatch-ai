@@ -242,7 +242,7 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
                 const score = atsScores[resume.id] ?? resume.atsScore;
 
                 return (
-                  <tr key={resume.id} data-testid={`resume-row-${resume.id}`} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={resume.id} data-testid={`resume-row-${resume.id}`} className="hover:bg-slate-50/80 transition-colors stagger-item">
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2 max-w-xs">
                         <FileText className="h-4 w-4 text-primary shrink-0" />

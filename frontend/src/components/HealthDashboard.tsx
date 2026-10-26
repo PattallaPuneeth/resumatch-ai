@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Activity, CheckCircle2, XCircle, RefreshCw, Database, Server, Cpu, HardDrive } from 'lucide-react';
 import { useBackendHealth } from '@/hooks/useHealth';
 

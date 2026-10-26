@@ -380,6 +380,71 @@ export interface JobSuggestionsResponse {
   message?: string;
 }
 
+export interface EvidenceSpan {
+  startChar: number;
+  endChar: number;
+  quote: string;
+}
+
+export interface VerifiedRewriteOption {
+  text: string;
+  evidenceSpans: EvidenceSpan[];
+  needsUserInput?: boolean;
+}
+
+export interface RewriterResponse {
+  status: 'SUCCESS' | 'HALLUCINATION_DETECTED';
+  originalBullet: string;
+  options: VerifiedRewriteOption[];
+  provider?: string | null;
+  model?: string | null;
+  tokensPrompt?: number;
+  tokensCompletion?: number;
+  latencyMs?: number;
+}
+
+export interface ResumeMatchHistoryItem {
+  id: string;
+  resumeId: string;
+  jobId: string;
+  job: {
+    id: string;
+    title: string;
+    company: string;
+    location?: string | null;
+  };
+  matchScore: number;
+  subScores: {
+    bm25Score?: number | null;
+    vectorScore?: number | null;
+    rrfScore?: number | null;
+    crossEncoderScore?: number | null;
+  };
+  explanation?: MatchExplanation | null;
+  createdAt: string;
+  updatedAt: string;
+  analysis?: {
+    status: string;
+    llmStatus?: string | null;
+    score?: number | null;
+    createdAt?: string;
+  } | null;
+}
+
+export interface ResumeMatchesListResponse {
+  matches: ResumeMatchHistoryItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface JobListResponse {
+  jobs: JobSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -696,9 +761,25 @@ export const apiClient = {
         method: 'POST',
         body: JSON.stringify(params || {}),
       }),
+
+    getMatches: (resumeId: string, params?: { limit?: number; offset?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.limit) q.set('limit', String(params.limit));
+      if (params?.offset) q.set('offset', String(params.offset));
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return apiClientRequest<ResumeMatchesListResponse>(`/v1/resumes/${resumeId}/matches${qs}`);
+    },
   },
 
   jobs: {
+    list: (params?: { limit?: number; offset?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.limit) q.set('limit', String(params.limit));
+      if (params?.offset) q.set('offset', String(params.offset));
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return apiClientRequest<JobListResponse>(`/v1/jobs${qs}`);
+    },
+
     create: (data: CreateJobRequest) =>
       apiClientRequest<JobSummary>('/v1/jobs', {
         method: 'POST',
@@ -725,5 +806,18 @@ export const apiClient = {
 
     getAnalysis: (jobId: string, resumeId: string) =>
       apiClientRequest<AnalysisResult>(`/v1/jobs/${jobId}/analysis/${resumeId}`),
+  },
+
+  rewriter: {
+    rewriteBullet: (params: {
+      resumeId: string;
+      originalBullet: string;
+      targetSkill?: string;
+      jobId?: string;
+    }) =>
+      apiClientRequest<RewriterResponse>('/v1/rewriter/bullet', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
   },
 };

@@ -12,7 +12,7 @@ import {
   type ScoredJobSuggestion,
   type JobSuggestionsResponse,
 } from '../services/jobSource/types.js';
-import { getJobSource } from '../services/jobSource/factory.js';
+import { getJobSource, getJobSourceQueryCap, getJobSourceAllowlist } from '../services/jobSource/factory.js';
 import { deriveJobSearchQueries } from '../services/jobSource/queryBuilder.js';
 
 interface CacheEntry {
@@ -212,19 +212,29 @@ export const suggestionsRoutes: FastifyPluginAsync = async (app) => {
           // Redis cache miss or disconnected, proceed to search
         }
 
-        // Derive queries (up to 3) based on mode (without JD vs with JD)
-        const queries = deriveJobSearchQueries({
+        // Derive queries based on mode (without JD vs with JD) and clamp by hard queryCap
+        const derivedQueries = deriveJobSearchQueries({
           parsedResume,
           targetJob,
           location: body.location,
           seniority: body.seniority,
         });
 
+        const queryCap = getJobSourceQueryCap();
+        const queries = derivedQueries.slice(0, queryCap);
         const jobSource = getJobSource();
-        const allowlist = (env.JOB_SOURCE_ALLOWLIST || '')
-          .split(',')
-          .map((d) => d.trim())
-          .filter(Boolean);
+        const allowlist = getJobSourceAllowlist();
+        const searchLimit = Math.min(limit, 3);
+
+        request.log.info(
+          {
+            queryCount: queries.length,
+            limit: searchLimit,
+            queryCap,
+            jobSource: jobSource.type,
+          },
+          'Executing JobSource suggestions search'
+        );
 
         const candidateListings: RawJobListing[] = [];
         const seenUrls = new Set<string>();
@@ -239,9 +249,9 @@ export const suggestionsRoutes: FastifyPluginAsync = async (app) => {
                 query: queryStr,
                 location: body.location,
                 seniority: body.seniority,
-                limit,
+                limit: searchLimit,
               },
-              { allowlist, timeoutMs: 15000, maxResults: limit }
+              { allowlist, timeoutMs: 15000, maxResults: searchLimit }
             );
           } catch (sourceErr: any) {
             request.log.error({ err: sourceErr, query: queryStr }, 'JobSource search execution failed');

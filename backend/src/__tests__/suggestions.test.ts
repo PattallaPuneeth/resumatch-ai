@@ -7,7 +7,7 @@ import { isDenylisted } from '../services/jobSource/denylist.js';
 import { validateUrlForSsrf } from '../services/jobSource/ssrfGuard.js';
 import { sanitizeScrapedContent } from '../services/jobSource/sanitizer.js';
 import { deriveJobSearchQueries } from '../services/jobSource/queryBuilder.js';
-import { getJobSource, setJobSource } from '../services/jobSource/factory.js';
+import { getJobSource, setJobSource, logJobSourceStatus, resetJobSourceLogging } from '../services/jobSource/factory.js';
 import { MockJobSource } from '../services/jobSource/mockSource.js';
 import { FirecrawlJobSource } from '../services/jobSource/firecrawlSource.js';
 import { usageService } from '../services/usageService.js';
@@ -233,6 +233,23 @@ describe('Phase 7: Job Suggestions via Swappable JobSource', () => {
     it('defaults to MockJobSource in test environment or when FIRECRAWL_API_KEY is empty', () => {
       const source = getJobSource();
       expect(source).toBeInstanceOf(MockJobSource);
+    });
+
+    it('logs an explicit non-secret status line identifying the active JobSource and reason', () => {
+      const mockLogger = { info: vi.fn() };
+      resetJobSourceLogging();
+      const status = logJobSourceStatus(mockLogger);
+
+      expect(status.jobSource).toBe('mock');
+      expect(status.reason).toBeDefined();
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ jobSource: 'mock' }),
+        expect.stringContaining('JobSource active: mock')
+      );
+      // Ensure no secret or key material is included in the logged object or message
+      const [loggedObj, loggedMsg] = mockLogger.info.mock.calls[0];
+      expect(JSON.stringify(loggedObj)).not.toContain('fc-');
+      expect(loggedMsg).not.toContain('fc-');
     });
 
     it('supports custom JobSource injection via setJobSource and instantiates FirecrawlJobSource', async () => {
@@ -931,6 +948,107 @@ describe('Phase 7: Job Suggestions via Swappable JobSource', () => {
       expect(json.totalFound).toBeUndefined();
       // Quota must be refunded
       expect(refundSpy).toHaveBeenCalledWith(userId, 'job_suggestions', 1);
+    });
+
+    it('proves FirecrawlJobSource sends pure search without scrapeOptions and clamps maxResults to at most 3', async () => {
+      let capturedBody: any = null;
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation(async (_url, init) => {
+        capturedBody = JSON.parse(init.body as string);
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: [
+              {
+                url: 'https://jobs.lever.co/acme/123',
+                title: 'Senior Backend Engineer',
+                description: 'We are seeking a senior backend engineer with node experience.',
+              },
+            ],
+          }),
+        };
+      }) as any;
+
+      try {
+        const source = new FirecrawlJobSource('test_key');
+        // Request limit 10, but source must clamp to max 3
+        const results = await source.searchJobs({ query: 'Backend Engineer', limit: 10 });
+        expect(results).toHaveLength(1);
+        expect(capturedBody).not.toBeNull();
+        expect(capturedBody.scrapeOptions).toBeUndefined(); // Zero scrape credits
+        expect(capturedBody.limit).toBe(3); // Clamped to 3
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('proves suggestions route enforces query cap of exactly 1 query by default', async () => {
+      const mockSource = new MockJobSource();
+      setJobSource(mockSource);
+      const searchSpy = vi.spyOn(mockSource, 'searchJobs');
+
+      const userId = '11111111-1111-1111-1111-111111111111';
+      const resumeId = '22222222-2222-2222-2222-222222222222';
+      const token = app.jwt.sign({ sub: userId });
+
+      vi.spyOn(prisma.resume, 'findUnique').mockResolvedValue({
+        id: resumeId,
+        userId,
+        status: 'PARSED',
+      } as any);
+
+      vi.spyOn(prisma.parsedResume, 'findUnique').mockResolvedValue({
+        resumeId,
+        rawText: 'Experienced Node.js and TypeScript backend engineer with cloud infrastructure.',
+        experience: [{ title: 'Staff Engineer' }],
+        skills: ['TypeScript', 'Node.js', 'Docker', 'PostgreSQL'],
+      } as any);
+
+      vi.spyOn(usageService, 'consume').mockResolvedValue({
+        allowed: true,
+        meter: 'job_suggestions',
+        used: 1,
+        limit: 5,
+        resetAt: '2026-11-01T00:00:00.000Z',
+      });
+
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              id: 'job-1',
+              title: 'Senior Backend Engineer',
+              company: 'Acme',
+              location: 'Remote',
+              matchScore: 90,
+              matchedSkills: ['typescript'],
+              missingSkills: [],
+            },
+          ],
+        }),
+      } as any);
+
+      try {
+        const res = await app.inject({
+          method: 'POST',
+          url: `/v1/resumes/${resumeId}/suggestions`,
+          headers: { authorization: `Bearer ${token}` },
+          payload: { limit: 5 },
+        });
+
+        expect(res.statusCode).toBe(200);
+        // Fan-out hard-capped: exactly 1 call to searchJobs
+        expect(searchSpy).toHaveBeenCalledTimes(1);
+        expect(searchSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ limit: 3 }),
+          expect.objectContaining({ maxResults: 3 })
+        );
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
   });
 });

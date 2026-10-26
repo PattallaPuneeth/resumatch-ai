@@ -114,6 +114,7 @@ export const EnvSchema = z.object({
   // Job Suggestions & Scraping (Phase 7)
   FIRECRAWL_API_KEY: z.string().optional(),
   JOB_SOURCE_ALLOWLIST: z.string().default('boards.greenhouse.io,jobs.lever.co,jobs.ashbyhq.com'),
+  JOB_SOURCE_MAX_QUERIES: z.coerce.number().int().positive().default(1),
 });
 
 

@@ -501,6 +501,200 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   );
 
   // -------------------------------------------------------------------------
+  // Phase 8C: GET /v1/jobs (Owner-scoped, paginated, newest first, no raw JD text)
+  // -------------------------------------------------------------------------
+  const listJobsQuerySchema = z.object({
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+    offset: z.coerce.number().int().min(0).default(0),
+  });
+
+  app.get(
+    '/v1/jobs',
+    {
+      preHandler: app.authenticate,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.user as any;
+      const userId: string = user.userId || user.sub;
+
+      const parseResult = listJobsQuerySchema.safeParse(request.query);
+      if (!parseResult.success) {
+        return reply.status(422).send({
+          type: 'https://api.resumatch.ai/errors/validation-error',
+          title: 'Unprocessable Entity',
+          status: 422,
+          statusCode: 422,
+          error: 'Unprocessable Entity',
+          message: parseResult.error.errors.map((e) => e.message).join('; '),
+          detail: parseResult.error.errors.map((e) => e.message).join('; '),
+        });
+      }
+
+      const { limit, offset } = parseResult.data;
+
+      const [jobs, total] = await Promise.all([
+        prisma.job.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            location: true,
+            jobType: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.job.count({ where: { userId } }),
+      ]);
+
+      return reply.status(200).send({
+        jobs,
+        total,
+        limit,
+        offset,
+      });
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // Phase 8C: GET /v1/resumes/:id/matches (Owner-scoped list of matches for resume)
+  // -------------------------------------------------------------------------
+  const listResumeMatchesParamsSchema = z.object({
+    id: z.string().uuid('Invalid resume UUID'),
+  });
+
+  app.get<{ Params: { id: string } }>(
+    '/v1/resumes/:id/matches',
+    {
+      preHandler: app.authenticate,
+    },
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const user = request.user as any;
+      const userId: string = user.userId || user.sub;
+
+      const paramResult = listResumeMatchesParamsSchema.safeParse(request.params);
+      if (!paramResult.success) {
+        return reply.status(404).send({
+          type: 'https://api.resumatch.ai/errors/not-found',
+          title: 'Not Found',
+          status: 404,
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Resume not found',
+          detail: 'Resume not found',
+        });
+      }
+
+      const resumeId = paramResult.data.id;
+
+      // 1. Verify resume ownership (404 on foreign/nonexistent)
+      const resume = await prisma.resume.findUnique({
+        where: { id: resumeId },
+        select: { id: true, userId: true },
+      });
+
+      if (!resume || resume.userId !== userId) {
+        return reply.status(404).send({
+          type: 'https://api.resumatch.ai/errors/not-found',
+          title: 'Not Found',
+          status: 404,
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Resume not found',
+          detail: 'Resume not found',
+        });
+      }
+
+      const queryResult = listJobsQuerySchema.safeParse(request.query);
+      const { limit, offset } = queryResult.success
+        ? queryResult.data
+        : { limit: 20, offset: 0 };
+
+      // 2. Fetch matches for this resume
+      const [matches, total] = await Promise.all([
+        prisma.match.findMany({
+          where: { resumeId },
+          include: {
+            job: {
+              select: {
+                id: true,
+                title: true,
+                company: true,
+                location: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.match.count({ where: { resumeId } }),
+      ]);
+
+      // 3. Fetch corresponding analysis records (if any)
+      const jobIds = matches.map((m) => m.jobId);
+      const analyses = await prisma.analysis.findMany({
+        where: {
+          resumeId,
+          jobId: { in: jobIds },
+        },
+        select: {
+          jobId: true,
+          status: true,
+          llmStatus: true,
+          score: true,
+          createdAt: true,
+        },
+      });
+
+      const analysisMap = new Map<string, (typeof analyses)[number]>();
+      for (const a of analyses) {
+        if (a.jobId) analysisMap.set(a.jobId, a);
+      }
+
+      const results = matches.map((m) => {
+        const analysis = analysisMap.get(m.jobId);
+        return {
+          id: m.id,
+          resumeId: m.resumeId,
+          jobId: m.jobId,
+          job: m.job,
+          matchScore: m.finalScore,
+          subScores: {
+            bm25Score: m.bm25Score,
+            vectorScore: m.vectorScore,
+            rrfScore: m.rrfScore,
+            crossEncoderScore: m.crossEncoderScore,
+          },
+          explanation: m.explanation,
+          createdAt: m.createdAt,
+          updatedAt: m.updatedAt,
+          analysis: analysis
+            ? {
+                status: analysis.status,
+                llmStatus: analysis.llmStatus,
+                score: analysis.score,
+                createdAt: analysis.createdAt,
+              }
+            : null,
+        };
+      });
+
+      return reply.status(200).send({
+        matches: results,
+        total,
+        limit,
+        offset,
+      });
+    }
+  );
+
+  // -------------------------------------------------------------------------
   // Legacy / Unimplemented stubs (Phase 5)
   // -------------------------------------------------------------------------
   const stub501 = async (_req: unknown, reply: FastifyReply) => {
@@ -514,5 +708,4 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.all('/jobs', stub501);
   app.all('/jobs/*', stub501);
   app.delete('/v1/jobs/:id', stub501);
-  app.get('/v1/jobs', stub501);
 };

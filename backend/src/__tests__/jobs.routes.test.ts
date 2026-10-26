@@ -20,12 +20,18 @@ vi.mock('../db/prisma.js', () => ({
       create: vi.fn(),
       findUnique: vi.fn(),
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     resume: {
       findUnique: vi.fn(),
     },
     match: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
+    analysis: {
+      findMany: vi.fn(),
     },
   },
   checkDatabaseHealth: vi.fn().mockResolvedValue({ status: 'healthy', latencyMs: 1 }),
@@ -77,8 +83,13 @@ const mockEmbeddingQueueAdd = vi.mocked(embeddingQueue.add);
 const mockMatchScoringQueueAdd = vi.mocked(matchScoringQueue.add);
 const mockJobCreate = vi.mocked(prisma.job.create);
 const mockJobFindUnique = vi.mocked(prisma.job.findUnique);
+const mockJobFindMany = vi.mocked(prisma.job.findMany);
+const mockJobCount = vi.mocked(prisma.job.count);
 const mockResumeFindUnique = vi.mocked(prisma.resume.findUnique);
 const mockMatchFindUnique = vi.mocked(prisma.match.findUnique);
+const mockMatchFindMany = vi.mocked(prisma.match.findMany);
+const mockMatchCount = vi.mocked(prisma.match.count);
+const mockAnalysisFindMany = vi.mocked(prisma.analysis.findMany);
 
 async function getAuthToken(
   app: FastifyInstance,
@@ -524,6 +535,263 @@ describe('Phase 3B: Job & Matching Routes', () => {
       expect(body.id).toBe('match-123');
       expect(body.explanation.skillGap.matched).toContain('TypeScript');
       expect(body.explanation.skillGap.missing).toContain('PostgreSQL');
+    });
+  });
+
+  // =========================================================================
+  // 5. Phase 8C: GET /v1/jobs (Owner-scoped list, no rawDescription)
+  // =========================================================================
+  describe('GET /v1/jobs', () => {
+    it('returns 401 when unauthenticated', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/jobs',
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 200 with owner-scoped jobs list and pagination metadata', async () => {
+      const token = await getAuthToken(app, 'user-A');
+      const now = new Date();
+      mockJobFindMany.mockResolvedValueOnce([
+        {
+          id: 'job-1',
+          title: 'Senior Backend Engineer',
+          company: 'Acme Corp',
+          location: 'Remote',
+          jobType: 'FULL_TIME',
+          status: 'ACTIVE',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ] as any);
+      mockJobCount.mockResolvedValueOnce(1);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/jobs?limit=10&offset=0',
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.jobs).toHaveLength(1);
+      expect(body.jobs[0].id).toBe('job-1');
+      expect(body.jobs[0].title).toBe('Senior Backend Engineer');
+      expect(body.jobs[0].rawDescription).toBeUndefined(); // Verify no raw JD text leakage
+      expect(body.total).toBe(1);
+      expect(body.limit).toBe(10);
+      expect(body.offset).toBe(0);
+
+      expect(mockJobFindMany).toHaveBeenCalledWith({
+        where: { userId: 'user-A' },
+        select: {
+          id: true,
+          title: true,
+          company: true,
+          location: true,
+          jobType: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        skip: 0,
+      });
+    });
+
+    it('returns empty list when user has no jobs', async () => {
+      const token = await getAuthToken(app, 'user-new');
+      mockJobFindMany.mockResolvedValueOnce([]);
+      mockJobCount.mockResolvedValueOnce(0);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/jobs',
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.jobs).toEqual([]);
+      expect(body.total).toBe(0);
+    });
+
+    it('accepts maximum allowed limit of 50 and handles default offset', async () => {
+      const token = await getAuthToken(app, 'user-A');
+      mockJobFindMany.mockResolvedValueOnce([]);
+      mockJobCount.mockResolvedValueOnce(0);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/jobs?limit=50&offset=0',
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.limit).toBe(50);
+      expect(body.offset).toBe(0);
+      expect(mockJobFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 50,
+          skip: 0,
+          where: { userId: 'user-A' },
+          orderBy: { createdAt: 'desc' },
+        })
+      );
+    });
+
+    it('rejects out-of-bounds limit (>50) or negative offset with RFC 7807 error', async () => {
+      const token = await getAuthToken(app, 'user-A');
+
+      const resLimit = await app.inject({
+        method: 'GET',
+        url: '/v1/jobs?limit=100',
+        headers: { authorization: token },
+      });
+      expect(resLimit.statusCode).toBe(422);
+      const limitBody = JSON.parse(resLimit.payload);
+      expect(limitBody.status).toBe(422);
+      expect(limitBody.type).toBe('https://api.resumatch.ai/errors/validation-error');
+
+      const resOffset = await app.inject({
+        method: 'GET',
+        url: '/v1/jobs?offset=-1',
+        headers: { authorization: token },
+      });
+      expect(resOffset.statusCode).toBe(422);
+      const offsetBody = JSON.parse(resOffset.payload);
+      expect(offsetBody.status).toBe(422);
+    });
+
+    it('enforces strict cross-tenant isolation: User A cannot see User B jobs', async () => {
+      const tokenUserA = await getAuthToken(app, 'user-A');
+      mockJobFindMany.mockResolvedValueOnce([]);
+      mockJobCount.mockResolvedValueOnce(0);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/jobs',
+        headers: { authorization: tokenUserA },
+      });
+
+      expect(res.statusCode).toBe(200);
+      // Prisma query strictly filters by user-A
+      expect(mockJobFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-A' },
+        })
+      );
+    });
+  });
+
+  // =========================================================================
+  // 6. Phase 8C: GET /v1/resumes/:id/matches (Owner-scoped resume match history)
+  // =========================================================================
+  describe('GET /v1/resumes/:id/matches', () => {
+    const resumeId = 'c2222222-2222-2222-2222-222222222222';
+
+    it('returns 401 when unauthenticated', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/resumes/${resumeId}/matches`,
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 404 when resume belongs to another user (IDOR prevention)', async () => {
+      const token = await getAuthToken(app, 'user-A');
+      mockResumeFindUnique.mockResolvedValueOnce({
+        id: resumeId,
+        userId: 'user-B',
+      } as any);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/resumes/${resumeId}/matches`,
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(404);
+      expect(JSON.parse(res.payload).message).toBe('Resume not found');
+    });
+
+    it('returns 404 when resume does not exist', async () => {
+      const token = await getAuthToken(app, 'user-A');
+      mockResumeFindUnique.mockResolvedValueOnce(null);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/resumes/${resumeId}/matches`,
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 200 with matches, exact scores, sub-scores, and associated analysis', async () => {
+      const token = await getAuthToken(app, 'user-A');
+      const now = new Date();
+      mockResumeFindUnique.mockResolvedValueOnce({
+        id: resumeId,
+        userId: 'user-A',
+      } as any);
+
+      mockMatchFindMany.mockResolvedValueOnce([
+        {
+          id: 'match-1',
+          resumeId,
+          jobId: 'job-1',
+          finalScore: 88.5,
+          bm25Score: 0.75,
+          vectorScore: 0.82,
+          rrfScore: 0.035,
+          crossEncoderScore: 88.5,
+          explanation: {
+            skillGap: {
+              matched: ['TypeScript', 'Node.js'],
+              partial: [],
+              missing: ['GraphQL'],
+            },
+          },
+          job: {
+            id: 'job-1',
+            title: 'Full Stack Engineer',
+            company: 'Tech Corp',
+            location: 'Remote',
+          },
+          createdAt: now,
+          updatedAt: now,
+        },
+      ] as any);
+      mockMatchCount.mockResolvedValueOnce(1);
+
+      mockAnalysisFindMany.mockResolvedValueOnce([
+        {
+          jobId: 'job-1',
+          status: 'COMPLETED',
+          llmStatus: 'SUCCESS',
+          score: 88.5,
+          createdAt: now,
+        },
+      ] as any);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/resumes/${resumeId}/matches?limit=10&offset=0`,
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.matches).toHaveLength(1);
+      expect(body.matches[0].matchScore).toBe(88.5);
+      expect(body.matches[0].subScores.bm25Score).toBe(0.75);
+      expect(body.matches[0].job.title).toBe('Full Stack Engineer');
+      expect(body.matches[0].analysis.llmStatus).toBe('SUCCESS');
+      expect(body.total).toBe(1);
     });
   });
 });

@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2 } from 'lucide-react';
 import { apiClient, ApiProblemError } from '@/lib/apiClient';
 import { formatBytes } from '@/components/UsagePanel';
+import { StepIndicator } from '@/components/ui/StepIndicator';
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -160,6 +161,21 @@ export function ResumeUpload({ onUploadSuccess, className }: ResumeUploadProps) 
       </div>
 
       {/* Drag & Drop Zone */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        className="hidden"
+        data-testid="file-input"
+        aria-label="Upload resume file (.pdf, .docx)"
+        disabled={isUploading}
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+          }
+        }}
+      />
+
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -168,6 +184,7 @@ export function ResumeUpload({ onUploadSuccess, className }: ResumeUploadProps) 
         data-testid="dropzone"
         role="button"
         tabIndex={0}
+        aria-label="Upload dropzone: click or drag and drop a resume in PDF or DOCX format"
         onKeyDown={(e) => {
           if ((e.key === 'Enter' || e.key === ' ') && !isUploading) {
             fileInputRef.current?.click();
@@ -181,19 +198,6 @@ export function ResumeUpload({ onUploadSuccess, className }: ResumeUploadProps) 
             : 'border-slate-300 hover:border-primary hover:bg-slate-50'
         }`}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          className="hidden"
-          data-testid="file-input"
-          disabled={isUploading}
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              handleFileSelect(e.target.files[0]);
-            }
-          }}
-        />
 
         <div className="flex flex-col items-center justify-center gap-2">
           <div className="p-3 rounded-full bg-slate-100 text-primary">
@@ -245,7 +249,11 @@ export function ResumeUpload({ onUploadSuccess, className }: ResumeUploadProps) 
 
       {/* Progress & Uploading State */}
       {isUploading && (
-        <div className="mt-4 p-4 rounded-md bg-slate-50 border border-border space-y-3" data-testid="upload-progress-container">
+        <div className="mt-4 p-4 rounded-md bg-slate-50 border border-border space-y-4" data-testid="upload-progress-container">
+          <div aria-live="polite" className="sr-only">
+            {uploadStatus === 'uploading' ? `Uploading ${uploadProgress ?? 0} percent` : 'Processing and queuing parse'}
+          </div>
+
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -271,13 +279,33 @@ export function ResumeUpload({ onUploadSuccess, className }: ResumeUploadProps) 
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Upload progress"
-            className="w-full h-2 rounded-full bg-slate-200 overflow-hidden"
+            className="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden shadow-inner"
           >
             <div
-              className="h-full bg-primary transition-all duration-150"
+              className="h-full bg-primary transition-all duration-300 ease-out motion-reduce:transition-none"
               style={{ width: `${uploadProgress ?? 5}%` }}
             />
           </div>
+
+          <StepIndicator
+            steps={[
+              {
+                id: 'upload',
+                name: 'Uploading',
+                status: uploadStatus === 'uploading' ? 'current' : 'complete',
+              },
+              {
+                id: 'process',
+                name: 'Processing',
+                status: uploadStatus === 'completing' ? 'current' : 'upcoming',
+              },
+              {
+                id: 'parsed',
+                name: 'Parsed',
+                status: 'upcoming',
+              },
+            ]}
+          />
         </div>
       )}
 

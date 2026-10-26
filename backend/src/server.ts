@@ -14,6 +14,7 @@ import { rewriterRoutes } from './routes/rewriter.js';
 import { improvementsRoutes } from './routes/improvements.js';
 import { usageRoutes } from './routes/usage.js';
 import { suggestionsRoutes } from './routes/suggestions.js';
+import { logJobSourceStatus } from './services/jobSource/factory.js';
 
 export function buildServer(): FastifyInstance {
   const isDev = env.NODE_ENV === 'development';
@@ -102,5 +103,9 @@ export function buildServer(): FastifyInstance {
   app.register(improvementsRoutes);
   app.register(usageRoutes);
   app.register(suggestionsRoutes);
+
+  // Explicitly log active JobSource and reason at startup (non-secret)
+  logJobSourceStatus(app.log);
+
   return app;
 }

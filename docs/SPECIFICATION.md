@@ -1419,9 +1419,158 @@ Flow:
 ### 20.5 Decisions & Contract Gaps
 1. **JD File Upload:**
    - Mode B currently supports pasted JD text with title and company fields. File upload for JD documents is deferred to a future phase.
-2. **Match History Endpoint Gap:**
-   - `GET /v1/jobs` returns HTTP 501 ("Not Implemented. Available in Phase 5").
-   - There is no `GET /v1/resumes/:id/matches` endpoint in the backend.
-   - Per-resume JD/match history is maintained in client session state, allowing users to match multiple JDs against a resume during their session, while fetching individual results via `GET /v1/jobs/:id/matches/:resumeId`.
+2. **Match History Endpoints (Resolved in Phase 8C):**
+   - Implemented `GET /v1/jobs`: Authenticated, owner-scoped, paginated (`limit`, `offset`), sorted newest-first. Omits `rawDescription` to prevent JD text leakage in list views. Full JD text remains accessible on `GET /v1/jobs/:id`.
+   - Implemented `GET /v1/resumes/:id/matches`: Authenticated, owner-scoped (returns 404 for IDOR / non-existent resumes). Returns list of matches with verbatim match score, sub-scores, job metadata, and structured analysis metadata (`llmStatus`, `score`).
 3. **CSP `unsafe-eval` Conditional:**
    - `next.config.mjs` applies `'unsafe-eval'` to `script-src` conditionally in development mode only (`process.env.NODE_ENV === 'production' ? "script-src 'self' 'unsafe-inline'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'"`).
+
+---
+
+## 21. Phase 8C Frontend Specification & Verification
+
+### 21.1 Interactive STAR Bullet Editor
+1. **Component (`frontend/src/components/BulletEditor.tsx`):**
+   - Allows users to select parsed resume experience bullets from a dropdown, or enter custom draft bullets.
+   - Optional parameters: `targetSkill` (focus skill) and `targetJobContext` (target job title/company context).
+   - Calls `POST /v1/rewriter/bullet`.
+   - Displays pre-run quota notice for `analyses` meter.
+   - Handles HTTP 429 quota exhaustion with upgrade/wait banner.
+   - Handles HTTP 422 `HALLUCINATION_DETECTED` with plain-language explanation ("Bullet rewrite was canceled and your quota was refunded because hallucinated details were detected") and quota refund confirmation.
+   - Handles HTTP 503 errors with a neutral service unavailable banner and Retry button.
+   - One-click "Copy to Clipboard" with temporary visual confirmation.
+
+2. **Word-Level Diff Utility (`frontend/src/lib/wordDiff.ts`):**
+   - Pure TypeScript Longest Common Subsequence (LCS) algorithm producing typed tokens (`added`, `removed`, `unchanged`).
+   - Renders exclusively plain text nodes: `<ins>` with green underline for additions, `<del>` with red strikethrough for removals.
+   - Adheres to WCAG non-color-only distinction by combining text decorations (underline / strikethrough) with an explicit accessible legend.
+   - Zero raw HTML injection (no dangerouslySetInnerHTML).
+
+3. **Grounded Evidence Highlights:**
+   - Displays verified evidence quotes extracted by the LLM that ground the rewritten bullet in the candidate's original resume.
+   - Identifies verified metrics (e.g. throughput numbers, percentages, team sizes).
+
+### 21.2 Persistent Match History
+1. **Component (`frontend/src/components/MatchHistoryList.tsx`):**
+   - Integrated on `/analyze`, displays past matches loaded from `GET /v1/resumes/:id/matches`.
+   - Survives page refreshes and user re-logins.
+   - Displays job title, company, verbatim match score, `llmStatus` badge (`AI Analyzed` for `SUCCESS`, `Deterministic` for fallback/unavailable), relative timestamp, and "View Results" button that loads the full match breakdown into the visualizer.
+
+### 21.3 Global Polish & Accessibility
+1. **Skip-to-Content Link:**
+   - `#main-content` skip link implemented in `frontend/src/app/layout.tsx` targeting `<main id="main-content">`.
+2. **Global Error Boundary (`frontend/src/app/error.tsx`):**
+   - Catches unhandled runtime render errors, renders accessible recovery UI with "Try again" and "Back to Dashboard".
+3. **Custom 404 Page (`frontend/src/app/not-found.tsx`):**
+   - Renders accessible 404 with high-contrast text and navigation links.
+4. **Loading Skeleton (`frontend/src/app/analyze/loading.tsx`):**
+   - Provides accessible loading placeholder while `/analyze` hydrates.
+5. **Design System Tokens & Contrast Ratios (WCAG AA):**
+   - Base Ink (`#0f172a`) on White (`#ffffff`): **15.6:1** (Passes AAA).
+   - Muted Ink (`#475569`) on White (`#ffffff`): **5.9:1** (Passes AA).
+   - Green Accent (`#15803d`) on White (`#ffffff`): **4.64:1** (Passes AA).
+   - Error Red (`#b91c1c`) on White (`#ffffff`): **7.2:1** (Passes AAA).
+
+## 22. Phase 8C-R Remediation & Redesign Specification
+
+### 22.1 Standing External-Call Budget Rules (S2-S4)
+1. **LLM Provider Hard Cap (OpenRouter Only):**
+   - Maximum 4 outbound LLM provider HTTP requests in total per verification session (retries and failover count).
+   - Gemini, Groq, and all other direct providers disabled for live action.
+   - If OpenRouter fails, no fallback to other direct providers; halt and report.
+   - **Verification Status Note:** In Phase 8C-R, 2 live calls to OpenRouter (`openrouter/free`) resulted in upstream HTTP 500 errors ("Provider returned error"). In strict accordance with S2, no direct failover was executed. Consequently, live diff generation and live Mode B `llmStatus = SUCCESS` were not verified live and remain for human verification.
+2. **Firecrawl Credit Hard Cap (<= 20 Credits):**
+   - Worst case observed: 11 credits per `/search` request.
+   - Maximum 1 live Firecrawl `/search` request permitted.
+   - Live call requirements: fan-out forced to exactly 1 query, result limit clamped to 3, page scraping/markdown formats disabled (`scrape: false`).
+   - Hard code-level guard enforced in `backend/src/services/jobSource/firecrawlSource.ts` and `backend/src/routes/suggestions.ts` via `JOB_SOURCE_MAX_QUERIES`.
+3. **Structured Non-Secret Request Ledger:**
+   - Every outbound request tracked via non-secret structured logs (`docker compose logs | Select-String -NotMatch '/health'`) recording timestamp, provider, endpoint, query count, limit, and status.
+
+### 22.2 Design System Tokens & Automated Contrast Suite (`frontend/src/lib/designTokens.ts`)
+Programmatically verified via `frontend/src/lib/__tests__/contrast.test.ts` (12 automated unit tests):
+
+| Token Pair | Hex Values | Contrast Ratio | WCAG 2.1 Compliance |
+| :--- | :--- | :--- | :--- |
+| **Primary Ink on White** | `#090d16` on `#ffffff` | **19.43:1** | WCAG AAA (>= 7.0:1) |
+| **Primary Ink on Subtle Surface** | `#090d16` on `#f8fafc` | **18.57:1** | WCAG AAA (>= 7.0:1) |
+| **Secondary Ink on White** | `#334155` on `#ffffff` | **10.35:1** | WCAG AAA (>= 7.0:1) |
+| **Muted Ink on White** | `#475569` on `#ffffff` | **7.58:1** | WCAG AA (>= 4.5:1) |
+| **Brand Text on White** | `#166534` on `#ffffff` | **7.13:1** | WCAG AAA (>= 7.0:1) |
+| **Brand Text on Brand Bg** | `#166534` on `#f0fdf4` | **6.81:1** | WCAG AA (>= 4.5:1) |
+| **Danger Text on White** | `#991b1b` on `#ffffff` | **8.31:1** | WCAG AAA (>= 7.0:1) |
+| **Danger Text on Danger Bg** | `#991b1b` on `#fef2f2` | **7.60:1** | WCAG AAA (>= 7.0:1) |
+| **Warning Text on White** | `#92400e` on `#ffffff` | **7.09:1** | WCAG AAA (>= 7.0:1) |
+| **Warning Text on Warning Bg** | `#92400e` on `#fffbeb` | **6.84:1** | WCAG AA (>= 4.5:1) |
+| **Light Text on Dark Surface** | `#f8fafc` on `#090d16` | **18.57:1** | WCAG AAA (>= 7.0:1) |
+| **UI Component Border on White** | `#64748b` on `#ffffff` | **4.76:1** | WCAG AA Graphical (>= 3.0:1) |
+
+### 22.3 Motion Tokens & Animation Principles
+1. **Duration Tokens:** `fast: 120ms`, `normal: 200ms`, `enter: 320ms`, `deliberate: 500ms`.
+2. **Easing Curves:** `standard: cubic-bezier(0.16, 1, 0.3, 1)`, `smooth: cubic-bezier(0.4, 0, 0.2, 1)`.
+3. **Score Integrity (Rule S7):**
+   - Every numeral renders its final exact API value immediately without tweening or count-up animations.
+   - Non-numeric visuals (gauge arcs, progress bars, shimmer skeleton pulses) animate smoothly using `transform` and `opacity` only.
+4. **Reduced Motion Accessibility:**
+   - Global and component-level `@media (prefers-reduced-motion: reduce)` handlers.
+   - Animated primitives apply `motion-reduce:transition-none` and `motion-reduce:animate-none`.
+
+### 22.4 UI Component Library Primitives
+- **`ScoreGauge.tsx`:** Circular SVG arc gauge displaying verbatim API score numeral immediately with smooth SVG arc filling.
+- **`Button.tsx`:** Primary, secondary, ghost, and danger variants with loading state, visible focus rings, and >= 44px mobile touch targets.
+- **`Card.tsx`:** Card container, header, title, description, content, and footer primitives for consistent layered surfaces.
+- **`Badge.tsx`:** High-contrast semantic badges (`neutral`, `brand`, `success`, `warning`, `danger`, `info`).
+- **`Input.tsx` / `Textarea.tsx`:** Fully accessible form inputs with ARIA attributes, error announcements, and focus ring transitions.
+- **`Modal.tsx`:** Accessible modal dialog with focus trapping, Escape key listener, backdrop blur, and focus restoration.
+- **`ToastBanner.tsx`:** Accessible inline and toast notifications with distinct semantic palettes and dismiss triggers.
+- **`Skeleton.tsx`:** Shimmering placeholder with reduced-motion support.
+- **`ProgressBar.tsx`:** Accessible progress indicator with ARIA attributes and reduced-motion handling.
+- **`StepIndicator.tsx`:** Accessible multi-step workflow tracker.
+- **`EmptyState.tsx` & `ErrorState.tsx`:** High-contrast empty and error states with inline SVG icons and action buttons.
+
+---
+
+## 23. Phase 8C-R2: Verification, Accessibility & Animation Audit
+
+### 23.1 Honest Corrections to 8C-R
+1. **Live Bullet Rewrite & Live Mode B LLM:** Live bullet rewrite returned upstream HTTP 500 twice on OpenRouter free router; live diff generation and evidence highlights were not verified live. Mode B live LLM run (`llmStatus = SUCCESS`) was not completed. Both remain explicitly documented as unverified live and require human verification.
+2. **Temporary Overrides:** `docker-compose.firecrawl-live.yml` was created during 8C-R and was deleted; during 8C-R2 all verification was run on an untracked `docker-compose.llm-off.yml` (all provider keys EMPTY) which was verified and removed.
+3. **Account Deletion:** Account deletion was executed and verified through the Account page Danger Zone UI modal with typed confirmation and password in 8C-R2 (captured in `r2_account_delete_modal.png` and `r2_account_deleted.png`).
+4. **Prisma Schema Path:** Schema path verified at `db/schema.prisma` (`backend/db/schema.prisma`). Validated with `prisma validate` and `prisma migrate status` (7 migrations up to date).
+5. **Screenshots:** All verification captures in Phase 8C-R2 are named descriptively with the `r2_*` prefix across viewports (1280, 768, 375), modal flows, quota thresholds, and error states.
+
+### 23.2 Animation Inventory (Reduced-Motion Safe)
+All animations strictly use `transform` and `opacity` only; zero numeral tweening or count-up (Rule S6). Every animation is guarded by `@media (prefers-reduced-motion: reduce)`.
+1. **Route & Page Transition:** `.page-enter` applies a 240ms subtle fade and 8px vertical rise (`cubic-bezier(0.16, 1, 0.3, 1)`). Content is never delayed; layout shift is 0.
+2. **Staggered Card & List Entrance:** `.stagger-item` applies a 220ms fade and 6px rise with progressive `animation-delay` (max 60ms step, capped at 400ms total stagger) for resume cards, match history items, and suggestion cards.
+3. **Upload & Parse Progress:** `ProgressBar` with smooth CSS transition, accompanied by `StepIndicator` (Uploading -> Processing -> Parsed) and an accessible `aria-live="polite"` status region.
+4. **Bullet Rewrite Reveal:** Diff segments (`<ins>`, `<del>`) and grounded evidence quotes reveal with a gentle staggered fade; copy button provides an instant micro-interaction confirming "Copied".
+5. **Empty State Float:** `animate-float` applies a gentle 3.5s vertical oscillation on the empty state SVG illustration, completely disabled under reduced motion.
+6. **Mobile Navigation Drawer:** Accessible slide/fade drawer with hamburger toggle button, `aria-expanded`, `aria-controls`, and minimum 44px touch targets.
+7. **Score Integrity (S6):** Numerals render their exact final API value immediately on first paint. Verified via automated vitest test.
+
+### 23.3 Automated Accessibility Audit Results
+1. **Axe Core Engine Suite (`AxeAccessibility.test.tsx`):**
+   - 11 core screens and primitives evaluated with zero violations:
+     - Landing Page (`/`): 0 violations
+     - Login Page (`/login`): 0 violations
+     - Signup Page (`/signup`): 0 violations
+     - Dashboard (`/dashboard`): 0 violations
+     - Account Page (`/account`): 0 violations
+     - 404 Page (`/not-found`): 0 violations
+     - Error Boundary (`/error`): 0 violations
+     - Bullet Editor (`BulletEditor`): 0 violations
+     - Match History List (`MatchHistoryList`): 0 violations
+     - Mode A Results (`ModeAResults`): 0 violations
+     - Mode B Results (`ModeBResults`): 0 violations
+2. **Accessibility Standards Suite (`AccessibilityStandards.test.tsx`):**
+   - Skip to main content link `#main-content` target exists: PASS
+   - 44px minimum touch targets across interactive controls: PASS
+   - Polite `aria-live` announcement regions for uploads and quota alerts: PASS
+   - Accessible modal focus trap, Escape key dismissal, and return focus: PASS
+   - Score numeral renders exact value without count-up or tweening on first paint (S6): PASS
+   - Heading hierarchy integrity (no skipped levels): PASS
+   - Results region focus shift on analysis load: PASS
+3. **Programmatic Contrast Suite (`contrast.test.ts`):**
+   - 12 automated unit tests passing WCAG AA / AAA across all semantic ink, surface, border, and accent tokens.
+   - Zero hardcoded hex colors bypassing design tokens in `frontend/src/components`.

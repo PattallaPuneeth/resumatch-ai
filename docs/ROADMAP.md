@@ -56,7 +56,7 @@
 | 7 | Job suggestions via Firecrawl | COMPLETE (Backend verified) |
 | 8A | Frontend foundation, auth, dashboard shell, upload & Usage panel | COMPLETE (Verified) |
 | 8B | Analyze flow, ATS score, match visualizer, suggestions UI | COMPLETE (verified) |
-| 8C | Interactive bullet editor, side-by-side diff, final polish | PLANNED |
+| 8C | Interactive bullet editor, side-by-side diff, persistent history, final polish | COMPLETE (verified) |
 | 9 | Security audit and hardening | PLANNED |
 | 10 | Performance, observability, CI, deployment | PLANNED |
 | 11 | Google OAuth, payments, plans | OPTIONAL (only after the core is done) |
@@ -222,10 +222,73 @@ Replaces the dev token minting used in tests.
 - **Backend Contract Addition (Step 2):** Added additive `source: "mock" | "firecrawl"` and `isSample: boolean` fields to `POST /v1/resumes/:id/suggestions` 200 response and `JobSource` interface.
 - **Security:** Zero `dangerouslySetInnerHTML`, untrusted strings rendered as inert text, safe URL validator rejecting non-http(s) protocols, CSP headers restricting `unsafe-eval` to dev only.
 
-### Phase 8C: Interactive Bullet Editor & Final Polish [PLANNED]
-1. Interactive STAR bullet rewriter and editor with side-by-side diff.
-2. Grounded evidence quotes highlighted against original resume bullets.
-3. Final UX polish and end-to-end user journeys.
+### Phase 8C: Interactive Bullet Editor, Persistent History & Final Polish [COMPLETE & VERIFIED]
+- **Status:** COMPLETE & VERIFIED.
+- **Additive Backend Endpoints:**
+  - `GET /v1/jobs`: Authenticated, owner-scoped, paginated (`limit` 1..50, default 20, `offset`), sorted newest-first. Omits `rawDescription` to avoid unnecessary JD text leakage in list views. Full JD text remains accessible on `GET /v1/jobs/:id`.
+  - `GET /v1/resumes/:id/matches`: Authenticated, owner-scoped (returns 404 for IDOR / non-existent resumes). Returns list of matches with verbatim match score, sub-scores, job metadata, and structured analysis metadata (`llmStatus`, `score`).
+- **Startup & Fallback Logging:**
+  - `backend/src/services/jobSource/factory.ts`: Added `logJobSourceStatus` reporting whether `firecrawl` or `mock` is active and why, without logging secrets or key material.
+- **Interactive STAR Bullet Editor:**
+  - `frontend/src/components/BulletEditor.tsx`: Allows users to select parsed resume bullets (or enter custom text), set an optional target skill and job context, and request a STAR rewrite via `POST /v1/rewriter/bullet`.
+  - Renders side-by-side word-level diff (`frontend/src/lib/wordDiff.ts` pure TypeScript LCS algorithm generating text nodes only with `<ins>` green underline and `<del>` red strikethrough, plus an accessible non-color legend).
+  - Highlights grounded evidence quotes and extracted metrics.
+  - Quota and refund handling: Displays `analyses` quota warning, handles 429 quota exhaustion, handles 422 `HALLUCINATION_DETECTED` with plain-language explanation and quota refund notification, and offers retry on 503 errors. Includes single-click clipboard copy.
+- **Persistent Match History UI:**
+  - `frontend/src/components/MatchHistoryList.tsx`: Integrated on `/analyze`, displays target JD match cards loaded from `GET /v1/resumes/:id/matches`.
+  - Preserves match history across page reloads and browser sessions.
+  - Displays job title, company, verbatim match score, `llmStatus` badge (`AI Analyzed` vs `Deterministic`), relative date, and a "View Results" button that loads full match details and breakdown visualizer.
+- **Accessibility & UX Polish:**
+  - Skip-to-content accessible link (`#main-content`) implemented in `frontend/src/app/layout.tsx`.
+  - Global error boundary implemented in `frontend/src/app/error.tsx`.
+  - Custom 404 page implemented in `frontend/src/app/not-found.tsx`.
+  - Skeleton loading view implemented in `frontend/src/app/analyze/loading.tsx`.
+  - Verified WCAG AA contrast across all color tokens (ink on white: 15.6:1; green accent on white: 4.64:1; error text on white: 7.2:1).
+- **Security & Integrity:**
+  - Zero `dangerouslySetInnerHTML` in source files.
+  - Score integrity strictly preserved: scores rendered verbatim without client recomputation or rounding manipulation.
+
+### Phase 8C-R: Remediation & Redesign (Follow-up: Phase 8C-R2)
+- **Status:** PARTIALLY VERIFIED (Deterministic & Mocked: VERIFIED; Live LLM: BLOCKED by upstream OpenRouter 500; Live Firecrawl: VERIFIED 1 call).
+- **Honest Corrections to 8C-R Baseline:**
+  - Live Bullet Rewrite & Mode B Live Run: The live bullet rewrite never succeeded because OpenRouter free router returned HTTP 500 twice; live diff and evidence highlights were not verified live. Mode B live run (`llmStatus = SUCCESS`) was not completed. Both remain in Blocked/Skipped and for human verification.
+  - Temporary Overrides: An extra untracked override `docker-compose.firecrawl-live.yml` was created to blank LLM providers during Firecrawl testing.
+  - Account Deletion: The test account was deleted via `DELETE /v1/account` using curl rather than the Account page UI.
+  - Screenshots & Validations: Earlier screenshots used automatic `media_*.png` IDs; `prisma validate` required the full schema path (`backend/db/schema.prisma`); error boundary was verified via script only.
+  - Animation Scope: Route transitions, staggered list entrance, animated upload progress, and animated empty states are completed in Phase 8C-R2.
+- **Audit Remediation & Budget Guards:**
+  - Appended Standing External-Call Budget Rules (S2-S4) to `rule.md` and `.agents/rules/engineering-directive.md`.
+  - Added code-level Firecrawl & Query Guards: `JOB_SOURCE_MAX_QUERIES` defaults to 1, result limits clamped to at most 3, and `scrapeOptions` stripped completely (`scrape: false`).
+  - Added structured non-secret console logging for outbound Firecrawl and LLM calls (provider, endpoint, limit, status).
+  - Added unit regression tests proving query fan-out cap, result limit clamping, scrapeOptions removal, and `GET /v1/jobs` bounds and cross-tenant isolation.
+- **Design System & Component Library (`frontend/src/lib/designTokens.ts`, `frontend/src/components/ui/`):**
+  - Token set: cohesive color palette, typography, spacing, radii, elevation, focus rings, and motion tokens (120ms, 200ms, 320ms, 500ms).
+  - Automated WCAG AA/AAA test suite (`contrast.test.ts`): 12 programmatic unit tests proving all text and UI component pairs pass AA/AAA (Primary ink: 19.43:1, UI border: 4.76:1, brand text: 7.13:1).
+  - Shared accessible primitives: `Button`, `Card`, `Badge`, `Input`, `Textarea`, `Modal` (focus trap + ESC + return focus), `ToastBanner`, `Skeleton`, `ProgressBar`, `ScoreGauge`, `StepIndicator`, `EmptyState`, `ErrorState`.
+- **Signature Animations & Motion:**
+  - `ScoreGauge`: Smooth SVG circular arc fill with verbatim API score numeral rendered immediately without tweening or count-up per Rule S7.
+  - Global and component-level reduced-motion overrides (`prefers-reduced-motion: reduce`) with automated test coverage.
+- **Redesigned Screens:**
+  - Landing page (`/`): Hero value proposition, 3-step workflow, privacy card, cluster diagnostics, removed debug wording.
+  - Dashboard (`/dashboard`): Dropzone, resume list with ATS scores, and mounted `BulletEditor`.
+  - Analyze page (`/analyze`): Mode A (ScoreGauge 90/100, content findings, suggested roles), Mode B (Cloudflare JD match, ScoreGauge 93.47%, graceful degraded LLM notice), Match History List, mounted `BulletEditor`.
+  - 404 (`/not-found`) & Global Error Boundary (`/error.tsx`).
+  - Account page (`/account`): User profile, quota meters, account deletion modal.
+- **Verification Passes:**
+  - Deterministic browser pass with providers OFF (`docker-compose.llm-off.yml`).
+  - Live Firecrawl pass under strict budget: exactly 1 request, limit 3, scrape disabled, quota decremented by 1.
+  - Zero live LLM calls succeeded (2 attempted against OpenRouter, both received upstream 500; stopped per S2 budget without direct fallback).
+
+### Phase 8C-R2: Verification, Accessibility & Animation Follow-up
+- **Status:** VERIFIED (Deterministic, Accessibility, Animations & Real Flows; Live LLM: Blocked by upstream OpenRouter 500, preserved in What human must verify).
+- **Completed Gaps:**
+  - **Prisma Validation:** Verified valid schema at `db/schema.prisma` (`npx prisma validate`) and verified database migrations up-to-date (`npx prisma migrate status`).
+  - **Real Quota Progression & 429 Flow:** Used throwaway user on `demo` plan to advance usage through real API flows (10/10 analyses used). Verified threshold banners at 50%, 70%, 90%, 100%, and verified HTTP 429 quota exhaustion banner on BulletEditor and Analyze pages.
+  - **Account Deletion Flow:** Tested and verified through Account page UI Danger Zone modal with typed confirmation and password. User erased completely from database and storage.
+  - **Keyboard & Reduced Motion Audits:** Verified accessible tab ordering, visible focus rings, modal focus trap and escape dismissal, and skip link. Verified reduced-motion overrides disable motion, animations, and shimmers.
+  - **Responsive Views:** Verified at 1280, 768, and 375 across all pages with zero horizontal page scroll (`scrollWidth === clientWidth`).
+  - **Automated Accessibility Testing:** Integrated `axe-core@4.10.2` across 11 pages and components with 0 violations. Added AccessibilityStandards suite covering heading order, unique page titles, 44px min touch targets, aria-live regions, and verbatim numeral rendering on first paint (S6). Full frontend suite expanded from 107 to 129 passing tests.
+  - **Animation Suite:** Added route transitions (`.page-enter`), staggered card entrances (`.stagger-item`), upload progress with `StepIndicator` and polite live announcements, bullet rewrite stagger reveal, floating empty state SVG, and accessible mobile menu.
 
 ---
 

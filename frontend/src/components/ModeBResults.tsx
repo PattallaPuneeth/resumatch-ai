@@ -3,6 +3,7 @@
 import React from 'react';
 import { AnalysisResult, MatchResult } from '@/lib/apiClient';
 import { MatchVisualizer } from '@/components/MatchVisualizer';
+import { ScoreGauge } from '@/components/ui/ScoreGauge';
 import {
   Award,
   CheckCircle2,
@@ -71,9 +72,17 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
         </div>
 
         <div className="flex items-center gap-6 shrink-0">
+          <ScoreGauge
+            score={matchScore}
+            maxScore={100}
+            label="Match Score"
+            statusBand={verdictConfig.label}
+            size="sm"
+          />
+
           {/* ATS Score */}
           {atsScore !== null && atsScore !== undefined && (
-            <div className="text-right">
+            <div className="text-right border-l border-border pl-4">
               <span className="text-[11px] font-semibold text-muted-foreground block">
                 ATS Score
               </span>
@@ -87,8 +96,8 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
             </div>
           )}
 
-          {/* Overall Match Score */}
-          <div className="text-right border-l border-border pl-6">
+          {/* Overall Match Score (Text representation for tests & accessibility) */}
+          <div className="hidden sm:block text-right border-l border-border pl-4">
             <span className="text-[11px] font-semibold text-muted-foreground block">
               Match Score
             </span>
@@ -112,6 +121,7 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
       {/* 2. "How to read this" Helper Card */}
       <aside
         data-testid="how-to-read-helper"
+        aria-label="Score interpretation guide"
         className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 space-y-2"
       >
         <div className="flex items-center gap-1.5 font-bold text-foreground">
@@ -133,6 +143,7 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
       {analysis.llmStatus === 'UNAVAILABLE' ? (
         <aside
           data-testid="llm-unavailable-notice"
+          aria-label="AI explanation service status"
           className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-start gap-3 text-xs text-slate-700"
         >
           <Info className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" aria-hidden="true" />
