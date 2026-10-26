@@ -6,7 +6,8 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
     env: {
-      INTERNAL_API_TOKEN: 'test-internal-token-minimum-32-chars-long',
+      JWT_SECRET: 'test-fake-jwt-secret-for-vitest-runs-only-32chars',
+      INTERNAL_API_TOKEN: 'test-fake-internal-api-token-vitest-32chars',
     },
     coverage: {
       provider: 'v8',

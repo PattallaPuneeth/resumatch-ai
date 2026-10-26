@@ -759,9 +759,9 @@ describe('Phase 2B: POST /v1/resumes/:id/complete', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Regression: Phase 1 stubs should still return 501
+// Regression: Default-deny (401 unauthenticated) & Phase 1 stubs return 501
 // ---------------------------------------------------------------------------
-describe('Regression: Phase 1 stubs still return 501', () => {
+describe('Regression: Phase 1 stubs return 401 unauthenticated and 501 authenticated', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
@@ -774,23 +774,32 @@ describe('Regression: Phase 1 stubs still return 501', () => {
     await app.close();
   });
 
-  it('GET /resumes returns 501', async () => {
+  it('unauthenticated calls to stubs return 401', async () => {
     const res = await app.inject({ method: 'GET', url: '/resumes' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('GET /resumes returns 501 when authenticated', async () => {
+    const authHeader = await getAuthToken(app);
+    const res = await app.inject({ method: 'GET', url: '/resumes', headers: { authorization: authHeader } });
     expect(res.statusCode).toBe(501);
   });
 
-  it('POST /resumes returns 501', async () => {
-    const res = await app.inject({ method: 'POST', url: '/resumes', payload: {} });
+  it('POST /resumes returns 501 when authenticated', async () => {
+    const authHeader = await getAuthToken(app);
+    const res = await app.inject({ method: 'POST', url: '/resumes', headers: { authorization: authHeader }, payload: {} });
     expect(res.statusCode).toBe(501);
   });
 
-  it('GET /analyses returns 501', async () => {
-    const res = await app.inject({ method: 'GET', url: '/analyses' });
+  it('GET /analyses returns 501 when authenticated', async () => {
+    const authHeader = await getAuthToken(app);
+    const res = await app.inject({ method: 'GET', url: '/analyses', headers: { authorization: authHeader } });
     expect(res.statusCode).toBe(501);
   });
 
-  it('GET /jobs returns 501', async () => {
-    const res = await app.inject({ method: 'GET', url: '/jobs' });
+  it('GET /jobs returns 501 when authenticated', async () => {
+    const authHeader = await getAuthToken(app);
+    const res = await app.inject({ method: 'GET', url: '/jobs', headers: { authorization: authHeader } });
     expect(res.statusCode).toBe(501);
   });
 });

@@ -3,3 +3,7 @@ dist
 build
 .git
 npm-debug.log*
+.env
+**/.env
+*.env
+.env.*

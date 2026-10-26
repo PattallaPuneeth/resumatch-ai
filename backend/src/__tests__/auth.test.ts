@@ -17,6 +17,7 @@ import {
   createTestUserAndSession,
   cleanupTestUser,
 } from './testAuthHelper.js';
+import { checkIpRateLimit } from '../auth/rateLimiter.js';
 
 describe('Phase 5: Accounts and Authentication Suite', () => {
   let app: FastifyInstance;
@@ -305,6 +306,32 @@ describe('Phase 5: Accounts and Authentication Suite', () => {
       expect(res.json().detail).toContain('unavailable');
 
       spyIncr.mockRestore();
+    });
+
+    it('enforces per-IP rate limit on auth endpoints and returns 429 with Retry-After when exceeded', async () => {
+      const testIp = `198.51.100.${Math.floor(Math.random() * 200) + 10}`;
+      const key = `ratelimit:auth:ip:${testIp}`;
+
+      // Clean start
+      await redisClient.del(key);
+
+      // Verify checkIpRateLimit allows up to threshold (e.g. 3 attempts)
+      const r1 = await checkIpRateLimit(testIp, 3, 60);
+      expect(r1.allowed).toBe(true);
+
+      const r2 = await checkIpRateLimit(testIp, 3, 60);
+      expect(r2.allowed).toBe(true);
+
+      const r3 = await checkIpRateLimit(testIp, 3, 60);
+      expect(r3.allowed).toBe(true);
+
+      // 4th request exceeds the per-IP threshold
+      const r4 = await checkIpRateLimit(testIp, 3, 60);
+      expect(r4.allowed).toBe(false);
+      expect(r4.retryAfter).toBeGreaterThan(0);
+
+      // Clean up Redis key
+      await redisClient.del(key);
     });
   });
 
@@ -799,6 +826,23 @@ describe('Phase 5: Accounts and Authentication Suite', () => {
       });
       expect(resRewriter.statusCode, 'POST /v1/rewriter/bullet foreign ownership').toBe(404);
 
+      // 10. POST /v1/jobs/:id/analysis -> 404 (User B cannot trigger analysis on User A job/resume)
+      const resAnalysis = await app.inject({
+        method: 'POST',
+        url: `/v1/jobs/${jobA.id}/analysis`,
+        headers: userB.authHeader,
+        payload: { resumeId: resumeA.id },
+      });
+      expect(resAnalysis.statusCode, 'POST /v1/jobs/:id/analysis foreign ownership').toBe(404);
+
+      // 11. GET /v1/jobs/:id/analysis/:resumeId -> 404 (User B cannot retrieve analysis on User A job/resume)
+      const resGetAnalysis = await app.inject({
+        method: 'GET',
+        url: `/v1/jobs/${jobA.id}/analysis/${resumeA.id}`,
+        headers: userB.authHeader,
+      });
+      expect(resGetAnalysis.statusCode, 'GET /v1/jobs/:id/analysis/:resumeId foreign ownership').toBe(404);
+
       await cleanupTestUser(userA.userId);
       await cleanupTestUser(userB.userId);
     });
@@ -1146,12 +1190,17 @@ describe('Phase 5: Accounts and Authentication Suite', () => {
           classified[category]++;
         }
 
-        // If PROTECTED, verify calling without credentials returns 401
-        if (category === 'PROTECTED') {
+        // If PROTECTED or LEGACY_STUB, verify calling without credentials returns 401
+        if (category === 'PROTECTED' || category === 'LEGACY_STUB') {
           const testUrl = route.url.replace(/:[a-zA-Z]+/g, '11111111-1111-1111-1111-111111111111');
+          const headers: Record<string, string> = {};
+          if (route.method === 'QUERY') {
+            headers['content-type'] = 'application/json';
+          }
           const res = await testServer.inject({
             method: route.method as any,
             url: testUrl,
+            headers,
           });
           expect(res.statusCode, `Route ${route.method} ${route.url} should return 401 without auth`).toBe(401);
         }

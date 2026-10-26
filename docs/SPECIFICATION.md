@@ -934,7 +934,7 @@ Flow:
 ### 16.1 Architecture Decisions
 1. **Credentials & Identity Separation:** Identity (`User` model) is strictly decoupled from credentials (`Credential` model). Google OAuth is not built in Phase 5; the schema cleanly permits alternative auth providers in the future without schema churn.
 2. **User.email:** Made optional (`String? @unique`), non-destructive change preserving all existing test users and databases.
-3. **Password Security:** Argon2id with OWASP minimum recommended parameters (memoryCost: 19 MiB / 19456 KiB, timeCost: 2, parallelism: 1). Password length: 12-128 chars, must not contain username (case-insensitive), rejected if in bundled common password list, no composition rules. Username: 3-32 chars `[a-zA-Z0-9_.-]`, case-insensitive unique.
+3. **Password Security:** Argon2id with OWASP minimum recommended parameters (memoryCost: 19 MiB / 19456 KiB, timeCost: 2, parallelism: 1). Password length: 12-128 chars, must not contain username (case-insensitive), rejected if in bundled common password list, no composition rules. Username: 3-32 chars `[a-zA-Z0-9_.-]`, case-insensitive unique. Hashing concurrency is bounded by `ARGON2_MAX_CONCURRENCY` (default 10) to cap worst-case memory consumption at 190 MiB (19 MiB x 10).
 4. **Timing Equalization:** When login or password recovery is attempted for an unknown username, a dummy Argon2id verification executes against a precomputed dummy hash with identical work factor parameters to prevent username enumeration via timing attacks.
 5. **Token Architecture:**
    - **Access Token:** JWT signed with `JWT_SECRET`, 15-minute lifetime. Contains claims `{ sub: userId, sid: sessionId, username: string }`.
@@ -1003,3 +1003,16 @@ Flow:
   2. Dual-keying lockout by IP subnet and device fingerprint alongside username.
   3. Out-of-band email or recovery code unlock to immediately bypass the lockout window.
   4. Progressive step-up authentication rather than total login denial.
+
+### 16.4 Dependencies & Security Parameters
+1. **Argon2id Work Factor & Concurrency Parameters:**
+   - Algorithm: Argon2id (`@node-rs/argon2`)
+   - Memory cost: 19 MiB (19,456 KiB)
+   - Time cost (iterations): 2
+   - Parallelism (lanes/threads): 1
+   - Concurrency ceiling (`ARGON2_MAX_CONCURRENCY`): 10 concurrent operations (bounded FIFO queue via `HashingConcurrencyLimiter`)
+   - Worst-case memory ceiling: `memoryCost x maxConcurrency` = 19 MiB x 10 = 190 MiB (194,560 KiB)
+2. **Phase 5 npm Dependencies (Backend):**
+   - `@fastify/cookie`: `^11.1.3` (Session and CSRF cookie management with SameSite and HttpOnly protection)
+   - `@fastify/jwt`: `^9.1.0` (JWT token signing, verification, and claims decoding)
+   - `@node-rs/argon2`: `^2.2.2` (Native SIMD-accelerated Argon2id password hashing and constant-time verification)

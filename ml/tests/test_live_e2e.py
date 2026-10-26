@@ -10,12 +10,11 @@ Flow:
 6. Verify database state transitions and parsed entities directly in PostgreSQL.
 """
 
-import base64
 import hashlib
-import hmac
 import io
-import json
+import os
 import time
+import uuid
 from typing import Any
 
 import docx
@@ -27,58 +26,43 @@ from PIL import Image, ImageDraw
 
 from ml.config import settings
 
-BACKEND_URL = "http://backend:4000"
-JWT_SECRET = "local-dev-secret-change-in-production"
+# Live marker: Never collected by default pytest runs, skipped unless RUN_LIVE_E2E=1
+pytestmark = [
+    pytest.mark.live,
+    pytest.mark.skipif(
+        os.getenv("RUN_LIVE_E2E") != "1",
+        reason="Live E2E test skipped unless RUN_LIVE_E2E=1",
+    ),
+]
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:4000")
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+def make_authenticated_token() -> str:
+    """Obtain a real session access token via session registration/login against the backend."""
+    username = f"live_e2e_{uuid.uuid4().hex[:8]}"
+    password = "LiveE2ePassword123!"
 
+    with httpx.Client(timeout=10.0) as client:
+        # Register a new user session directly via backend /v1/auth/register
+        res = client.post(
+            f"{BACKEND_URL}/v1/auth/register",
+            json={"username": username, "password": password},
+        )
+        if res.status_code == 201:
+            data = res.json()
+            return str(data["tokens"]["accessToken"])
 
-def get_demo_user() -> tuple[str, str]:
-    with psycopg.connect(settings.database_url) as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT u.id, u.email
-                FROM users u
-                WHERE (SELECT COUNT(*) FROM resumes r WHERE r."userId" = u.id) < 45
-                ORDER BY u."createdAt" DESC
-                LIMIT 1;
-            """)
-            row = cur.fetchone()
-            if row:
-                return str(row[0]), str(row[1])
-            import uuid
+        login_res = client.post(
+            f"{BACKEND_URL}/v1/auth/login",
+            json={"username": username, "password": password},
+        )
+        if login_res.status_code == 200:
+            data = login_res.json()
+            return str(data["tokens"]["accessToken"])
 
-            uid = str(uuid.uuid4())
-            email = f"e2e-{uid[:8]}@example.com"
-            cur.execute(
-                """
-                INSERT INTO users (id, email, role, "createdAt", "updatedAt")
-                VALUES (%s, %s, 'CANDIDATE', NOW(), NOW());
-                """,
-                (uid, email),
-            )
-            conn.commit()
-            return uid, email
-
-
-def make_dev_token() -> str:
-    user_id, email = get_demo_user()
-    header = {"alg": "HS256", "typ": "JWT"}
-    payload = {
-        "userId": user_id,
-        "email": email,
-        "sub": user_id,
-        "iat": int(time.time()),
-        "exp": int(time.time()) + 3600,
-    }
-    encoded_header = _b64url(json.dumps(header, separators=(",", ":")).encode())
-    encoded_payload = _b64url(json.dumps(payload, separators=(",", ":")).encode())
-    signing_input = f"{encoded_header}.{encoded_payload}".encode()
-    sig = hmac.new(JWT_SECRET.encode(), signing_input, hashlib.sha256).digest()
-    return f"{encoded_header}.{encoded_payload}.{_b64url(sig)}"
+        raise RuntimeError(f"Failed to authenticate live e2e session: {res.status_code} {res.text}")
 
 
 def build_sample_pdf() -> bytes:
@@ -189,7 +173,7 @@ def wait_for_status(
 
 @pytest.mark.asyncio
 async def test_live_pdf_pipeline_e2e() -> None:
-    token = make_dev_token()
+    token = make_authenticated_token()
     pdf_bytes = build_sample_pdf()
     sha256_hash = hashlib.sha256(pdf_bytes).hexdigest()
 
@@ -269,7 +253,7 @@ async def test_live_pdf_pipeline_e2e() -> None:
 
 @pytest.mark.asyncio
 async def test_live_docx_pipeline_e2e() -> None:
-    token = make_dev_token()
+    token = make_authenticated_token()
     docx_bytes = build_sample_docx()
     sha256_hash = hashlib.sha256(docx_bytes).hexdigest()
 
@@ -339,7 +323,7 @@ async def test_live_docx_pipeline_e2e() -> None:
 
 @pytest.mark.asyncio
 async def test_live_scanned_pdf_ocr_pipeline_e2e() -> None:
-    token = make_dev_token()
+    token = make_authenticated_token()
     scanned_bytes = build_scanned_pdf()
     sha256_hash = hashlib.sha256(scanned_bytes).hexdigest()
 

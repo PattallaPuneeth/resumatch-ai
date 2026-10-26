@@ -47,6 +47,28 @@ function getCorsAllowedOrigins(): Set<string> {
   );
 }
 
+export function isPublicRoute(method: string, url: string): boolean {
+  if (method.toUpperCase() === 'OPTIONS') {
+    return true;
+  }
+  const rawPath = url.split('?')[0];
+  const pathname = rawPath.length > 1 ? rawPath.replace(/\/+$/, '') : rawPath;
+
+  if (method.toUpperCase() === 'GET' && pathname === '/health') {
+    return true;
+  }
+  if (
+    method.toUpperCase() === 'POST' &&
+    (pathname === '/v1/auth/register' ||
+      pathname === '/v1/auth/login' ||
+      pathname === '/v1/auth/refresh' ||
+      pathname === '/v1/auth/recover')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 const authPlugin: FastifyPluginAsync = async (app) => {
   await app.register(jwt, {
     secret: env.JWT_SECRET,
@@ -58,6 +80,10 @@ const authPlugin: FastifyPluginAsync = async (app) => {
   const allowedOrigins = getCorsAllowedOrigins();
 
   app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+    // Idempotent: If already authenticated by the global hook, skip re-verification
+    if (request.user) {
+      return;
+    }
     // RFC 7807 Error helper
     const sendAuthError = (status: number, title: string, detail: string) => {
       return reply
@@ -242,6 +268,15 @@ const authPlugin: FastifyPluginAsync = async (app) => {
 
     // Attach decoded user
     request.user = payload;
+  });
+
+  // Global Default-Deny Hook:
+  // Every route not in the explicit PUBLIC allowlist requires authentication.
+  app.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (isPublicRoute(request.method, request.url)) {
+      return;
+    }
+    await app.authenticate(request, reply);
   });
 };
 
