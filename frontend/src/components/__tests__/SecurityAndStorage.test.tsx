@@ -74,4 +74,33 @@ describe('Frontend Security Checklist (Phase 8A Requirements)', () => {
       expect(window.sessionStorage.getItem(key)).toBeNull();
     }
   });
+
+  it('strictly verifies zero instances of NEXT_PUBLIC_ML_URL across all frontend source files', () => {
+    const srcDir = path.resolve(__dirname, '../../');
+    const sourceFiles = findFilesRecursive(srcDir, ['.ts', '.tsx', '.js', '.jsx']);
+
+    const violations: { file: string; line: number; text: string }[] = [];
+
+    for (const file of sourceFiles) {
+      if (file.includes('SecurityAndStorage.test.tsx')) continue;
+
+      const content = fs.readFileSync(file, 'utf-8');
+      const lines = content.split('\n');
+
+      lines.forEach((line, idx) => {
+        if (line.includes('NEXT_PUBLIC_ML_URL')) {
+          violations.push({
+            file: path.relative(srcDir, file),
+            line: idx + 1,
+            text: line.trim(),
+          });
+        }
+      });
+    }
+
+    expect(
+      violations,
+      `Found forbidden NEXT_PUBLIC_ML_URL usage in:\n${JSON.stringify(violations, null, 2)}`
+    ).toEqual([]);
+  });
 });
