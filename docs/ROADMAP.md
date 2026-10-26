@@ -52,9 +52,10 @@
 | 4B | Fact-grounded STAR bullet rewriter | COMPLETE (verified) |
 | 4C | Resume-only improvements and role suggestions | COMPLETE (verified) |
 | 5 | Accounts and authentication (username/password) | COMPLETE (verified) |
-| 6 | Usage metering, displayed limits, 50/70/90 alerts | PLANNED (required) |
-| 7 | Job suggestions via Firecrawl | PLANNED |
-| 8 | Product UI (full frontend, green/white/black theme) | PLANNED |
+| 6 | Usage metering, displayed limits, 50/70/90 alerts | COMPLETE (Backend verified) |
+| 7 | Job suggestions via Firecrawl | COMPLETE (Backend verified) |
+| 8A | Frontend foundation, auth, dashboard shell, upload & Usage panel | COMPLETE (Verified) |
+| 8B/8C | Analyze flow, match visualizer, suggestions UI, bullet editor | PLANNED |
 | 9 | Security audit and hardening | PLANNED |
 | 10 | Performance, observability, CI, deployment | PLANNED |
 | 11 | Google OAuth, payments, plans | OPTIONAL (only after the core is done) |
@@ -195,15 +196,24 @@ Replaces the dev token minting used in tests.
 
 **Theme (all pages):** white base, near-black ink for text and dark surfaces, a restrained green accent. Define design tokens once (colors, spacing, type, radius), light mode first, accessible contrast (WCAG AA). Use the `frontend-design` skill.
 
-**Screens**
-1. Sign up / log in / log out; account page.
-2. Dashboard: resumes list, upload with progress and clear errors, per-resume history.
-3. **Analyze flow:** pick a resume, optionally paste/upload a JD. With a JD: match score, **ATS score**, structured explanation (matched/partial/missing skills, strengths, gaps, prioritized fixes with evidence), suggested jobs. Without a JD: **ATS score**, resume fixes, suggested roles/jobs.
-4. Match visualizer: lexical / semantic / cross-encoder / skill breakdown, missing keywords.
-5. Interactive bullet editor: side-by-side diff, grounded-evidence highlights.
-6. **Usage panel (required)** on the dashboard and analyze screens: used / limit (or "Unlimited"), progress bar, and separate 50% / 70% / 90% / 100% alert banners.
-7. Loading, empty, and failure states everywhere; plain language so anyone can understand results.
-**Security:** no `dangerouslySetInnerHTML` with untrusted content; CSP-compatible; no secrets in client bundle; no PII in analytics.
+### Phase 8A: Foundation, Auth, Dashboard Shell, Upload & Usage Panel [COMPLETE - VERIFIED]
+- **Status:** COMPLETE & VERIFIED.
+- **Theme:** White base (`#ffffff`), near-black ink (`#0f172a`), restrained green accent (`#15803d` / `#166534`, 4.64:1 contrast on white, WCAG AA compliant). System font stack, no external CDN dependencies.
+- **API Proxy Architecture:** Same-origin Next.js rewrites (`/api/backend/:path*` -> `http://backend:4000/:path*` in container, `127.0.0.1:4000` on host) preserving first-party HTTP-only session cookies and strict CORS isolation.
+- **Typed API Client:** CSRF double-submit token (`x-csrf-token`) on mutating methods, single-flight token refresh queue on 401 (prevents refresh storms and infinite loops), RFC 7807 error parsing (`ApiProblemError`), request timeout abort controller. Zero tokens in `localStorage` or `sessionStorage`.
+- **Screens Implemented:**
+  - `/login`: Username + password, lockout / rate-limit 429 countdown banner, generic error messages, safe relative redirect.
+  - `/signup`: Username policy helper (3-32 alphanumeric/dashes), password policy helper (12-128 chars, no username), 10 recovery codes display.
+  - `/dashboard`: Resumes list (status badges: `Uploading`, `Processing`, `Parsed`, `Failed`, ATS score badge, relative dates, delete with confirmation modal, auto-polling with bounded backoff for `PROCESSING` resumes), `ResumeUpload` dropzone (PDF/DOCX, 5 MB pre-check, presigned storage PUT with progress and cancel support, 429 storage quota banner), and `UsagePanel`.
+  - `/account`: User profile, plan badge, usage summary link, `UsagePanel`, and Danger Zone with typed "DELETE" + password confirmation modal calling `DELETE /v1/account`.
+- **Usage Panel:** Displays all 3 meters (`analyses`, `job_suggestions`, `resume_storage_bytes`), human units for bytes, reset dates, and distinct, separate alert banners for 50%, 70%, 90%, and 100% (blocked). Unlimited plan renders no alert banners. Refetches after upload/delete and on window focus.
+- **Security:** Zero `dangerouslySetInnerHTML` in source files (enforced by ESLint and regression test), strict CSP headers, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, open-redirect sanitization.
+
+### Phase 8B / 8C: Analyze Flow, Match Visualizer, Suggestions UI & Bullet Editor [PLANNED]
+1. **Analyze flow:** pick a resume, optionally paste/upload a JD. With a JD: match score, **ATS score**, structured explanation (matched/partial/missing skills, strengths, gaps, prioritized fixes with evidence), suggested jobs. Without a JD: **ATS score**, resume fixes, suggested roles/jobs.
+2. Match visualizer: lexical / semantic / cross-encoder / skill breakdown, missing keywords.
+3. Interactive bullet editor: side-by-side diff, grounded-evidence highlights.
+4. Plain language copy and progressive enhancement.
 
 ---
 

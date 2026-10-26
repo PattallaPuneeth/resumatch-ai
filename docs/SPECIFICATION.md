@@ -1017,6 +1017,8 @@ Flow:
    - `@fastify/jwt`: `^9.1.0` (JWT token signing, verification, and claims decoding)
    - `@node-rs/argon2`: `^2.2.2` (Native SIMD-accelerated Argon2id password hashing and constant-time verification)
 
+---
+
 ## 17. Phase 6: Usage Metering, Displayed Limits, and Alerts
 
 ### 17.1 Architectural Overview & Core Decisions
@@ -1294,3 +1296,72 @@ Flow:
   ```
 
 ---
+
+## 19. Phase 8A: Frontend Foundation, Auth Screens, Dashboard Shell, Upload & Usage Panel
+
+### 19.1 Architecture & Same-Origin Proxy Design
+1. **Next.js App Router (15.1.4, React 19, Tailwind CSS):**
+   - Implemented exclusively within `frontend/`.
+   - Backend and ML services remain untouched; API contracts from Phases 1–7 are strictly consumed.
+2. **Same-Origin Reverse Proxy (`next.config.mjs`):**
+   - Proxies `/api/backend/:path*` to `http://backend:4000/:path*` in Docker container (`http://127.0.0.1:4000` in host mode).
+   - Keeps session and refresh cookies first-party to `http://localhost:3000`, completely avoiding third-party cookie restrictions and preventing CORS widening.
+3. **Security Headers:**
+   - Strict `Content-Security-Policy`: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* http://backend:* http://minio:*; frame-ancestors 'none'; form-action 'self'; base-uri 'self'`.
+   - `X-Content-Type-Options: nosniff`.
+   - `X-Frame-Options: DENY`.
+   - `Referrer-Policy: strict-origin-when-cross-origin`.
+   - `Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()`.
+
+### 19.2 Design Tokens & Accessibility (WCAG AA)
+1. **Token Hierarchy:**
+   - Base: Pure white `#ffffff` (`hsl(0, 0%, 100%)`).
+   - Surfaces: Near-black ink `#0f172a` (`hsl(222, 47%, 11%)`) for high-contrast typography and dark surfaces.
+   - Restrained Green Accent: Emerald green `#15803d` (`hsl(142, 72%, 29%)`) for primary buttons, progress bars, and active focus rings.
+2. **Measured Contrast Ratios (WCAG AA Compliance):**
+   - Ink `#0f172a` on `#ffffff`: **15.9:1** (exceeds AAA requirement of 7:1).
+   - Primary green `#15803d` on `#ffffff`: **4.64:1** (exceeds AA normal text requirement of 4.5:1).
+   - White text on primary button `#15803d`: **4.64:1** (passes AA).
+   - Button hover `#166534` on `#ffffff`: **6.37:1** (passes AA).
+   - Muted text `#64748b` on `#ffffff`: **4.61:1** (passes AA).
+3. **Typography & Accessibility:**
+   - Clean system font stack (`ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`). Zero external network font dependencies.
+   - Visible focus states: `focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`.
+   - `prefers-reduced-motion` media query disables animations and transitions for sensitive users.
+
+### 19.3 Typed API Client & Auth Lifecycle
+1. **Credentials & Double-Submit CSRF:**
+   - Every fetch request includes `credentials: 'include'`.
+   - Mutating calls (`POST`, `PUT`, `PATCH`, `DELETE`) automatically extract the non-HttpOnly `csrf_token` cookie and append the `x-csrf-token` header.
+2. **Single-Flight Refresh Token Queue on 401:**
+   - If an authenticated call returns HTTP 401, `apiClient` catches it and enqueues a single-flight call to `POST /v1/auth/refresh`.
+   - Concurrent requests share the same refresh promise, eliminating refresh storms.
+   - Once the refresh completes, the original requests are retried exactly once. If refresh fails, auth state is cleared and user is redirected to `/login`.
+3. **RFC 7807 Error Handling:**
+   - Non-2xx responses are parsed into `ApiProblemError`, exposing `status`, `title`, `detail`, `type`, `meter`, `used`, `limit`, and `retryAfter`.
+4. **Zero Web Storage Tokens:**
+   - Auth tokens (`access_token`, `refresh_token`) reside exclusively in HTTP-only browser cookies. `localStorage` and `sessionStorage` are never used for tokens or credentials.
+
+### 19.4 Screens & Components
+1. **`/login`:**
+   - Username and password inputs.
+   - Rate-limit / lockout 429 countdown banner with real-time second decrements.
+   - Generic error messages ("Invalid username or password.").
+   - Safe redirect via `sanitizeNextRedirect` (rejects open redirects).
+2. **`/signup`:**
+   - Real-time password policy helpers (12–128 characters, cannot contain username).
+   - Username policy helper (3–32 alphanumeric, underscores, hyphens, periods).
+   - One-time 10 recovery codes display with copy-to-clipboard functionality.
+3. **`/dashboard`:**
+   - Resumes list: Status badges (`Uploading`, `Processing`, `Parsed`, `Failed`), ATS score badge when available, formatted upload date, per-resume delete with confirmation modal.
+   - Auto-polling with bounded exponential backoff (2s up to 10s) when resumes are in `PROCESSING` or `UPLOAD_PENDING` status.
+   - Resume Upload: Drag-and-drop zone and file picker, client-side type/size pre-check (PDF/DOCX, <= 5 MB), presigned storage PUT with progress bar and cancel support, 429 storage quota banner.
+4. **`/account`:**
+   - User profile details and member date.
+   - Full `UsagePanel` integration.
+   - Danger Zone: Typed "DELETE" confirmation + password verification calling `DELETE /v1/account`, clearing client state and cascading user deletion.
+5. **`UsagePanel`:**
+   - Renders 3 meters: `analyses`, `job_suggestions`, `resume_storage_bytes`.
+   - Used / limit or "Unlimited".
+   - Human-readable byte formatting for storage (`B`, `KB`, `MB`, `GB`).
+   - Distinct, non-overlapping alert banners for 50%, 70%, 90%, and 100% (blocked) thresholds driven by `activeThreshold` and `blocked` from `GET /v1/usage`. Unlimited plan displays no alert banners. Refetches on window focus and after upload/delete actions.

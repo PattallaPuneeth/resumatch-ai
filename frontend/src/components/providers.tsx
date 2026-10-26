@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { AuthProvider } from '@/lib/authContext';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -10,12 +11,16 @@ export function Providers({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 5000,
-            refetchInterval: 10000,
             retry: 1,
+            refetchOnWindowFocus: true,
           },
         },
       })
   );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 }

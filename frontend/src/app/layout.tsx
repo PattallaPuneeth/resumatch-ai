@@ -1,14 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Navbar } from '@/components/Navbar';
 
-const inter = Inter({ subsets: ['latin'] });
-
 export const metadata: Metadata = {
-  title: 'ResuMatch AI - Foundation Console',
-  description: 'AI-Powered ATS resume parsing, hybrid job matching, and bullet rewrites.',
+  title: 'ResuMatch AI - ATS Resume Analysis & Matching',
+  description: 'Production-grade AI resume platform with ATS format compliance, hybrid matching, and usage metering.',
 };
 
 export default function RootLayout({
@@ -17,13 +14,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} min-h-screen bg-slate-950 text-slate-100 flex flex-col`}>
+    <html lang="en">
+      <body className="min-h-screen bg-background text-foreground flex flex-col font-sans">
         <Providers>
           <Navbar />
           <main className="flex-1 flex flex-col">{children}</main>
-          <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-400">
-            ResuMatch AI • Phase 1 Foundation • PostgreSQL pgvector(384) • Fastify • FastAPI • Next.js
+          <footer className="border-t border-border bg-slate-50 py-6 text-center text-xs text-muted-foreground">
+            <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <span>ResuMatch AI • Production AI Resume & Job Matching Platform</span>
+              <span>Fastify • PostgreSQL pgvector(384) • FastAPI • Next.js</span>
+            </div>
           </footer>
         </Providers>
       </body>
