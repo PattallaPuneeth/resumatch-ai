@@ -293,3 +293,45 @@ def test_corrupt_docx_fails(temp_dir: str) -> None:
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
+
+def test_docx_zip_bomb_fails_safely(temp_dir: str) -> None:
+    """Simulates a zip bomb with extreme compression ratio."""
+    import zipfile
+    bomb_path = os.path.join(temp_dir, "zipbomb.docx")
+    # Highly compressible stream of 1MB zeroes compressed into tiny bytes
+    with zipfile.ZipFile(bomb_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("word/document.xml", b"0" * 1000000)
+
+    with pytest.raises(CorruptFileError, match="potential zip bomb"):
+        parse_document(
+            bomb_path,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+
+def test_docx_with_macro_payload_fails(temp_dir: str) -> None:
+    """Verifies that DOCX with embedded VBA macro is rejected."""
+    import zipfile
+    macro_path = os.path.join(temp_dir, "macro.docx")
+    with zipfile.ZipFile(macro_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("word/document.xml", b"<xml>Dummy text</xml>")
+        zf.writestr("word/vbaProject.bin", b"fake macro binary payload")
+
+    with pytest.raises(CorruptFileError, match="macros or executable payloads"):
+        parse_document(
+            macro_path,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+
+def test_pdf_with_oversized_dimensions_fails(temp_dir: str) -> None:
+    """Verifies that PDF with massive dimensions (e.g. 5000x5000 pt) is rejected."""
+    pdf_path = os.path.join(temp_dir, "huge_dim.pdf")
+    doc = fitz.open()
+    doc.new_page(width=5000, height=5000)
+    doc.save(pdf_path)
+    doc.close()
+
+    with pytest.raises(CorruptFileError, match="exceed maximum safety limit"):
+        parse_document(pdf_path, "application/pdf")
+

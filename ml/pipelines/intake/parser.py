@@ -1,6 +1,7 @@
 import io
 import os
 import re
+import zipfile
 from collections.abc import Callable
 
 import docx
@@ -48,6 +49,8 @@ def _extract_pdf_blocks(doc: fitz.Document) -> tuple[str, bool, bool, set[str]]:
     for _page_idx, page in enumerate(doc):
         page_rect = page.rect
         width, height = page_rect.width, page_rect.height
+        if width > 3000.0 or height > 3000.0:
+            raise CorruptFileError(f"PDF page dimensions ({width}x{height}) exceed maximum safety limit.")
 
         # extract blocks: (x0, y0, x1, y1, text, block_no, block_type)
         blocks = page.get_text("blocks")
@@ -122,8 +125,15 @@ def _run_pdf_ocr(doc: fitz.Document) -> str:
 
     for page_idx in range(max_pages):
         page = doc[page_idx]
-        # Render page using configured DPI
+        page_rect = page.rect
+        # Render page using configured DPI, capping maximum pixel dimension to 4096px
         zoom = settings.ocr_dpi / 72.0
+        max_pixel_dim = 4096.0
+        calc_width = page_rect.width * zoom
+        calc_height = page_rect.height * zoom
+        if calc_width > max_pixel_dim or calc_height > max_pixel_dim:
+            scale = min(max_pixel_dim / calc_width, max_pixel_dim / calc_height)
+            zoom = zoom * scale
         mat = fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=mat, alpha=False)
 
@@ -138,11 +148,41 @@ def _run_pdf_ocr(doc: fitz.Document) -> str:
     return "\n\n".join(p for p in ocr_pages_text if p)
 
 
+def _check_docx_zip_safety(
+    file_path: str,
+    max_uncompressed_bytes: int = 50 * 1024 * 1024,
+    max_ratio: float = 100.0,
+) -> None:
+    """Validates DOCX zip structure against decompression bombs and macro payloads."""
+    try:
+        with zipfile.ZipFile(file_path, "r") as zf:
+            total_uncompressed = 0
+            has_macro = False
+            for info in zf.infolist():
+                total_uncompressed += info.file_size
+                if total_uncompressed > max_uncompressed_bytes:
+                    raise CorruptFileError(
+                        f"DOCX uncompressed size exceeds safety limit of {max_uncompressed_bytes // (1024 * 1024)}MB."
+                    )
+                if info.file_size > 1024 and (info.file_size / max(info.compress_size, 1)) > max_ratio:
+                    raise CorruptFileError(
+                        f"DOCX entry '{info.filename}' compression ratio exceeds safety threshold (potential zip bomb)."
+                    )
+                if "vbaProject.bin" in info.filename or info.filename.endswith(".bin"):
+                    has_macro = True
+            if has_macro:
+                raise CorruptFileError("DOCX contains macros or executable payloads which are disallowed.")
+    except zipfile.BadZipFile as bz:
+        raise CorruptFileError(f"Corrupted or invalid DOCX archive: {bz}") from bz
+
+
 def _extract_docx(file_path: str) -> tuple[str, bool, bool]:
     """
     Extracts text and layout details from DOCX document.
     Returns: (text, has_tables, has_header_footer)
     """
+    _check_docx_zip_safety(file_path)
+
     try:
         doc = docx.Document(file_path)
     except Exception as e:

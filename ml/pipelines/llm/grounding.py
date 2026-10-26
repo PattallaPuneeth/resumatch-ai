@@ -6,6 +6,7 @@ and computes fabricated evidence rate.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass
 
@@ -76,10 +77,11 @@ def verify_evidence_grounding(
                 )
             )
         else:
+            quote_hash = hashlib.sha256(quote.encode("utf-8")).hexdigest()[:12]
             logger.warning(
-                "Grounding verification rejected evidence quote: '%s' "
-                "(not found or invalid offset)",
-                quote[:80],
+                "Grounding verification rejected evidence quote (len=%d, sha256_prefix=%s): not found or invalid offset",
+                len(quote),
+                quote_hash,
             )
             dropped += 1
 
