@@ -607,9 +607,86 @@ describe('Phase 7: Job Suggestions via Swappable JobSource', () => {
 
       const json = res.json();
       expect(json.resumeId).toBe(resumeId);
+      expect(json.source).toBe('mock');
+      expect(json.isSample).toBe(true);
       expect(json.suggestions).toHaveLength(2);
       expect(json.suggestions[0].matchScore).toBe(92.5);
       expect(json.suggestions[0].matchedSkills).toContain('python');
+    });
+
+    it('sets source to "firecrawl" and isSample to false when Firecrawl source is used', async () => {
+      const userId = 'user-firecrawl-suggestions';
+      const token = (app as any).jwt.sign({ sub: userId });
+      const resumeId = '99999999-9999-9999-9999-999999999999';
+
+      vi.spyOn(prisma.resume, 'findUnique').mockResolvedValue({
+        id: resumeId,
+        userId: userId,
+        status: 'PARSED',
+      } as any);
+
+      vi.spyOn(prisma.parsedResume, 'findUnique').mockResolvedValue({
+        resumeId,
+        rawText: 'Experienced Node.js and TypeScript backend engineer',
+      } as any);
+
+      vi.spyOn(usageService, 'consume').mockResolvedValue({
+        allowed: true,
+        meter: 'job_suggestions',
+        used: 1,
+        limit: 5,
+        resetAt: '2026-11-01T00:00:00.000Z',
+      });
+
+      const mockFirecrawlSource = {
+        type: 'firecrawl' as const,
+        searchJobs: vi.fn().mockResolvedValue([
+          {
+            id: 'firecrawl-job-1',
+            urlHash: 'fc-hash-1',
+            contentHash: 'fc-chash-1',
+            sourceUrl: 'https://boards.greenhouse.io/acme/jobs/1',
+            title: 'Staff Backend Engineer',
+            company: 'Acme Cloud',
+            location: 'Remote',
+            cleanedText: 'Looking for a Staff Backend Engineer skilled in TypeScript.',
+            fetchedAt: '2026-10-26T12:00:00.000Z',
+          },
+        ]),
+      };
+      setJobSource(mockFirecrawlSource as any);
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              id: 'firecrawl-job-1',
+              title: 'Staff Backend Engineer',
+              company: 'Acme Cloud',
+              location: 'Remote',
+              sourceUrl: 'https://boards.greenhouse.io/acme/jobs/1',
+              matchScore: 95.0,
+              matchedSkills: ['typescript'],
+              missingSkills: [],
+            },
+          ],
+        }),
+      } as any);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/v1/resumes/${resumeId}/suggestions`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { limit: 5 },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const json = res.json();
+      expect(json.source).toBe('firecrawl');
+      expect(json.isSample).toBe(false);
+      expect(json.suggestions).toHaveLength(1);
+      expect(json.suggestions[0].title).toBe('Staff Backend Engineer');
     });
 
     it('refunds 1 unit of job_suggestions when downstream search or scoring fails', async () => {

@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, ResumeSummary } from '@/lib/apiClient';
-import { FileText, Trash2, AlertCircle, RefreshCw, Award, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { FileText, Trash2, AlertCircle, RefreshCw, Award, Clock, Sparkles } from 'lucide-react';
 import { formatBytes, formatDate } from '@/components/UsagePanel';
 
 interface ResumeListProps {
@@ -282,15 +283,27 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
                     </td>
 
                     <td className="py-3 px-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setDeleteCandidate(resume)}
-                        aria-label={`Delete resume ${resume.originalFilename}`}
-                        data-testid={`delete-resume-${resume.id}`}
-                        className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        {resume.status === 'PARSED' && (
+                          <Link
+                            href={`/analyze?resumeId=${resume.id}`}
+                            data-testid={`analyze-resume-link-${resume.id}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded text-primary hover:text-white bg-emerald-50 hover:bg-primary border border-emerald-200 hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            <span>Analyze</span>
+                          </Link>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setDeleteCandidate(resume)}
+                          aria-label={`Delete resume ${resume.originalFilename}`}
+                          data-testid={`delete-resume-${resume.id}`}
+                          className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

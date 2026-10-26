@@ -193,6 +193,194 @@ export interface CompleteUploadResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 8B: Jobs, Match, Analysis, Improvements & Suggestions Types
+// ---------------------------------------------------------------------------
+
+export interface CreateJobRequest {
+  title: string;
+  company: string;
+  rawDescription: string;
+  location?: string;
+  jobType?: string;
+  requiredSkills?: string[];
+  preferredSkills?: string[];
+  experienceLevel?: string;
+}
+
+export interface JobSummary {
+  id: string;
+  title: string;
+  company: string;
+  location?: string | null;
+  jobType?: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface JobDetails extends JobSummary {
+  rawDescription: string;
+  requiredSkills: string[];
+  preferredSkills: string[];
+  experienceLevel?: string | null;
+  chunkCount: number;
+  updatedAt: string;
+}
+
+export interface MatchScoringBreakdown {
+  bm25TopScore?: number;
+  vectorSimilarity?: number;
+  rrfScore?: number;
+  crossEncoderScore?: number;
+  skillCoverage?: number;
+}
+
+export interface MatchExplanation {
+  skillGap?: {
+    matched: string[];
+    missing: string[];
+    partial: string[];
+    coverage_ratio?: number;
+  };
+  scoringBreakdown?: MatchScoringBreakdown;
+  topMatchingChunks?: Array<{
+    chunkId: string;
+    sectionType?: string;
+    crossEncoderScore?: number;
+    snippet: string;
+  }>;
+  totalChunksEvaluated?: number;
+}
+
+export interface MatchResult {
+  id: string;
+  resumeId: string;
+  jobId: string;
+  bm25Score: number;
+  vectorScore: number;
+  rrfScore: number;
+  crossEncoderScore: number;
+  finalScore: number;
+  explanation?: MatchExplanation | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QueuedJobResponse {
+  statusCode: number;
+  message: string;
+  jobId: string;
+  resumeId: string;
+  status: 'QUEUED';
+}
+
+export interface ImprovementAtsFix {
+  hazardCode: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  issue: string;
+  recommendation: string;
+  priority: number;
+}
+
+export interface ContentFinding {
+  type: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  message: string;
+  startChar: number;
+  endChar: number;
+  quote: string;
+}
+
+export interface SuggestedRole {
+  title: string;
+  similarityScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+}
+
+export interface LLMExplanation {
+  summary: string;
+  prioritizedNextSteps: string[];
+}
+
+export interface ImprovementsResponse {
+  atsScore: number;
+  atsFixes: ImprovementAtsFix[];
+  contentFindings: ContentFinding[];
+  suggestedRoles: SuggestedRole[];
+  explanation: LLMExplanation | null;
+  llmStatus: 'SUCCESS' | 'UNAVAILABLE';
+  provider?: string | null;
+  model?: string | null;
+  tokensPrompt?: number | null;
+  tokensCompletion?: number | null;
+  latencyMs?: number | null;
+}
+
+export interface AnalysisStrength {
+  claim: string;
+  evidence: string;
+}
+
+export interface AnalysisImprovement {
+  priority: number;
+  action: string;
+  evidence?: string;
+}
+
+export interface StructuredAnalysisData {
+  summary: string;
+  strengths: Array<AnalysisStrength | string>;
+  gaps: Array<{ gap: string; severity?: string; recommendation?: string } | string>;
+  prioritized_improvements: Array<AnalysisImprovement | string>;
+  match_score: number;
+  ats_score: number | null;
+  verdict_band: 'strong' | 'medium' | 'weak';
+  matched_skills: string[];
+  missing_skills: string[];
+  partial_skills: string[];
+}
+
+export interface AnalysisResult {
+  id: string;
+  resumeId: string;
+  jobId: string;
+  status: string;
+  llmStatus: 'SUCCESS' | 'UNAVAILABLE' | string;
+  score: number;
+  result: StructuredAnalysisData;
+  provider?: string | null;
+  model?: string | null;
+  promptVersion?: string | null;
+  tokensPrompt?: number | null;
+  tokensCompletion?: number | null;
+  latencyMs?: number | null;
+  fabricatedEvidenceRate?: number;
+  injectionSuspected?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScoredJobSuggestion {
+  title: string;
+  company: string;
+  location: string | null;
+  sourceUrl: string;
+  matchScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  fetchedAt: string;
+}
+
+export interface JobSuggestionsResponse {
+  resumeId: string;
+  totalFound: number;
+  source: 'mock' | 'firecrawl';
+  isSample: boolean;
+  suggestions: ScoredJobSuggestion[];
+  message?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -493,5 +681,49 @@ export const apiClient = {
         xhr.send(file);
       });
     },
+
+    getImprovements: (resumeId: string) =>
+      apiClientRequest<ImprovementsResponse>(`/v1/resumes/${resumeId}/improvements`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+
+    getSuggestions: (
+      resumeId: string,
+      params?: { limit?: number; location?: string; seniority?: string; jobId?: string }
+    ) =>
+      apiClientRequest<JobSuggestionsResponse>(`/v1/resumes/${resumeId}/suggestions`, {
+        method: 'POST',
+        body: JSON.stringify(params || {}),
+      }),
+  },
+
+  jobs: {
+    create: (data: CreateJobRequest) =>
+      apiClientRequest<JobSummary>('/v1/jobs', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    get: (id: string) =>
+      apiClientRequest<JobDetails>(`/v1/jobs/${id}`),
+
+    match: (jobId: string, resumeId: string) =>
+      apiClientRequest<QueuedJobResponse>(`/v1/jobs/${jobId}/match`, {
+        method: 'POST',
+        body: JSON.stringify({ resumeId }),
+      }),
+
+    getMatch: (jobId: string, resumeId: string) =>
+      apiClientRequest<MatchResult>(`/v1/jobs/${jobId}/matches/${resumeId}`),
+
+    createAnalysis: (jobId: string, resumeId: string) =>
+      apiClientRequest<QueuedJobResponse>(`/v1/jobs/${jobId}/analysis`, {
+        method: 'POST',
+        body: JSON.stringify({ resumeId }),
+      }),
+
+    getAnalysis: (jobId: string, resumeId: string) =>
+      apiClientRequest<AnalysisResult>(`/v1/jobs/${jobId}/analysis/${resumeId}`),
   },
 };

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
-import { FileText, LayoutDashboard, User, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { FileText, LayoutDashboard, User, LogOut, LogIn, UserPlus, Sparkles } from 'lucide-react';
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -43,6 +43,17 @@ export function Navbar() {
               >
                 <LayoutDashboard className="h-4 w-4 text-primary" />
                 Dashboard
+              </Link>
+              <Link
+                href="/analyze"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  isActive('/analyze')
+                    ? 'bg-accent text-accent-foreground font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-slate-100'
+                }`}
+              >
+                <Sparkles className="h-4 w-4 text-primary" />
+                Analyze
               </Link>
               <Link
                 href="/account"

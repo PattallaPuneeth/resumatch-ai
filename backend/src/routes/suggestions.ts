@@ -302,6 +302,8 @@ export const suggestionsRoutes: FastifyPluginAsync = async (app) => {
             totalFound: 0,
             suggestions: [],
             message: 'No matching job suggestions found for the provided criteria.',
+            source: jobSource.type,
+            isSample: jobSource.type === 'mock',
           };
           localSuggestionsCache.set(cacheKey, {
             data: emptyResponse,
@@ -379,6 +381,8 @@ export const suggestionsRoutes: FastifyPluginAsync = async (app) => {
           resumeId,
           totalFound: formattedSuggestions.length,
           suggestions: formattedSuggestions,
+          source: jobSource.type,
+          isSample: jobSource.type === 'mock',
         };
 
         // Cache final response in memory and Redis (24-hour TTL)

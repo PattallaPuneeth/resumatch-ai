@@ -93,6 +93,8 @@ Requirements:
  * Deterministic MockJobSource providing repeatable test fixtures without external network calls.
  */
 export class MockJobSource implements JobSource {
+  public readonly type = 'mock' as const;
+
   public async searchJobs(
     query: JobSearchQuery,
     options?: JobSourceOptions

@@ -1250,6 +1250,8 @@ Flow:
   {
     "resumeId": "11111111-1111-1111-1111-111111111111",
     "totalFound": 2,
+    "source": "mock",
+    "isSample": true,
     "suggestions": [
       {
         "title": "Senior Backend Engineer",
@@ -1270,6 +1272,8 @@ Flow:
   {
     "resumeId": "11111111-1111-1111-1111-111111111111",
     "totalFound": 0,
+    "source": "mock",
+    "isSample": true,
     "suggestions": [],
     "message": "No matching job suggestions found for the provided criteria."
   }
@@ -1319,11 +1323,13 @@ Flow:
    - Surfaces: Near-black ink `#0f172a` (`hsl(222, 47%, 11%)`) for high-contrast typography and dark surfaces.
    - Restrained Green Accent: Emerald green `#15803d` (`hsl(142, 72%, 29%)`) for primary buttons, progress bars, and active focus rings.
 2. **Measured Contrast Ratios (WCAG AA Compliance):**
-   - Ink `#0f172a` on `#ffffff`: **15.9:1** (exceeds AAA requirement of 7:1).
-   - Primary green `#15803d` on `#ffffff`: **4.64:1** (exceeds AA normal text requirement of 4.5:1).
-   - White text on primary button `#15803d`: **4.64:1** (passes AA).
-   - Button hover `#166534` on `#ffffff`: **6.37:1** (passes AA).
-   - Muted text `#64748b` on `#ffffff`: **4.61:1** (passes AA).
+   - Ink `#0f172a` (`hsl(222, 47%, 11%)`) on `#ffffff`: **17.87:1** (exceeds AAA requirement of 7:1).
+   - Primary green `#15803d` (`hsl(142, 72%, 29%)`) on `#ffffff`: **5.08:1** (exceeds AA normal text requirement of 4.5:1).
+   - White text on primary button `#15803d`: **5.08:1** (passes AA).
+   - Button hover `#116430` (`hsl(142, 71%, 23%)`) on `#ffffff`: **7.27:1** (passes AA).
+   - Muted text `#65758b` (`hsl(215, 16%, 47%)`) on `#ffffff`: **4.70:1** (passes AA).
+   - Accent foreground on accent background (`hsl(142, 76%, 96%)`): **4.83:1** (passes AA).
+   - Destructive button `#d31212` (`hsl(0, 84%, 45%)`) on `#ffffff`: **5.43:1** (passes AA).
 3. **Typography & Accessibility:**
    - Clean system font stack (`ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`). Zero external network font dependencies.
    - Visible focus states: `focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`.
@@ -1365,3 +1371,57 @@ Flow:
    - Used / limit or "Unlimited".
    - Human-readable byte formatting for storage (`B`, `KB`, `MB`, `GB`).
    - Distinct, non-overlapping alert banners for 50%, 70%, 90%, and 100% (blocked) thresholds driven by `activeThreshold` and `blocked` from `GET /v1/usage`. Unlimited plan displays no alert banners. Refetches on window focus and after upload/delete actions.
+
+---
+
+## 20. Phase 8B: Analyze Flow, ATS Score, Match Visualizer, Suggestions UI & Source Metadata
+
+### 20.1 Architecture & Route Map
+1. **`/analyze` Route (`frontend/src/app/analyze/page.tsx`):**
+   - Main entry point for resume inspection and matching.
+   - Requires authenticated session; redirects unauthenticated visitors to `/login?next=/analyze`.
+   - Embeds top `UsagePanel` tracking meters (`analyses`, `job_suggestions`) and triggering quota banners.
+2. **Component Hierarchy:**
+   - `AnalyzeSelector`: Resume dropdown picker (only allows `PARSED` resumes), Mode A vs Mode B selector tabs, JD paste form with live character count (20–200 characters), and per-resume JD history list.
+   - `ModeAResults`: Displays verbatim ATS score (0–100) with plain-language status band (`Poor ATS Compatibility`, `Fair ATS Compatibility`, `Good ATS Compatibility`, `Strong ATS Compatibility`), deterministic content findings with exact character spans highlighted, ATS hazard fixes, ML-ranked suggested roles, and neutral "AI explanation unavailable, showing deterministic results" banner when `llmStatus: UNAVAILABLE`. Pre-run quota notice for `analyses` meter.
+   - `ModeBResults`: Overall match score (ML hybrid), ATS score, verdict band (`Strong Match`, `Moderate Match`, `Low Match`), verified strengths with exact evidence quotes, identified skill gaps, prioritized fixes, and "How to read this score" helper card. Integrates `MatchVisualizer`.
+   - `MatchVisualizer`: Breakdown bars for Lexical (BM25), Semantic Vector, Cross-Encoder, Skill Coverage, Final Blend, and missing keywords list. Displays exact returned scores without re-computation.
+   - `JobSuggestionsList`: Suggestions cards displaying title, company, location, match score, matched and missing skills, fetched date, and validated external links (`rel="noopener noreferrer nofollow"`, `target="_blank"`, hostname badge). When `isSample: true`, displays prominent accessible "Sample data" badge and disclaimer. Includes remaining quota indicator for `job_suggestions` and handles 429 usage limits and 5xx failures (refunded).
+
+### 20.2 Score Integrity & Display Policy
+1. **Verbatim Score Display:**
+   - Every score displayed (overall match score, ATS score, sub-scores, suggestion match scores) is rendered exactly as returned by the API.
+   - The frontend never computes, blends, rounds-to-improve, or alters any score.
+   - If an API response omits a sub-score, the UI indicates it as omitted rather than fabricating a default value.
+2. **Untrusted String Sanitization:**
+   - All server, user, and scraped strings (JD text, resume text, evidence quotes, job titles, companies, URLs) are rendered exclusively as plain text children in React.
+   - `dangerouslySetInnerHTML` is strictly prohibited.
+3. **Safe External URLs (`frontend/src/lib/safeUrl.ts`):**
+   - All external job links are parsed through `validateExternalUrl`.
+   - Only `http:` and `https:` protocols are accepted. `javascript:`, `data:`, `file:`, `vbscript:`, and malformed URIs are discarded.
+   - Valid links render with `rel="noopener noreferrer nofollow"`, `target="_blank"`, and show the parsed hostname badge.
+
+### 20.3 Bounded Exponential Backoff Polling
+- Match jobs (`POST /v1/jobs/:id/match`) and Analysis jobs (`POST /v1/resumes/:id/analysis`) execute asynchronously via BullMQ workers.
+- The UI polls status with exponential backoff: starts at 1000ms, multiplies by 1.5 per poll, capped at 10000ms, with a maximum timeout of 60 seconds.
+- Renders visible "Analyzing match..." / "Analyzing resume..." progress states with cancel/leave safety.
+- Exposes retry buttons on polling failure or timeout without losing user inputs.
+
+### 20.4 Backend Contract Change (Step 2 Additive)
+- **Endpoint:** `POST /v1/resumes/:id/suggestions`
+- **Additive Fields in 200 Response:**
+  - `source: "mock" | "firecrawl"`: Derived from the active `JobSource` (`MockJobSource` -> `"mock"`, `FirecrawlJobSource` -> `"firecrawl"`).
+  - `isSample: boolean`: `true` when `source === "mock"`, `false` when live Firecrawl listings are retrieved.
+- **Contract Schema Update:**
+  - `backend/src/services/jobSource/types.ts`: `JobSource` interface has `readonly type: 'mock' | 'firecrawl'`, and `JobSuggestionsResponse` includes `source` and `isSample`.
+  - Stored in cache and returned identically on cache hits.
+
+### 20.5 Decisions & Contract Gaps
+1. **JD File Upload:**
+   - Mode B currently supports pasted JD text with title and company fields. File upload for JD documents is deferred to a future phase.
+2. **Match History Endpoint Gap:**
+   - `GET /v1/jobs` returns HTTP 501 ("Not Implemented. Available in Phase 5").
+   - There is no `GET /v1/resumes/:id/matches` endpoint in the backend.
+   - Per-resume JD/match history is maintained in client session state, allowing users to match multiple JDs against a resume during their session, while fetching individual results via `GET /v1/jobs/:id/matches/:resumeId`.
+3. **CSP `unsafe-eval` Conditional:**
+   - `next.config.mjs` applies `'unsafe-eval'` to `script-src` conditionally in development mode only (`process.env.NODE_ENV === 'production' ? "script-src 'self' 'unsafe-inline'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'"`).

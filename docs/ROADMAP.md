@@ -55,7 +55,8 @@
 | 6 | Usage metering, displayed limits, 50/70/90 alerts | COMPLETE (Backend verified) |
 | 7 | Job suggestions via Firecrawl | COMPLETE (Backend verified) |
 | 8A | Frontend foundation, auth, dashboard shell, upload & Usage panel | COMPLETE (Verified) |
-| 8B/8C | Analyze flow, match visualizer, suggestions UI, bullet editor | PLANNED |
+| 8B | Analyze flow, ATS score, match visualizer, suggestions UI | COMPLETE (verified) |
+| 8C | Interactive bullet editor, side-by-side diff, final polish | PLANNED |
 | 9 | Security audit and hardening | PLANNED |
 | 10 | Performance, observability, CI, deployment | PLANNED |
 | 11 | Google OAuth, payments, plans | OPTIONAL (only after the core is done) |
@@ -209,11 +210,22 @@ Replaces the dev token minting used in tests.
 - **Usage Panel:** Displays all 3 meters (`analyses`, `job_suggestions`, `resume_storage_bytes`), human units for bytes, reset dates, and distinct, separate alert banners for 50%, 70%, 90%, and 100% (blocked). Unlimited plan renders no alert banners. Refetches after upload/delete and on window focus.
 - **Security:** Zero `dangerouslySetInnerHTML` in source files (enforced by ESLint and regression test), strict CSP headers, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, open-redirect sanitization.
 
-### Phase 8B / 8C: Analyze Flow, Match Visualizer, Suggestions UI & Bullet Editor [PLANNED]
-1. **Analyze flow:** pick a resume, optionally paste/upload a JD. With a JD: match score, **ATS score**, structured explanation (matched/partial/missing skills, strengths, gaps, prioritized fixes with evidence), suggested jobs. Without a JD: **ATS score**, resume fixes, suggested roles/jobs.
-2. Match visualizer: lexical / semantic / cross-encoder / skill breakdown, missing keywords.
-3. Interactive bullet editor: side-by-side diff, grounded-evidence highlights.
-4. Plain language copy and progressive enhancement.
+### Phase 8B: Analyze Flow, ATS Score, Match Visualizer & Suggestions UI [COMPLETE & VERIFIED]
+- **Status:** COMPLETE & VERIFIED.
+- **Entry & Mode Switching:** Resume selector (enforcing `PARSED` status requirement), Mode A ("Resume only") vs. Mode B ("Resume + job description"). Paste JD inputs with real-time character counters adhering to backend bounds (20–200 characters).
+- **Mode A Results:** Verbatim ATS score display with plain-language band, deterministic content findings with exact character spans highlighted as plain text, ATS hazard fixes, and ML-ranked suggested roles. LLM section renders graceful "AI explanation unavailable, showing deterministic results" banner when `llmStatus` is `UNAVAILABLE`.
+- **Mode B Results:** Overall match score (ML), ATS score, verdict band, verified strength evidence quotes, identified skill gaps, and prioritized fixes. Plain language "How to read this score" helper card.
+- **Match Visualizer:** Accessible score breakdown bars for Lexical (BM25), Semantic Vector, Cross-Encoder, Skill Coverage, Final Blend, and missing keywords list. Exact scores displayed alongside progress bars without client recomputation.
+- **Job Suggestions UI:** Job listing cards with title, company, location, match score, matched and missing skills, fetched date, and validated external links (`rel="noopener noreferrer nofollow"`, `target="_blank"`, hostname badge). Prominent accessible "Sample data" badge with explanation when `isSample: true`.
+- **Async Polling:** Bounded exponential backoff (1s up to 10s, max 60s wait) with visible "Analyzing match...", leave-safe states, and retry buttons on failure.
+- **Usage & Quotas:** Pre-run remaining quota indicators for `analyses` and `job_suggestions`. 429 usage limit banners and 5xx refund handling. Integrated `UsagePanel` refetched after every metered action.
+- **Backend Contract Addition (Step 2):** Added additive `source: "mock" | "firecrawl"` and `isSample: boolean` fields to `POST /v1/resumes/:id/suggestions` 200 response and `JobSource` interface.
+- **Security:** Zero `dangerouslySetInnerHTML`, untrusted strings rendered as inert text, safe URL validator rejecting non-http(s) protocols, CSP headers restricting `unsafe-eval` to dev only.
+
+### Phase 8C: Interactive Bullet Editor & Final Polish [PLANNED]
+1. Interactive STAR bullet rewriter and editor with side-by-side diff.
+2. Grounded evidence quotes highlighted against original resume bullets.
+3. Final UX polish and end-to-end user journeys.
 
 ---
 

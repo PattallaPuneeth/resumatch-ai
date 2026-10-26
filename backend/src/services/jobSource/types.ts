@@ -27,6 +27,7 @@ export interface JobSourceOptions {
 }
 
 export interface JobSource {
+  readonly type: 'mock' | 'firecrawl';
   searchJobs(query: JobSearchQuery, options?: JobSourceOptions): Promise<RawJobListing[]>;
 }
 
@@ -55,4 +56,6 @@ export interface JobSuggestionsResponse {
   totalFound: number;
   suggestions: ScoredJobSuggestion[];
   message?: string;
+  source: 'mock' | 'firecrawl';
+  isSample: boolean;
 }

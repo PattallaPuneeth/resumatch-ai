@@ -168,7 +168,7 @@ export interface ListResumesResponse {
 // Base request helpers
 // ---------------------------------------------------------------------------
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || '/api/backend';
 
 async function request<T>(baseUrl: string, endpoint: string, init?: RequestInit): Promise<T> {
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;

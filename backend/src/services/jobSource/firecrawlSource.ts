@@ -27,6 +27,7 @@ export interface FirecrawlSearchApiResponse {
  * Marked as TEMPORARY and swappable for licensed enterprise job APIs.
  */
 export class FirecrawlJobSource implements JobSource {
+  public readonly type = 'firecrawl' as const;
   private readonly apiKey: string;
   private readonly endpoint: string;
 
