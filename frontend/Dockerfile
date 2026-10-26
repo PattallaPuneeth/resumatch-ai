@@ -16,6 +16,7 @@ ENV NODE_ENV=production \
     PORT=3000
 
 COPY package*.json ./
+COPY next.config.mjs ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
