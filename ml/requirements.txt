@@ -20,7 +20,7 @@ pytest-asyncio==0.24.0
 # Phase 3A Vector Embeddings:
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.14.1+cpu
-sentence-transformers==3.3.1
+sentence-transformers==6.2.0
 # Phase 10B Workstream B: tracing (inactive unless OTEL_EXPORTER_OTLP_ENDPOINT is set)
 opentelemetry-api==1.45.1
 opentelemetry-sdk==1.45.1
