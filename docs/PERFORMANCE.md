@@ -162,6 +162,12 @@ Limits of this measurement: one job at a time, so it doesn't show concurrent job
 to 2 per queue); the match path's cross-encoder model isn't loaded by these uploads (during the load
 runs, with both models loaded, the worker sat at about 830 MiB); and 0.5 s sampling can miss short spikes.
 
+Model-swap memory (measured by the ML analysis session: bare Python process, no load, peak RSS via
+`ru_maxrss`): current pair `all-MiniLM-L6-v2` + `ms-marco-MiniLM-L-6-v2` 697 MB; with the L-12
+reranker 740 MB; with `bge-small-en-v1.5` 741 MB. Neither swap was adopted: L-12 ranked worse on every
+eval set and reranked 2× slower; bge-small was neutral on ranking and embedded 2.5× slower (details in
+`docs/eval/`).
+
 **Sizing (decision D1).** The spec's "512 MB is unsafe" holds: the worker passes 512 MiB on the first
 text upload. 1 GB survives every single-job case but leaves only about 250 MiB of headroom on the worst
 case before concurrency or the cross-encoder. **Recommendation: 2 GB for `ml-worker`, at least 1 GB for
