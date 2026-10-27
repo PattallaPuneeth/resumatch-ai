@@ -38,9 +38,12 @@ def get_or_create_test_user() -> str:
             return user_id
 
 
-def create_test_resume(user_id: str, filename: str, mime_type: str, storage_key: str) -> str:
+def create_test_resume(
+    user_id: str, filename: str, mime_type: str, storage_key: str, resume_id: str | None = None
+) -> str:
     """Creates a Resume record in UPLOADED status."""
-    resume_id = str(uuid.uuid4())
+    if resume_id is None:
+        resume_id = str(uuid.uuid4())
     with psycopg.connect(settings.database_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -325,7 +328,7 @@ async def test_worker_handles_resume_deleted_while_queued() -> None:
     storage_key = f"resumes/{user_id}/{resume_id}.pdf"
 
     # Create Resume in DB
-    create_test_resume(user_id, "deleted_race.pdf", "application/pdf", storage_key)
+    create_test_resume(user_id, "deleted_race.pdf", "application/pdf", storage_key, resume_id=resume_id)
 
     # Put object in S3
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:

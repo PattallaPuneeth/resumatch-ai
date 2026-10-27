@@ -1,0 +1,23 @@
+services:
+  backend:
+    environment:
+      OPENROUTER_API_KEY: ""
+      FIRECRAWL_API_KEY: ""
+  ml:
+    environment:
+      GEMINI_API_KEY: ""
+      GROQ_API_KEY: ""
+      OPENROUTER_API_KEY: ""
+      GEMINI_MODEL: ""
+      GROQ_MODEL_PRIMARY: ""
+      OPENROUTER_MODEL: ""
+      GROQ_MODEL_EMERGENCY: ""
+  ml-worker:
+    environment:
+      GEMINI_API_KEY: ""
+      GROQ_API_KEY: ""
+      OPENROUTER_API_KEY: ""
+      GEMINI_MODEL: ""
+      GROQ_MODEL_PRIMARY: ""
+      OPENROUTER_MODEL: ""
+      GROQ_MODEL_EMERGENCY: ""

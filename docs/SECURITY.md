@@ -126,6 +126,13 @@ flowchart TD
 | **SEC-04** | High | Parser | Potential worker OOM or hang on maliciously nested DOCX zip bombs or massive PDFs | `ml/pipelines/intake/parser.py` | **FIXED** | Added 50MB decompressed size limit, 100:1 compression ratio guard, macro (`vbaProject.bin`) rejection, 3000pt page dimension bound, and 4096px OCR pixel clamping (`test_parser.py` 14 passed). |
 | **SEC-05** | Medium | Headers/CSP | CSP `script-src` includes `'unsafe-inline'` due to Next.js inline chunk hydration | `frontend/next.config.mjs` | **ACCEPTED-RISK (PENDING HUMAN APPROVAL)** | Next.js App Router client bootstrap requires inline chunk loader. Mitigated by strict `connect-src` allowlist, zero `dangerouslySetInnerHTML`, and strict input sanitization. |
 | **SEC-06** | Low | Network Ports | Internal services published to host ports in docker-compose for dev convenience | `docker-compose.yml` | **FIXED** | Bound all host publish ports (`5433`, `6380`, `9000`, `9001`, `8000`) exclusively to `127.0.0.1` preventing external LAN access. ML service requires `X-Internal-Token`. |
+| **SEC-07** | High | AuthN / Backend | `fast-jwt` (via `@fastify/jwt@9.1.0`) advisories: `crit` header, RSA whitespace algorithm confusion, cache confusion, regex DoS | `node_modules/fast-jwt` | **ACCEPTED-RISK (PENDING HUMAN APPROVAL)** | Mitigated in architecture: App strictly uses HMAC-SHA256 (`HS256`) with boot-guard enforced high-entropy secret; no RSA, no async key resolvers, no custom `cacheKeyBuilder`, no regex claims. Session state verified against PostgreSQL/Redis on every request. |
+| **SEC-08** | Medium | Storage / Backend | `minio` SDK transitive dependencies `query-string` (`decode-uri-component` DoS) and `stream-json` (DoS/prototype pollution) | `node_modules/minio` | **ACCEPTED-RISK (PENDING HUMAN APPROVAL)** | Mitigated in architecture: ResuMatch backend exclusively uses AWS SDK S3 client (`@aws-sdk/client-s3`) in `src/storage/s3.ts`. `minioClient` in `src/storage/minio.ts` is unused by production endpoints and never parses untrusted queries or streams. |
+| **SEC-09** | Medium | Validation / Backend | `zod` (<4.6.6) advisory: potential memory exhaustion on oversized constrained collections (GHSA-mrhx-c7xc-m3w5) | `node_modules/zod` | **ACCEPTED-RISK (PENDING HUMAN APPROVAL)** | Mitigated in architecture: Fastify global request body limit is strictly clamped at 1MB (`bodyLimit: 1048576`). File uploads bypass Fastify completely via direct presigned S3 PUTs. Unbounded collections cannot reach Zod parsers. |
+| **SEC-10** | High | Edge / Frontend | Next.js RCE (GHSA-2464-fhr4-w9xw) / DoS (GHSA-p3m5-59mp-jv5r), PostCSS `sourceMappingURL` file read in build | `frontend/package.json` | **FIXED & ACCEPTED-RISK (PENDING HUMAN APPROVAL)** | Next.js updated to 15.5.28 via `npm audit fix` (RCE and DoS fixed; 129 vitest tests passed, typecheck passed, build passed). PostCSS build tool `sourceMappingURL` unreachable in production runtime. |
+| **SEC-11** | High | ML Service | `transformers` (4.57.6) advisories: `Trainer` torch.load (PYSEC-2026-2288), untrusted config code execution (PYSEC-2026-2289/2290), path traversal (PYSEC-2026-3929) | `ml/requirements.txt` | **ACCEPTED-RISK (PENDING HUMAN APPROVAL)** | Mitigated in architecture: ML service uses `sentence-transformers` strictly for inference embeddings with a pinned local model (`all-MiniLM-L6-v2`). Never executes `Trainer`, never loads arbitrary untrusted Hub models, never calls `save_pretrained` or `load_custom_generate`. |
+| **SEC-12** | Info | ML Service | Validation of `starlette` and `Pillow` security posture | `ml/requirements.txt` | **VERIFIED CLEAN** | Pinned versions `starlette==0.41.3` and `Pillow==11.1.0` audited via `pip-audit`. Exactly 0 CVEs found. Past multipart DoS and Pillow memory corruption CVEs are fully patched. |
+| **SEC-13** | Medium | Infrastructure / Containers | Containers ran as root, lacked capability dropping, and MinIO/MC used mutable `:latest` tags | `docker-compose.yml`, Dockerfiles | **FIXED** | Configured non-root `USER` (node/appuser UID 1000), `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`, `read_only: true` root filesystem with tmpfs mounts, memory limit (2GB on ml-worker), and pinned MinIO/MC release tags. Trivy vulnerability baseline documented. |
 
 ---
 
@@ -156,11 +163,12 @@ Assessment against OWASP Application Security Verification Standard (ASVS) 4.0.3
 ## 9. Automated Scanners Summary
 
 ### 9.1 Gitleaks (Secret Scanner)
-- **Execution:** Containerized `zricethezav/gitleaks:latest` scan with `--redact` across all 26 repository commits and full git tree history.
+- **Execution:** Containerized `zricethezav/gitleaks:latest` scan with `--redact --verbose` across all 31 repository commits and full git tree history (`docker run --rm -v "c:\Puneeth-Tech\Project-CBP:/path" zricethezav/gitleaks:latest detect --source="/path" --redact --verbose`).
 - **Findings:** 4 candidate items, all triaged as false positives:
-  - `backend/src/__tests__/env.test.ts` (test dummy string `supersecretkey123456789012345678901234567890`)
-  - `backend/src/__tests__/auth.test.ts` (vitest spy stub)
-  - `backend/src/auth/commonPasswords.ts` (public dictionary of common passwords for blocklist validation)
+  - `backend/src/__tests__/auth.test.ts:213` (vitest spy stub on password module)
+  - `backend/src/__tests__/env.test.ts:11` (test dummy JWT secret string)
+  - `backend/src/__tests__/env.test.ts:71` (test dummy JWT secret string)
+  - `backend/src/auth/commonPasswords.ts:9` (public dictionary of common passwords for NIST-compliant registration blocklist validation)
 - **Leaked Real Secrets:** **0**.
 
 ### 9.2 OWASP ZAP (Baseline Passive Scan)

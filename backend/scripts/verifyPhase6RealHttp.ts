@@ -18,15 +18,23 @@
  * Rule: NEVER logs passwords, tokens, or DATABASE_URL.
  */
 
+import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 
-const BASE_URL = 'http://localhost:4000';
+const BASE_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+
+// Security Guard: Refuse execution against non-localhost targets
+const targetUrl = new URL(BASE_URL);
+if (targetUrl.hostname !== 'localhost' && targetUrl.hostname !== '127.0.0.1') {
+  throw new Error(`Refusing to run verification script against non-localhost target: ${BASE_URL}`);
+}
+
 const prisma = new PrismaClient();
 
 async function runVerification() {
-  const timestamp = Date.now();
-  const testUsername = `p6_throwaway_${timestamp}`;
-  const testPassword = `SecureTestPass_${timestamp}!`;
+  const runId = crypto.randomBytes(6).toString('hex');
+  const testUsername = `p6_throwaway_${runId}`;
+  const testPassword = `P6_${crypto.randomUUID()}!Aa1`;
 
   console.log('=== PHASE 6 REAL HTTP VERIFICATION ===');
   console.log(`1. Registering throwaway user: ${testUsername}`);

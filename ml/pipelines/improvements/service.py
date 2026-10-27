@@ -150,8 +150,9 @@ class ResumeImprovementsService:
                 for q in evidence_quotes:
                     span = redaction.map_quote_to_original(q)
                     if span is None and q not in req.resumeRawText:
+                        q_hash = hashlib.sha256(q.encode("utf-8")).hexdigest()[:12]
                         raise GroundingVerificationError(
-                            f"Fabricated quote detected in explanation: {q}",
+                            f"Fabricated quote detected in explanation (len={len(q)}, sha256_prefix={q_hash})",
                             rate=1.0,
                             dropped=1,
                             total=len(evidence_quotes),

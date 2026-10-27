@@ -6,11 +6,20 @@
  * session revocation, brute-force lockout, and account deletion cascade.
  * Never prints passwords, tokens, or recovery codes.
  */
+import crypto from 'node:crypto';
+
 async function runE2ECheck() {
-  const BACKEND_URL = 'http://localhost:4000';
-  const timestamp = Date.now();
-  const username = `e2e_verify_${timestamp}`;
-  const password = `ValidSecretPass_${timestamp}!`;
+  const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+
+  // Security Guard: Refuse execution against non-localhost targets
+  const targetUrl = new URL(BACKEND_URL);
+  if (targetUrl.hostname !== 'localhost' && targetUrl.hostname !== '127.0.0.1') {
+    throw new Error(`Refusing to run verification script against non-localhost target: ${BACKEND_URL}`);
+  }
+
+  const runId = crypto.randomBytes(6).toString('hex');
+  const username = `e2e_verify_${runId}`;
+  const password = `Valid_${crypto.randomUUID()}!Aa1`;
 
   console.log('=== PHASE 5 REAL HTTP END-TO-END VERIFICATION ===\n');
 
@@ -147,7 +156,7 @@ async function runE2ECheck() {
 
   // 8. Brute-force lockout verification
   console.log(`\n8. Brute-force lockout verification on /v1/auth/login (Nonexistent user)`);
-  const lockoutUser = `lockout_probe_${timestamp}`;
+  const lockoutUser = `lockout_probe_${runId}`;
   let wasLockedOut = false;
   let retryAfterHeader = '';
 

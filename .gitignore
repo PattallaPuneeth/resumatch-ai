@@ -78,3 +78,14 @@ test-data/
 .eval_cache/
 eval-output/
 sample_resume.pdf
+
+# Scratch, Logs & Security Reports
+scratch/
+*.log
+docker-compose.override.yml
+docker-compose.*.local.yml
+trivy-results*
+zap-report*
+gitleaks-report*
+.coverage
+htmlcov/

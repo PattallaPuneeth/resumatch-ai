@@ -14,16 +14,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd -u 1000 -m -s /bin/bash appuser && \
+    mkdir -p /home/appuser/.cache/huggingface /workspace && \
+    chown -R appuser:appuser /home/appuser /workspace
+
 COPY requirements.txt ./ml/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r ./ml/requirements.txt
 
 # Pre-download embedding and cross-encoder model weights per SPEC § 7.1
-ENV TRANSFORMERS_CACHE=/root/.cache/huggingface/hub \
-    HF_HOME=/root/.cache/huggingface
-RUN python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')"
+ENV TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/hub \
+    HF_HOME=/home/appuser/.cache/huggingface
+RUN python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')" && \
+    chown -R appuser:appuser /home/appuser/.cache
 
 COPY . ./ml/
+RUN chown -R appuser:appuser /workspace
+
+USER appuser
 
 EXPOSE 8000
 

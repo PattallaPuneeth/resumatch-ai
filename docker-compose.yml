@@ -37,7 +37,7 @@ services:
       - resumatch-network
 
   minio:
-    image: pgsty/minio:latest
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: resumatch-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -59,7 +59,7 @@ services:
       - resumatch-network
 
   minio-setup:
-    image: pgsty/mc:latest
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     container_name: resumatch-minio-setup
     depends_on:
       minio:
@@ -143,6 +143,14 @@ services:
       JOB_SOURCE_ALLOWLIST: ${JOB_SOURCE_ALLOWLIST:-boards.greenhouse.io,jobs.lever.co,jobs.ashbyhq.com}
     ports:
       - "127.0.0.1:4000:4000"
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 5s
@@ -182,6 +190,15 @@ services:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
     ports:
       - "127.0.0.1:8000:8000"
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000
+      - /home/appuser/.cache:uid=1000,gid=1000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 5s
@@ -218,6 +235,19 @@ services:
       GROQ_MODEL_PRIMARY: ${GROQ_MODEL_PRIMARY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
       GROQ_MODEL_EMERGENCY: ${GROQ_MODEL_EMERGENCY:-}
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000
+      - /home/appuser/.cache:uid=1000,gid=1000
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import sys; sys.exit(0)'"]
       interval: 10s
@@ -241,6 +271,15 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:4000
     ports:
       - "127.0.0.1:3000:3000"
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000
+      - /app/.next/cache:uid=1000,gid=1000
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 5s

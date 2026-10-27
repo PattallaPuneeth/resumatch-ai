@@ -11,3 +11,12 @@
 **/.env
 *.env
 .env.*
+scratch/
+*.log
+docker-compose*.yml
+!docker-compose.yml
+!docker-compose.ci.yml
+!docker-compose.llm-off.yml
+trivy-results*
+zap-report*
+gitleaks-report*

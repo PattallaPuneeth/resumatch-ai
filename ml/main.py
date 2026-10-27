@@ -120,7 +120,10 @@ def run_analysis(
 
 # Feature contract stubs returning 501
 @app.post("/v1/embeddings", status_code=status.HTTP_501_NOT_IMPLEMENTED)
-def embeddings_stub() -> dict[str, Any]:
+def embeddings_stub(
+    x_internal_token: str = Header(..., alias="X-Internal-Token"),
+) -> dict[str, Any]:
+    verify_internal_token(x_internal_token)
     return {
         "statusCode": 501,
         "error": "Not Implemented",
@@ -129,7 +132,10 @@ def embeddings_stub() -> dict[str, Any]:
 
 
 @app.post("/v1/parser/extract", status_code=status.HTTP_501_NOT_IMPLEMENTED)
-def parser_stub() -> dict[str, Any]:
+def parser_stub(
+    x_internal_token: str = Header(..., alias="X-Internal-Token"),
+) -> dict[str, Any]:
+    verify_internal_token(x_internal_token)
     return {
         "statusCode": 501,
         "error": "Not Implemented",
@@ -138,7 +144,10 @@ def parser_stub() -> dict[str, Any]:
 
 
 @app.post("/v1/matching/rerank", status_code=status.HTTP_501_NOT_IMPLEMENTED)
-def rerank_stub() -> dict[str, Any]:
+def rerank_stub(
+    x_internal_token: str = Header(..., alias="X-Internal-Token"),
+) -> dict[str, Any]:
+    verify_internal_token(x_internal_token)
     return {
         "statusCode": 501,
         "error": "Not Implemented",

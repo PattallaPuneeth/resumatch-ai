@@ -15,15 +15,23 @@
  * 8. Confirms user and usage records are completely cleaned up.
  */
 
+import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 
-const BASE_URL = 'http://localhost:4000';
+const BASE_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+
+// Security Guard: Refuse execution against non-localhost targets
+const targetUrl = new URL(BASE_URL);
+if (targetUrl.hostname !== 'localhost' && targetUrl.hostname !== '127.0.0.1') {
+  throw new Error(`Refusing to run verification script against non-localhost target: ${BASE_URL}`);
+}
+
 const prisma = new PrismaClient();
 
 async function runVerification() {
-  const timestamp = Date.now();
-  const testUsername = `p7_throwaway_${timestamp}`;
-  const testPassword = `SecureTestPass_${timestamp}!`;
+  const runId = crypto.randomBytes(6).toString('hex');
+  const testUsername = `p7_throwaway_${runId}`;
+  const testPassword = `P7_${crypto.randomUUID()}!Aa1`;
 
   console.log('=== PHASE 7 REAL HTTP VERIFICATION ===');
   console.log(`1. Registering throwaway user: ${testUsername}`);

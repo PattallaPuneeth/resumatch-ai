@@ -12,6 +12,19 @@
 
 import { PrismaClient } from '@prisma/client';
 
+// Security Guard: Refuse execution against non-localhost database targets
+if (process.env.DATABASE_URL) {
+  try {
+    const dbUrl = new URL(process.env.DATABASE_URL);
+    if (dbUrl.hostname !== 'localhost' && dbUrl.hostname !== '127.0.0.1') {
+      console.error(`Refusing to run setPlan against non-localhost database: ${dbUrl.hostname}`);
+      process.exit(1);
+    }
+  } catch {
+    // If not a standard URL format, proceed to Prisma's own connection validation
+  }
+}
+
 const prisma = new PrismaClient();
 
 async function main() {

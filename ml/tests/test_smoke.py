@@ -155,7 +155,7 @@ def test_stubs_501() -> None:
         "/v1/matching/rerank",
     ]
     for ep in endpoints:
-        res = client.post(ep)
+        res = client.post(ep, headers={"X-Internal-Token": settings.internal_api_token})
         assert res.status_code == 501
         data = res.json()
         assert data["statusCode"] == 501
