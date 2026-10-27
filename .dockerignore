@@ -16,7 +16,11 @@ scratch/
 docker-compose*.yml
 !docker-compose.yml
 !docker-compose.ci.yml
-!docker-compose.llm-off.yml
 trivy-results*
 zap-report*
+zap_report*
 gitleaks-report*
+test-data/
+*.png
+*.webp
+!frontend/public/**

@@ -188,3 +188,36 @@ describe('Environment Configuration - Production Boot Guard (Phase 9 - C5)', () 
     expect(() => loadEnv(weakEnv)).toThrow('Environment configuration error');
   });
 });
+
+describe('Environment Configuration - Test Database Isolation Guard', () => {
+  const testBaseEnv: Record<string, string> = {
+    NODE_ENV: 'test',
+    PORT: '4000',
+    HOST: '127.0.0.1',
+    DATABASE_URL: 'postgresql://ci_user:ci_pass@127.0.0.1:55432/resumatch_ci_test?schema=public',
+    REDIS_URL: 'redis://127.0.0.1:56379',
+    JWT_SECRET: '0123456789abcdef0123456789abcdef0123456789abcdef',
+    INTERNAL_API_TOKEN: '12345678901234567890123456789012',
+  };
+
+  it('allows booting in test environment when pointing to isolated CI database (port 55432, resumatch_ci_test)', () => {
+    const loaded = loadEnv(testBaseEnv);
+    expect(loaded.NODE_ENV).toBe('test');
+  });
+
+  it('refuses to boot in test environment when DATABASE_URL points to dev port 5433', () => {
+    const devPortEnv = {
+      ...testBaseEnv,
+      DATABASE_URL: 'postgresql://ci_user:ci_pass@127.0.0.1:5433/resumatch_ci_test?schema=public',
+    };
+    expect(() => loadEnv(devPortEnv)).toThrow('Refusing to run tests against development database');
+  });
+
+  it('refuses to boot in test environment when DATABASE_URL points to dev DB "resumatch"', () => {
+    const devDbEnv = {
+      ...testBaseEnv,
+      DATABASE_URL: 'postgresql://ci_user:ci_pass@127.0.0.1:55432/resumatch?schema=public',
+    };
+    expect(() => loadEnv(devDbEnv)).toThrow('Refusing to run tests against development database');
+  });
+});

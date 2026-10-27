@@ -31,6 +31,7 @@ from ml.pipelines.intake.exceptions import (
 )
 from ml.pipelines.intake.parser import parse_document
 from ml.pipelines.intake.repository import (
+    get_resume_status,
     mark_resume_failed,
     save_parsed_resume,
     update_resume_status,
@@ -124,12 +125,30 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
 
     logger.info("Processing resume parsing job %s for resume %s", job.id, resume_id)
 
-    # 1. Update status to EXTRACTING (or abort if resume was deleted)
-    if not update_resume_status(resume_id, "EXTRACTING"):
+    # 1. Idempotency & existence check
+    curr_status, curr_method = get_resume_status(resume_id)
+    if curr_status is None:
         logger.info(
             "Resume %s was deleted prior to processing. Aborting job %s.", resume_id, job.id
         )
         return {"status": "ABORTED", "reason": "RESUME_DELETED"}
+    if curr_status == "PARSED":
+        logger.info(
+            "Resume %s is already PARSED. Acknowledging duplicate job %s idempotently.",
+            resume_id,
+            job.id,
+        )
+        return {"status": "PARSED", "extractionMethod": curr_method or "TEXT_LAYER"}
+
+    # Update status to EXTRACTING
+    if not update_resume_status(resume_id, "EXTRACTING"):
+        logger.info(
+            "Resume %s could not transition to EXTRACTING (current=%s). Aborting job %s.",
+            resume_id,
+            curr_status,
+            job.id,
+        )
+        return {"status": "ABORTED", "reason": "INVALID_TRANSITION"}
 
     # Determine local temp path
     ext = storage_key.split(".")[-1].lower() if "." in storage_key else "pdf"

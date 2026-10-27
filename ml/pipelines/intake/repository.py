@@ -240,3 +240,21 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> boo
     except Exception as e:
         logger.error("Failed to save parsed resume for %s: %s", resume_id, e)
         raise
+
+
+def get_resume_status(resume_id: str) -> tuple[str | None, str | None]:
+    """Returns (status, extractionMethod) for a resume, or (None, None) if not found."""
+    try:
+        with psycopg.connect(settings.database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT status, "extractionMethod" FROM resumes WHERE id = %s;',
+                    (resume_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return (None, None)
+                return (str(row[0]), str(row[1]) if row[1] else None)
+    except Exception as e:
+        logger.error("Failed to fetch status for resume %s: %s", resume_id, e)
+        raise

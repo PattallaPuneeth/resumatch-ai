@@ -200,6 +200,15 @@ export function loadEnv(overrideEnv?: Record<string, string | undefined>): Env {
   }
 
   const envData = result.data;
+
+  // Refuse if test environment points to development database (port 5433 or dev DB "resumatch")
+  if (envData.NODE_ENV === 'test') {
+    const url = envData.DATABASE_URL.toLowerCase();
+    if (url.includes(':5433') || (url.includes('/resumatch') && !url.includes('resumatch_ci') && !url.includes('test'))) {
+      throw new Error('Refusing to run tests against development database (port 5433 or dev DB "resumatch"). Tests must use isolated CI database.');
+    }
+  }
+
   // If strict boot guard is explicitly requested or running in strict production, validate secrets
   if (envData.ENFORCE_PRODUCTION_BOOT_GUARD) {
     validateProductionBootGuard(envData);
