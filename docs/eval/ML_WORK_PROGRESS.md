@@ -24,7 +24,21 @@ Resume point for "continue". Times are IST. Read this file first, then pick the 
       tune/test split), MRR/P@K/R@K/NDCG@K, `--split`
 - [x] `580d539` ci(ml): integration tests (DB/S3) run inside the e2e compose stack
 
-## In progress / next
+## State after "continue" (~04:05 IST)
+All Phase 10B work in this session's scope is pushed:
+- d8299d6 backend request spans + BullMQ traceparent propagation, vitest canary test
+- d6027ad otel-lgtm `observability` profile, 2 dashboards (all queries checked against a live
+  otel-lgtm), cross-service trace evidence, SEC-14
+- e721b0e README rewrite with linked evidence
+- ef7227c backend CI REDIS_URL fix (vitest hang reproduced and fixed locally on the CI stack)
+
+Open (documented in observability/README.md and ML_FAILURE_ANALYSIS.md §6):
+- LLM token/cost and usage-meter metrics and dashboards (not emitted yet)
+- Tracing overhead k6 rerun (other session's area)
+- Required vs preferred skills at job creation (top ML improvement)
+- Human-labeled eval set
+
+## In progress / next (older list)
 - [ ] Final official eval (`python -m ml.eval.run`) on ci / handwritten / extended / kaggle test+tune.
       Outputs in the scratchpad `final/`. Then write `docs/eval/ML_FAILURE_ANALYSIS.md` with before/after.
 - [ ] Check CI for 580d539 (ML CI pytest, e2e integration step). Use the public API:

@@ -159,6 +159,7 @@ Extended has 6 medium pairs scored as weak, all "adjacent role" labels (product 
 | Backend CI: `prisma validate` without `DATABASE_URL` | Reproduced from a directory with no `.env` | Env on the step (`160120d`) |
 | Security gate: `trivy-action@v0.29.0` → `setup-trivy@v0.2.2`, tag deleted | GitHub API returns 404 for the tag | Pinned v0.36.0, SHA checked against the tag (`160120d`) |
 | E2E: backend and ml refuse to start without `JWT_SECRET` / `INTERNAL_API_TOKEN` | Zod and pydantic validators | CI-only placeholders (`160120d`); E2E now passes |
+| Backend CI cancelled at the 10-minute timeout on every run | `vitest.config.ts` defaults `REDIS_URL` to the local CI stack port 56379, which `redis.ts` prefers; reproduced: 435/435 pass in 14 s with Redis reachable, hang with it unreachable | `REDIS_URL` on the vitest step (`ef7227c`) |
 | HF models re-downloaded into RAM (tmpfs) at every worker start | Empty `huggingface/hub` after restart | Fixed by the other session in `66009f7` (baked into `/opt/hf`, offline) |
 
 ---
