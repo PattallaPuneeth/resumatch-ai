@@ -10,7 +10,6 @@ Generates diverse synthetic resumes, job descriptions, and labeled pairs:
 from __future__ import annotations
 
 import csv
-import os
 from pathlib import Path
 
 ROLES = [

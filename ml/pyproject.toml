@@ -12,6 +12,13 @@ target-version = "py311"
 select = ["E", "F", "I", "W", "UP", "B", "C4"]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures, synthetic dataset text and report templates are long string literals;
+# wrapping them only hurts readability. Application code keeps the 100-column limit.
+"tests/**" = ["E501"]
+"eval/generate_dataset_100.py" = ["E501"]
+"eval/parsing_accuracy.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true

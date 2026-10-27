@@ -61,6 +61,52 @@ def normalize_cross_encoder_logit(
     return round(prob * 100.0, 2)
 
 
+_REQUIREMENT_HEADING_KEYWORDS = (
+    "requirement",
+    "qualification",
+    "skills",
+    "what you'll need",
+    "what you will need",
+    "must have",
+    "you have",
+    "you bring",
+)
+
+
+def _is_heading_line(line: str) -> bool:
+    """Short lines without sentence punctuation are treated as section headings."""
+    stripped = line.strip().rstrip(":")
+    return (
+        0 < len(stripped.split()) <= 5
+        and not stripped.endswith(".")
+        and not stripped.startswith(("-", "*", "•"))
+    )
+
+
+def _extract_requirement_excerpt(raw_description: str) -> str:
+    """
+    Returns the body lines of requirement-like sections ("Required Skills", "Qualifications", ...)
+    plus any inline "experience with" line. Heading lines themselves are never returned on their
+    own: a query made only of headings ("Required Skills Preferred Skills") carries no signal.
+    Falls back to the first content lines of the description.
+    """
+    lines = [line.strip() for line in raw_description.splitlines() if line.strip()]
+    captured: list[str] = []
+    in_requirements = False
+    for line in lines:
+        lower = line.lower()
+        if _is_heading_line(line):
+            in_requirements = any(k in lower for k in _REQUIREMENT_HEADING_KEYWORDS)
+            continue
+        if in_requirements or "experience with" in lower:
+            captured.append(line.lstrip("-*• ").strip())
+
+    if captured:
+        return " ".join(captured)
+    content = [line for line in lines if not _is_heading_line(line)]
+    return " ".join(content[:3])
+
+
 def build_bounded_rerank_query(
     job_title: str,
     required_skills: list[str] | None,
@@ -88,17 +134,8 @@ def build_bounded_rerank_query(
     if clean_skills:
         parts.append(f"Skills: {', '.join(clean_skills)}.")
     elif raw_description and raw_description.strip():
-        # Fallback when structured skills are missing: extract requirements / key terms
-        lines = [line.strip() for line in raw_description.splitlines() if line.strip()]
-        req_lines = [
-            line
-            for line in lines
-            if any(
-                k in line.lower()
-                for k in ["requirement", "qualification", "skills", "experience with"]
-            )
-        ]
-        excerpt = " ".join(req_lines) if req_lines else " ".join(lines[:2])
+        # Fallback when structured skills are missing: use the requirement section bodies
+        excerpt = _extract_requirement_excerpt(raw_description)
         if excerpt:
             parts.append(excerpt)
 

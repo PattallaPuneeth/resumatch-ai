@@ -203,10 +203,23 @@ def test_ablation_score_extraction() -> None:
     }
     assert extract_ablation_score(sample, "lexical_only") == 30.0
     assert extract_ablation_score(sample, "semantic_only") == 80.0
-    assert extract_ablation_score(sample, "rrf_only") == 50.0
+    assert extract_ablation_score(sample, "hybrid") == 55.0
     assert extract_ablation_score(sample, "rrf_cross_encoder") == 85.0
     assert extract_ablation_score(sample, "plus_skill_gap") == 89.5
     assert extract_ablation_score(sample, "full_blend") == 88.25
+
+
+def test_ablation_unknown_coverage_drops_skill_term() -> None:
+    """A job with no known requirements must not get free skill points in any blend."""
+    sample = {
+        "lexical_score": 0.5,
+        "semantic_score": 0.8,
+        "calibrated_ce_score": 85.0,
+        "skill_coverage": None,
+    }
+    assert extract_ablation_score(sample, "plus_skill_gap") == 85.0
+    # (0.65 * 85 + 0.10 * 80) / 0.75
+    assert extract_ablation_score(sample, "full_blend") == 84.33
 
 
 def test_ablation_analysis_output_structure() -> None:

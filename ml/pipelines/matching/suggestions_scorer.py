@@ -19,8 +19,6 @@ import logging
 from typing import Any
 
 import psycopg
-from pydantic import BaseModel, ConfigDict, Field
-
 from ml.config import settings
 from ml.pipelines.matching.lexical import search_lexical
 from ml.pipelines.matching.reranker import build_bounded_rerank_query, rerank_candidates
@@ -28,10 +26,10 @@ from ml.pipelines.matching.rrf import fuse_ranks
 from ml.pipelines.matching.scorer import compute_match_scores
 from ml.pipelines.matching.semantic import search_semantic
 from ml.pipelines.matching.skill_gap import (
-    _is_word_boundary_match,
-    analyze_skill_gap,
-    load_skill_aliases,
+  analyze_skill_gap,
+  extract_skills_from_text,
 )
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("resumatch-ml-suggestions-scorer")
 
@@ -80,23 +78,6 @@ class ScoreCandidateListingsResponse(BaseModel):
   results: list[ScoredCandidateListing]
 
 
-def extract_skills_from_text(text: str) -> list[str]:
-  """Extracts known canonical skills from text using word-boundary matching."""
-  if not text:
-    return []
-
-  import re
-  aliases = load_skill_aliases()
-  found_canonical: set[str] = set()
-  clean_text = text.lower()
-
-  for alias_pattern, canonical in aliases.items():
-    escaped = re.escape(alias_pattern)
-    regex = rf"(?:^|[\s,;/()\[\].!?:-]){escaped}(?:$|[\s,;/()\[\].!?:-])"
-    if re.search(regex, clean_text):
-      found_canonical.add(canonical)
-
-  return sorted(found_canonical)
 
 
 
@@ -145,6 +126,7 @@ class SuggestionsScoringService:
       )
 
     resume_skills = ctx.get("skills")
+    resume_text = ctx.get("raw_text") or ""
     scored_items: list[ScoredCandidateListing] = []
 
     for listing in request.listings:
@@ -179,7 +161,7 @@ class SuggestionsScoringService:
       )
 
       # 5. Skill-Gap Analysis
-      skill_gap = analyze_skill_gap(req_skills, resume_skills)
+      skill_gap = analyze_skill_gap(req_skills, resume_skills, resume_text=resume_text)
 
       # 6. Composite scoring
       scores = compute_match_scores(
@@ -195,10 +177,10 @@ class SuggestionsScoringService:
               title=title,
               company=company,
               location=listing.location,
-              sourceUrl=listing.source_url,
-              matchScore=scores["final_score"],
-              matchedSkills=skill_gap.get("matched", []),
-              missingSkills=skill_gap.get("missing", []),
+              source_url=listing.source_url,
+              match_score=scores["final_score"],
+              matched_skills=skill_gap.get("matched", []),
+              missing_skills=skill_gap.get("missing", []),
           )
       )
 
@@ -206,7 +188,7 @@ class SuggestionsScoringService:
     scored_items.sort(key=lambda x: x.match_score, reverse=True)
 
     return ScoreCandidateListingsResponse(
-        resumeId=resume_id,
-        totalScored=len(scored_items),
+        resume_id=resume_id,
+        total_scored=len(scored_items),
         results=scored_items,
     )

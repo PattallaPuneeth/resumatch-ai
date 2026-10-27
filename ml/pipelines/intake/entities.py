@@ -108,6 +108,12 @@ SKILL_CATALOG: dict[str, list[str]] = {
     ],
 }
 
+# Catalog entries that collide with common English words or initials when matched
+# case-insensitively. These must appear with the catalog's casing to count as a skill.
+CASE_SENSITIVE_SKILLS: frozenset[str] = frozenset(
+    {"Go", "R", "Rust", "Ruby", "Swift", "Dart", "Shell", "Perl", "Express", "REST", "Rails"}
+)
+
 EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b")
 PHONE_REGEX = re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
 LINKEDIN_REGEX = re.compile(
@@ -228,8 +234,11 @@ def extract_skills(raw_text: str, sections: dict[str, tuple[int, int]]) -> list[
         for skill_name in skill_list:
             # Word boundary regex for exact matching (handling C++, C#, .NET etc.)
             escaped = re.escape(skill_name)
-            pattern = rf"(?<!\w){escaped}(?!\w)"
-            matches = list(re.finditer(pattern, raw_text, re.IGNORECASE))
+            pattern = rf"(?<!\w){escaped}(?![\w&])"
+            # Names that are also everyday English words ("go", "swift", "rest", "shell") or a
+            # single letter ("R" in "R&D") only count when written with their exact casing.
+            flags = 0 if skill_name in CASE_SENSITIVE_SKILLS else re.IGNORECASE
+            matches = list(re.finditer(pattern, raw_text, flags))
             if not matches:
                 continue
 

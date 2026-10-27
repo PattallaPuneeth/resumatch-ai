@@ -20,6 +20,7 @@ from ml.pipelines.matching.scorer import (
     DEFAULT_W_CE,
     DEFAULT_W_SKILL,
     DEFAULT_W_VEC,
+    blend_final_score,
     calibrate_ce_logit,
 )
 
@@ -83,14 +84,14 @@ def score_with_params(
 ) -> float:
     """Computes final score using explicit calibration parameters."""
     logit = float(example.get("cross_encoder_logit", 0.0))
-    coverage = float(example.get("skill_coverage", 1.0))
+    raw_coverage = example.get("skill_coverage")
+    coverage = None if raw_coverage is None else float(raw_coverage)
     best_vector = float(example.get("semantic_score", 0.0))
 
     ce_score = calibrate_ce_logit(logit, shift=shift, temp=temp)
-    raw_final = (
-        w_ce * ce_score + w_skill * (coverage * 100.0) + w_vec * max(0.0, best_vector * 100.0)
+    return blend_final_score(
+        ce_score, coverage, best_vector, w_ce=w_ce, w_skill=w_skill, w_vec=w_vec
     )
-    return round(max(0.0, min(100.0, raw_final)), 2)
 
 
 def fit_calibration_on_train(

@@ -21,8 +21,9 @@ from ml.eval.ablation import run_ablation_analysis
 from ml.eval.calibration import run_calibration_study
 from ml.eval.dataset import EvaluationExample, load_and_validate_dataset
 from ml.eval.metrics import compute_comprehensive_metrics
-from ml.pipelines.embeddings.chunker import chunk_job_text, chunk_resume_text
-from ml.pipelines.embeddings.embedder import generate_chunk_embeddings
+from ml.pipelines.embeddings.chunker import chunk_resume_text
+from ml.pipelines.embeddings.embedder import embed_query_text, generate_chunk_embeddings
+from ml.pipelines.intake.entities import extract_skills
 from ml.pipelines.intake.parser import parse_document
 from ml.pipelines.matching.reranker import (
     build_bounded_rerank_query,
@@ -30,9 +31,15 @@ from ml.pipelines.matching.reranker import (
 )
 from ml.pipelines.matching.rrf import aggregate_resume_rrf, fuse_ranks
 from ml.pipelines.matching.scorer import compute_match_scores
-from ml.pipelines.matching.skill_gap import analyze_skill_gap
+from ml.pipelines.matching.skill_gap import analyze_skill_gap, resolve_required_skills
 
 logger = logging.getLogger("resumatch-ml-eval-runner")
+
+# Bump when cached artifacts change meaning.
+# v2: production skill resolution + windowed query embedding.
+CACHE_VERSION = "v2"
+
+_TITLE_PREFIX = re.compile(r"^(?:job\s+title|title)\s*:\s*", re.IGNORECASE)
 
 
 def _compute_file_sha256(path: Path) -> str:
@@ -51,7 +58,7 @@ class EvaluationArtifactCache:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def get_parsed_resume(self, sha: str) -> dict[str, Any] | None:
-        p = self.cache_dir / f"resume_{sha}.json"
+        p = self.cache_dir / f"resume_{CACHE_VERSION}_{sha}.json"
         if p.exists():
             try:
                 with open(p, encoding="utf-8") as f:
@@ -61,12 +68,12 @@ class EvaluationArtifactCache:
         return None
 
     def save_parsed_resume(self, sha: str, data: dict[str, Any]) -> None:
-        p = self.cache_dir / f"resume_{sha}.json"
+        p = self.cache_dir / f"resume_{CACHE_VERSION}_{sha}.json"
         with open(p, "w", encoding="utf-8") as f:
             json.dump(data, f)
 
     def get_job_data(self, sha: str) -> dict[str, Any] | None:
-        p = self.cache_dir / f"job_{sha}.json"
+        p = self.cache_dir / f"job_{CACHE_VERSION}_{sha}.json"
         if p.exists():
             try:
                 with open(p, encoding="utf-8") as f:
@@ -76,7 +83,7 @@ class EvaluationArtifactCache:
         return None
 
     def save_job_data(self, sha: str, data: dict[str, Any]) -> None:
-        p = self.cache_dir / f"job_{sha}.json"
+        p = self.cache_dir / f"job_{CACHE_VERSION}_{sha}.json"
         with open(p, "w", encoding="utf-8") as f:
             json.dump(data, f)
 
@@ -88,40 +95,6 @@ def _cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
     return float(max(0.0, min(1.0, dot / (norm_a * norm_b))))
-
-
-def _extract_job_skills_heuristic(text: str) -> list[str]:
-    """Extracts candidate skill keywords from raw job description text."""
-    known_skills = [
-        "python",
-        "kubernetes",
-        "k8s",
-        "docker",
-        "postgresql",
-        "postgres",
-        "react",
-        "typescript",
-        "javascript",
-        "node.js",
-        "nodejs",
-        "aws",
-        "gcp",
-        "ci/cd",
-        "machine learning",
-        "fastapi",
-        "redis",
-        "graphql",
-        "sql",
-        "java",
-        "go",
-    ]
-    lower = text.lower()
-    found: list[str] = []
-    for s in known_skills:
-        pattern = rf"(?:^|[\s,;/()\[\]]){re.escape(s)}(?:$|[\s,;/()\[\]])"
-        if re.search(pattern, lower):
-            found.append(s)
-    return found
 
 
 def process_eval_pair(
@@ -144,7 +117,8 @@ def process_eval_pair(
         if suffix == ".txt":
             with open(example.resume_path, encoding="utf-8") as f:
                 resume_text = f.read()
-            resume_skills = _extract_job_skills_heuristic(resume_text)
+            # Same catalog extractor the production parser runs on canonical text
+            resume_skills = [str(s.name) for s in extract_skills(resume_text, {})]
             chunks = chunk_resume_text(resume_text)
             chunk_pairs = generate_chunk_embeddings(chunks)
         else:
@@ -200,14 +174,15 @@ def process_eval_pair(
             raw_job_content = f.read().strip()
 
         lines = [line.strip() for line in raw_job_content.splitlines() if line.strip()]
-        job_title = lines[0] if lines else "Software Engineer"
+        job_title = _TITLE_PREFIX.sub("", lines[0]) if lines else "Software Engineer"
         job_desc = raw_job_content
-        job_skills = _extract_job_skills_heuristic(raw_job_content)
+        # Mirror production: the UI sends no structured skills, so the worker resolves them
+        # from the title + description with the shared taxonomy.
+        job_skills = resolve_required_skills([], job_title, job_desc)
 
-        # Generate embedding for full job context
-        job_chunks = chunk_job_text(job_desc)
-        job_embs = generate_chunk_embeddings(job_chunks) if job_chunks else []
-        job_embedding = job_embs[0][1] if job_embs else [0.0] * 384
+        # Mirror the worker's retrieval query (title + skills + description), embedded whole
+        query_text = f"{job_title}\n{' '.join(job_skills)}\n{job_desc}".strip()
+        job_embedding = embed_query_text(query_text)
 
         cache.save_job_data(
             job_sha,
@@ -266,7 +241,7 @@ def process_eval_pair(
     reranked = rerank_candidates(job_rerank_query, fused_chunks, top_n=20)
 
     # 7. Skill-Gap Analysis
-    skill_gap = analyze_skill_gap(job_skills, resume_skills)
+    skill_gap = analyze_skill_gap(job_skills, resume_skills, resume_text=resume_text)
 
     # 8. Score Aggregation
     scores = compute_match_scores(
@@ -363,7 +338,7 @@ def run_evaluation_suite(
     for p in evaluated_pairs:
         ce_l = f"{p['cross_encoder_logit']:.2f}"
         ce_c = f"{p['calibrated_ce_score']:.1f}"
-        sk_c = f"{p['skill_coverage']*100:.0f}%"
+        sk_c = "n/a" if p["skill_coverage"] is None else f"{p['skill_coverage'] * 100:.0f}%"
         sem_s = f"{p['semantic_score']*100:.1f}%"
         md_report_sections.append(
             f"| `{p['resume']}` | `{p['job']}` | **{p['expected'].upper()}** | "

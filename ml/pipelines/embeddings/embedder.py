@@ -106,6 +106,60 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
     return vectors
 
 
+QUERY_WINDOW_OVERLAP_TOKENS = 48
+
+
+def embed_query_text(text: str) -> list[float]:
+    """
+    Embeds a retrieval query of any length (e.g. job title + full job description).
+
+    generate_embeddings() refuses texts longer than the model window so stored chunk
+    vectors are never silently truncated. A query has no such contract, so a long query
+    is split into overlapping token windows that each fit the model, every window is
+    embedded, and the L2-normalized mean of the window vectors is returned. Queries that
+    already fit are embedded as a single text, exactly as before.
+    """
+    if not text or not text.strip():
+        raise ValueError("Cannot embed an empty query text")
+
+    model = get_embedder()
+    tokenizer = getattr(model, "tokenizer", None)
+    max_len = int(getattr(model, "max_seq_length", 256))
+    if tokenizer is None:
+        return generate_embeddings([text])[0]
+
+    if len(tokenizer.encode(text, add_special_tokens=True)) <= max_len:
+        return generate_embeddings([text])[0]
+
+    encoding = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True, verbose=False)
+    offsets = encoding["offset_mapping"]
+    window = max_len - 2  # room for [CLS] and [SEP]
+    stride = window - QUERY_WINDOW_OVERLAP_TOKENS
+
+    windows: list[str] = []
+    for start in range(0, len(offsets), stride):
+        end = min(start + window, len(offsets))
+        piece = text[offsets[start][0] : offsets[end - 1][1]].strip()
+        if piece:
+            windows.append(piece)
+        if end == len(offsets):
+            break
+
+    # Decoded token boundaries can re-tokenize slightly longer; shrink any window that does.
+    safe_windows: list[str] = []
+    for piece in windows:
+        while len(tokenizer.encode(piece, add_special_tokens=True)) > max_len:
+            piece = piece[: int(len(piece) * 0.9)]
+        safe_windows.append(piece)
+
+    vectors = np.asarray(generate_embeddings(safe_windows), dtype=np.float32)
+    mean = vectors.mean(axis=0)
+    norm = float(np.linalg.norm(mean))
+    if norm == 0.0 or not np.isfinite(norm):
+        raise ValueError("Query window embeddings averaged to a zero or non-finite vector")
+    return [float(v) for v in (mean / norm)]
+
+
 def generate_chunk_embeddings(
     chunks: list[TextChunk],
 ) -> list[tuple[TextChunk, list[float]]]:

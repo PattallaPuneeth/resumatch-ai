@@ -8,10 +8,8 @@ Validates state transitions for resume and analysis processing:
 - Rejection of invalid / backward transitions from terminal states (PARSED, FAILED)
 """
 
-import pytest
 from ml.pipelines.intake.state_machine import (
     evaluate_resume_transition,
-    ALLOWED_RESUME_TRANSITIONS,
 )
 
 

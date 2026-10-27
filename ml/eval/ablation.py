@@ -4,7 +4,7 @@ Ablation Analysis for ResuMatch AI (Phase 3C-1).
 Evaluates 6 retrieval and scoring configurations:
 1. Lexical only (BM25 sparse search)
 2. Semantic only (dense pgvector cosine similarity)
-3. RRF only (Reciprocal Rank Fusion)
+3. Hybrid lexical + semantic (no reranker; RRF alone cannot separate resumes)
 4. RRF + Cross-Encoder (neural reranking on fused candidates)
 5. RRF + Cross-Encoder + Skill-Gap (reranking + structured skill coverage)
 6. Full Blend (production 0.65 CE + 0.25 Skill + 0.10 Vector)
@@ -18,11 +18,12 @@ from __future__ import annotations
 from typing import Any
 
 from ml.eval.metrics import compute_comprehensive_metrics
+from ml.pipelines.matching.scorer import blend_final_score
 
 ABLATION_CONFIGS = [
     ("lexical_only", "Lexical Only (BM25)"),
     ("semantic_only", "Semantic Only (Dense Cosine)"),
-    ("rrf_only", "RRF Only (Internal Chunk Ranker)*"),
+    ("hybrid", "Hybrid Lexical + Semantic (no rerank)*"),
     ("rrf_cross_encoder", "RRF + Cross-Encoder"),
     ("plus_skill_gap", "RRF + Cross-Encoder + Skill-Gap"),
     ("full_blend", "Full Blend (Production)"),
@@ -33,9 +34,9 @@ def extract_ablation_score(example: dict[str, Any], config_name: str) -> float:
     """Computes normalized 0-100 score for a specific ablation stage."""
     best_bm25 = float(example.get("lexical_score", 0.0))
     best_vector = float(example.get("semantic_score", 0.0))
-    rrf_score = float(example.get("rrf_score", 0.0))
     ce_score = float(example.get("calibrated_ce_score", 0.0))
-    coverage = float(example.get("skill_coverage", 1.0))
+    raw_coverage = example.get("skill_coverage")
+    coverage = None if raw_coverage is None else float(raw_coverage)
 
     if config_name == "lexical_only":
         # ts_rank_cd typically in [0.0, 1.5+]; normalize to 0-100
@@ -45,21 +46,21 @@ def extract_ablation_score(example: dict[str, Any], config_name: str) -> float:
         # Cosine similarity in [0.0, 1.0]; scale to 0-100
         return round(min(100.0, max(0.0, best_vector * 100.0)), 2)
 
-    elif config_name == "rrf_only":
-        # RRF scores typically in [0.01, 0.04]; scale to 0-100
-        return round(min(100.0, max(0.0, rrf_score * 2500.0)), 2)
+    elif config_name == "hybrid":
+        lexical = min(100.0, max(0.0, best_bm25 * 60.0))
+        semantic = min(100.0, max(0.0, best_vector * 100.0))
+        return round(0.5 * lexical + 0.5 * semantic, 2)
 
     elif config_name == "rrf_cross_encoder":
         return round(ce_score, 2)
 
     elif config_name == "plus_skill_gap":
+        if coverage is None:
+            return round(ce_score, 2)
         return round(0.70 * ce_score + 0.30 * (coverage * 100.0), 2)
 
     elif config_name == "full_blend":
-        return round(
-            0.65 * ce_score + 0.25 * (coverage * 100.0) + 0.10 * max(0.0, best_vector * 100.0),
-            2,
-        )
+        return blend_final_score(ce_score, coverage, best_vector)
 
     raise ValueError(f"Unknown ablation configuration: {config_name}")
 
@@ -131,11 +132,9 @@ def run_ablation_analysis(
 
     md_lines.append("")
     md_lines.append(
-        "\\* *Note on RRF Only: RRF operates on chunk ranks (1 / (60 + rank)) within each "
-        "resume to select candidate passages for Cross-Encoder reranking. Because every resume "
-        "has a rank-1 chunk, intra-document RRF scores cluster near ~0.040 and do not act as an "
-        "independent cross-resume score. Cross-Encoder reranking provides the subsequent "
-        "cross-candidate discrimination.*"
+        "*RRF is not scored on its own: it ranks chunks within one resume to pick reranker "
+        "candidates, so every resume has a rank-1 chunk and the RRF score cannot separate "
+        "resumes. The hybrid row averages the normalized lexical and semantic scores instead.*"
     )
 
     # Observations on marginal value of each stage

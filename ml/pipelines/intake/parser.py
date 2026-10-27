@@ -50,7 +50,9 @@ def _extract_pdf_blocks(doc: fitz.Document) -> tuple[str, bool, bool, set[str]]:
         page_rect = page.rect
         width, height = page_rect.width, page_rect.height
         if width > 3000.0 or height > 3000.0:
-            raise CorruptFileError(f"PDF page dimensions ({width}x{height}) exceed maximum safety limit.")
+            raise CorruptFileError(
+                f"PDF page dimensions ({width}x{height}) exceed maximum safety limit."
+            )
 
         # extract blocks: (x0, y0, x1, y1, text, block_no, block_type)
         blocks = page.get_text("blocks")
@@ -162,16 +164,21 @@ def _check_docx_zip_safety(
                 total_uncompressed += info.file_size
                 if total_uncompressed > max_uncompressed_bytes:
                     raise CorruptFileError(
-                        f"DOCX uncompressed size exceeds safety limit of {max_uncompressed_bytes // (1024 * 1024)}MB."
+                        "DOCX uncompressed size exceeds safety limit of "
+                        f"{max_uncompressed_bytes // (1024 * 1024)}MB."
                     )
-                if info.file_size > 1024 and (info.file_size / max(info.compress_size, 1)) > max_ratio:
+                ratio = info.file_size / max(info.compress_size, 1)
+                if info.file_size > 1024 and ratio > max_ratio:
                     raise CorruptFileError(
-                        f"DOCX entry '{info.filename}' compression ratio exceeds safety threshold (potential zip bomb)."
+                        f"DOCX entry '{info.filename}' compression ratio exceeds safety "
+                        "threshold (potential zip bomb)."
                     )
                 if "vbaProject.bin" in info.filename or info.filename.endswith(".bin"):
                     has_macro = True
             if has_macro:
-                raise CorruptFileError("DOCX contains macros or executable payloads which are disallowed.")
+                raise CorruptFileError(
+                    "DOCX contains macros or executable payloads which are disallowed."
+                )
     except zipfile.BadZipFile as bz:
         raise CorruptFileError(f"Corrupted or invalid DOCX archive: {bz}") from bz
 

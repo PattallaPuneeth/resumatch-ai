@@ -59,7 +59,7 @@ from ml.pipelines.matching.reranker import (
 from ml.pipelines.matching.rrf import aggregate_resume_rrf, fuse_ranks
 from ml.pipelines.matching.scorer import compute_match_scores
 from ml.pipelines.matching.semantic import search_semantic
-from ml.pipelines.matching.skill_gap import analyze_skill_gap
+from ml.pipelines.matching.skill_gap import analyze_skill_gap, resolve_required_skills
 from ml.storage.s3 import download_file
 
 logging.basicConfig(
@@ -370,13 +370,19 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
     job_desc = ctx.get("job_description", "")
     job_req_skills = ctx.get("job_required_skills")
     resume_skills = ctx.get("resume_skills")
+    resume_raw_text = ctx.get("resume_raw_text") or ""
 
     if not job_desc or not job_desc.strip():
         logger.warning("Job %s has no description text.", job_id)
         return {"status": "ABORTED", "reason": "EMPTY_JOB_DESCRIPTION"}
 
     # Build query text for lexical and semantic retrieval
-    skills_text = " ".join(job_req_skills) if isinstance(job_req_skills, list) else ""
+    # The analyze UI sends only title + raw description, so requiredSkills is usually empty.
+    # Fall back to taxonomy skills found in the JD instead of scoring with no requirements.
+    job_req_skills = resolve_required_skills(
+        job_req_skills if isinstance(job_req_skills, list) else [], job_title, job_desc
+    )
+    skills_text = " ".join(job_req_skills)
     query_text = f"{job_title}\n{skills_text}\n{job_desc}".strip()
 
     try:
@@ -404,8 +410,9 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
 
         # 5. Skill-Gap Analysis
         skill_gap = analyze_skill_gap(
-            job_req_skills if isinstance(job_req_skills, list) else [],
+            job_req_skills,
             resume_skills,
+            resume_text=resume_raw_text,
         )
 
         # 6. Score aggregation
@@ -421,15 +428,19 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
         best_ce_score = scores["best_ce_score"]
         final_score = scores["final_score"]
 
+        scoring_breakdown: dict[str, Any] = {
+            "bm25TopScore": best_bm25,
+            "vectorSimilarity": best_vector,
+            "rrfScore": rrf_score,
+            "crossEncoderScore": best_ce_score,
+        }
+        # Omit coverage when the job has no known requirements: unknown is not 0% or 100%.
+        if skill_gap.get("coverage_ratio") is not None:
+            scoring_breakdown["skillCoverage"] = skill_gap["coverage_ratio"]
+
         explanation = {
             "skillGap": skill_gap,
-            "scoringBreakdown": {
-                "bm25TopScore": best_bm25,
-                "vectorSimilarity": best_vector,
-                "rrfScore": rrf_score,
-                "crossEncoderScore": best_ce_score,
-                "skillCoverage": skill_gap.get("coverage_ratio", 0.0),
-            },
+            "scoringBreakdown": scoring_breakdown,
             "topMatchingChunks": [
                 {
                     "chunkId": c["chunk_id"],

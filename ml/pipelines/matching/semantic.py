@@ -12,7 +12,7 @@ from typing import Any
 
 import psycopg
 from ml.config import settings
-from ml.pipelines.embeddings.embedder import generate_embeddings
+from ml.pipelines.embeddings.embedder import embed_query_text
 from pgvector.psycopg import register_vector
 
 logger = logging.getLogger("resumatch-ml-semantic")
@@ -38,10 +38,8 @@ def search_semantic(
     if isinstance(query_text_or_embedding, str):
         if not query_text_or_embedding.strip():
             return []
-        vectors = generate_embeddings([query_text_or_embedding])
-        if not vectors:
-            return []
-        query_vec = vectors[0]
+        # Job queries routinely exceed the 256-token model window; embed_query_text windows them.
+        query_vec = embed_query_text(query_text_or_embedding)
     else:
         query_vec = query_text_or_embedding
 

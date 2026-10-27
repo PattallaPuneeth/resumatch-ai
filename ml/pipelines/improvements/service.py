@@ -25,7 +25,7 @@ from ml.pipelines.improvements.role_matcher import suggest_roles
 from ml.pipelines.llm.gateway import LLMGateway, LLMUnavailableError, llm_gateway
 from ml.pipelines.llm.grounding import GroundingVerificationError
 from ml.pipelines.llm.safety import RedactionResult, detect_prompt_injection, redact_pii
-from pgvector.psycopg import register_vector  # type: ignore[import-untyped]
+from pgvector.psycopg import register_vector
 
 logger = logging.getLogger("resumatch-ml-improvements-service")
 
@@ -54,7 +54,8 @@ def fetch_resume_vector(resume_id: str, raw_text: str) -> np.ndarray:
                     if vecs:
                         mean_vec = np.mean(vecs, axis=0)
                         norm = np.linalg.norm(mean_vec)
-                        return (mean_vec / norm) if norm > 1e-8 else mean_vec
+                        result: np.ndarray = (mean_vec / norm) if norm > 1e-8 else mean_vec
+                        return result
     except Exception as e:
         logger.debug("Database chunk vector retrieval bypassed/failed: %s", e)
 
@@ -152,7 +153,8 @@ class ResumeImprovementsService:
                     if span is None and q not in req.resumeRawText:
                         q_hash = hashlib.sha256(q.encode("utf-8")).hexdigest()[:12]
                         raise GroundingVerificationError(
-                            f"Fabricated quote detected in explanation (len={len(q)}, sha256_prefix={q_hash})",
+                            "Fabricated quote detected in explanation "
+                            f"(len={len(q)}, sha256_prefix={q_hash})",
                             rate=1.0,
                             dropped=1,
                             total=len(evidence_quotes),

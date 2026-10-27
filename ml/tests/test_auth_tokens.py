@@ -9,7 +9,9 @@ EVERY endpoint in the ML FastAPI service:
 - Public health check (/health) requires no authentication and returns 200
 """
 
-from unittest.mock import patch, MagicMock
+from typing import Any
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -19,7 +21,7 @@ from ml.main import app
 client = TestClient(app)
 
 # Table of all protected endpoints in ml/main.py
-PROTECTED_ROUTES = [
+PROTECTED_ROUTES: list[dict[str, Any]] = [
     {
         "method": "POST",
         "url": "/v1/analyses/run",
@@ -89,7 +91,7 @@ def test_health_check_public_no_token_required() -> None:
 
 
 @pytest.mark.parametrize("route", PROTECTED_ROUTES, ids=[r["url"] for r in PROTECTED_ROUTES])
-def test_protected_routes_reject_missing_token(route: dict) -> None:
+def test_protected_routes_reject_missing_token(route: dict[str, Any]) -> None:
     """Verifies that requests without X-Internal-Token are rejected (401 or 422)."""
     resp = client.request(
         method=route["method"],
@@ -101,7 +103,7 @@ def test_protected_routes_reject_missing_token(route: dict) -> None:
 
 
 @pytest.mark.parametrize("route", PROTECTED_ROUTES, ids=[r["url"] for r in PROTECTED_ROUTES])
-def test_protected_routes_reject_invalid_token(route: dict) -> None:
+def test_protected_routes_reject_invalid_token(route: dict[str, Any]) -> None:
     """Verifies that requests with invalid X-Internal-Token are rejected with 401."""
     resp = client.request(
         method=route["method"],
@@ -114,7 +116,7 @@ def test_protected_routes_reject_invalid_token(route: dict) -> None:
 
 
 @pytest.mark.parametrize("route", PROTECTED_ROUTES, ids=[r["url"] for r in PROTECTED_ROUTES])
-def test_protected_routes_accept_valid_token(route: dict) -> None:
+def test_protected_routes_accept_valid_token(route: dict[str, Any]) -> None:
     """Verifies that requests with valid X-Internal-Token pass auth and execute route logic."""
     from ml.pipelines.improvements.models import ImprovementsResponse
     from ml.pipelines.matching.suggestions_scorer import ScoreCandidateListingsResponse
@@ -139,8 +141,8 @@ def test_protected_routes_accept_valid_token(route: dict) -> None:
             llmStatus="SUCCESS",
         )
         mock_score.return_value = ScoreCandidateListingsResponse(
-            resumeId="r1",
-            totalScored=0,
+            resume_id="r1",
+            total_scored=0,
             results=[],
         )
 

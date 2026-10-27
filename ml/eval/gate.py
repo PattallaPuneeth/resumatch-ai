@@ -14,7 +14,6 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
 
 from ml.eval.runner import run_evaluation_suite
 
@@ -40,7 +39,8 @@ def run_eval_gate(
         baseline = json.load(f)
 
     # Execute evaluation pipeline
-    eval_output_dir = "/tmp/eval_gate_output" if os.path.exists("/tmp") else "./tmp/eval_gate_output"
+    tmp_root = "/tmp" if os.path.exists("/tmp") else "./tmp"
+    eval_output_dir = f"{tmp_root}/eval_gate_output"
     cache_dir = "/tmp/eval_gate_cache" if os.path.exists("/tmp") else "./tmp/eval_gate_cache"
 
     print("Running evaluation pipeline on fixtures...")
@@ -69,7 +69,10 @@ def run_eval_gate(
     min_gap = baseline.get("min_strong_to_weak_gap", 20.0)
 
     print("\n---------------- Metric Comparison vs Baseline ----------------")
-    print(f"  • Pairwise Ordering Accuracy: {actual_pairwise:.2%} (Threshold: >= {min_pairwise:.2%})")
+    print(
+        f"  • Pairwise Ordering Accuracy: {actual_pairwise:.2%} "
+        f"(Threshold: >= {min_pairwise:.2%})"
+    )
     print(f"  • Strong Mean Score:          {actual_strong:.1f} (Threshold: >= {min_strong:.1f})")
     print(f"  • Weak Mean Score:            {actual_weak:.1f} (Threshold: <= {max_weak:.1f})")
     print(f"  • Strong-to-Weak Separation:  {actual_gap:.1f} pts (Threshold: >= {min_gap:.1f} pts)")
@@ -78,7 +81,8 @@ def run_eval_gate(
     regressions: list[str] = []
     if actual_pairwise < min_pairwise:
         regressions.append(
-            f"Pairwise accuracy degraded below threshold: {actual_pairwise:.2%} < {min_pairwise:.2%}"
+            "Pairwise accuracy degraded below threshold: "
+            f"{actual_pairwise:.2%} < {min_pairwise:.2%}"
         )
     if actual_strong < min_strong:
         regressions.append(
@@ -108,8 +112,14 @@ def run_eval_gate(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CI Evaluation Quality Gate")
     parser.add_argument("--fixture-dir", default="ml/eval/ci_fixtures", help="Fixture directory")
-    parser.add_argument("--baseline", default="ml/eval/ci_fixtures/baseline.json", help="Baseline path")
-    parser.add_argument("--simulate-regression", action="store_true", help="Simulate a regression to test failure exit")
+    parser.add_argument(
+        "--baseline", default="ml/eval/ci_fixtures/baseline.json", help="Baseline path"
+    )
+    parser.add_argument(
+        "--simulate-regression",
+        action="store_true",
+        help="Simulate a regression to test failure exit",
+    )
 
     args = parser.parse_args()
     success = run_eval_gate(

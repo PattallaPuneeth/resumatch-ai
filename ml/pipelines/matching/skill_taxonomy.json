@@ -72,5 +72,645 @@
   ],
   "graphql": [
     "graphql"
+  ],
+  "java": [
+    "java",
+    "core java",
+    "java 8",
+    "java 11",
+    "java 17"
+  ],
+  "kotlin": [
+    "kotlin"
+  ],
+  "swift": [
+    "swift",
+    "swiftui"
+  ],
+  "golang": [
+    "golang"
+  ],
+  "rust": [
+    "rust"
+  ],
+  "c++": [
+    "c++",
+    "cpp"
+  ],
+  "c#": [
+    "c#",
+    "csharp",
+    ".net",
+    "dotnet",
+    "asp.net"
+  ],
+  "php": [
+    "php",
+    "laravel"
+  ],
+  "ruby": [
+    "ruby on rails",
+    "rails"
+  ],
+  "scala": [
+    "scala"
+  ],
+  "r": [
+    "r programming",
+    "rstudio"
+  ],
+  "sql": [
+    "sql",
+    "t-sql",
+    "pl/sql",
+    "mysql",
+    "sqlite",
+    "sql server",
+    "ms sql"
+  ],
+  "nosql": [
+    "nosql",
+    "mongodb",
+    "dynamodb",
+    "cassandra"
+  ],
+  "html": [
+    "html",
+    "html5"
+  ],
+  "css": [
+    "css",
+    "css3",
+    "sass",
+    "scss",
+    "tailwind",
+    "tailwind css",
+    "tailwindcss",
+    "bootstrap"
+  ],
+  "bash": [
+    "bash",
+    "shell scripting",
+    "powershell"
+  ],
+  "spring": [
+    "spring",
+    "spring boot",
+    "spring mvc",
+    "springboot"
+  ],
+  "hibernate": [
+    "hibernate",
+    "jpa"
+  ],
+  "django": [
+    "django"
+  ],
+  "flask": [
+    "flask"
+  ],
+  "angular": [
+    "angular",
+    "angularjs"
+  ],
+  "vue": [
+    "vue",
+    "vue.js",
+    "vuejs",
+    "nuxt",
+    "nuxt.js"
+  ],
+  "next.js": [
+    "next.js",
+    "nextjs"
+  ],
+  "express": [
+    "express.js",
+    "expressjs"
+  ],
+  "pytorch": [
+    "pytorch"
+  ],
+  "tensorflow": [
+    "tensorflow",
+    "keras"
+  ],
+  "scikit-learn": [
+    "scikit-learn",
+    "sklearn",
+    "scikit learn"
+  ],
+  "pandas": [
+    "pandas"
+  ],
+  "numpy": [
+    "numpy"
+  ],
+  "nlp": [
+    "nlp",
+    "natural language processing"
+  ],
+  "computer vision": [
+    "computer vision",
+    "opencv"
+  ],
+  "android": [
+    "android",
+    "android sdk",
+    "jetpack compose"
+  ],
+  "ios": [
+    "ios",
+    "ios sdk",
+    "xcode"
+  ],
+  "git": [
+    "git",
+    "github",
+    "gitlab",
+    "bitbucket",
+    "version control"
+  ],
+  "linux": [
+    "linux",
+    "unix",
+    "ubuntu"
+  ],
+  "terraform": [
+    "terraform",
+    "infrastructure as code",
+    "iac"
+  ],
+  "ansible": [
+    "ansible"
+  ],
+  "kafka": [
+    "kafka",
+    "apache kafka"
+  ],
+  "rabbitmq": [
+    "rabbitmq",
+    "message queue",
+    "message queues"
+  ],
+  "elasticsearch": [
+    "elasticsearch",
+    "opensearch"
+  ],
+  "prometheus": [
+    "prometheus",
+    "grafana"
+  ],
+  "spark": [
+    "spark",
+    "apache spark",
+    "pyspark"
+  ],
+  "airflow": [
+    "airflow",
+    "apache airflow"
+  ],
+  "snowflake": [
+    "snowflake"
+  ],
+  "dbt": [
+    "dbt"
+  ],
+  "maven": [
+    "maven",
+    "gradle"
+  ],
+  "rest api": [
+    "rest api",
+    "rest apis",
+    "restful",
+    "restful api"
+  ],
+  "grpc": [
+    "grpc"
+  ],
+  "microservices": [
+    "microservices",
+    "microservice architecture"
+  ],
+  "unit testing": [
+    "unit testing",
+    "unit tests",
+    "pytest",
+    "junit",
+    "jest",
+    "test automation"
+  ],
+  "playwright": [
+    "playwright"
+  ],
+  "cypress": [
+    "cypress"
+  ],
+  "selenium": [
+    "selenium"
+  ],
+  "manual testing": [
+    "manual testing",
+    "qa testing"
+  ],
+  "jira": [
+    "jira",
+    "confluence"
+  ],
+  "agile": [
+    "agile",
+    "scrum",
+    "kanban",
+    "sdlc"
+  ],
+  "data analysis": [
+    "data analysis",
+    "data analytics",
+    "analytics",
+    "exploratory data analysis"
+  ],
+  "data visualization": [
+    "data visualization",
+    "tableau",
+    "power bi",
+    "powerbi",
+    "looker",
+    "matplotlib"
+  ],
+  "statistics": [
+    "statistics",
+    "statistical analysis",
+    "statistical modeling",
+    "hypothesis testing",
+    "regression analysis"
+  ],
+  "data structures & algorithms": [
+    "data structures",
+    "algorithms",
+    "data structures and algorithms",
+    "dsa"
+  ],
+  "responsive design": [
+    "responsive design",
+    "responsive web design"
+  ],
+  "ui/ux design": [
+    "ui/ux",
+    "ux design",
+    "ui design",
+    "figma"
+  ],
+  "financial reporting": [
+    "financial reporting",
+    "financial statements",
+    "financial statement",
+    "balance sheet",
+    "income statement"
+  ],
+  "general ledger": [
+    "general ledger",
+    "journal entries",
+    "bookkeeping"
+  ],
+  "accounts payable/receivable": [
+    "accounts payable",
+    "accounts receivable",
+    "ap/ar",
+    "a/p",
+    "a/r"
+  ],
+  "gaap/ifrs": [
+    "gaap",
+    "ifrs",
+    "us gaap"
+  ],
+  "tax": [
+    "tax",
+    "taxation",
+    "tax preparation",
+    "tax returns"
+  ],
+  "month-end close": [
+    "month-end close",
+    "month end close",
+    "year-end close",
+    "closing process"
+  ],
+  "budgeting": [
+    "budgeting",
+    "budget management"
+  ],
+  "forecasting": [
+    "forecasting"
+  ],
+  "variance analysis": [
+    "variance analysis"
+  ],
+  "financial modeling": [
+    "financial modeling",
+    "financial modelling",
+    "financial analysis",
+    "valuation"
+  ],
+  "payroll": [
+    "payroll"
+  ],
+  "audit": [
+    "audit",
+    "auditing",
+    "internal audit",
+    "external audit"
+  ],
+  "erp/accounting software": [
+    "erp",
+    "sap",
+    "oracle financials",
+    "quickbooks",
+    "tally",
+    "netsuite",
+    "peachtree",
+    "accounting software"
+  ],
+  "excel": [
+    "excel",
+    "ms excel",
+    "microsoft excel",
+    "spreadsheets",
+    "vlookup",
+    "pivot tables"
+  ],
+  "ms office": [
+    "ms office",
+    "microsoft office",
+    "microsoft word",
+    "powerpoint",
+    "outlook"
+  ],
+  "fixed assets": [
+    "fixed assets",
+    "depreciation"
+  ],
+  "cpa": [
+    "cpa",
+    "chartered accountant",
+    "acca",
+    "cma"
+  ],
+  "cash handling": [
+    "cash handling",
+    "cash management",
+    "cashier",
+    "cash register",
+    "point of sale",
+    "teller"
+  ],
+  "account management": [
+    "account opening",
+    "account management",
+    "account maintenance",
+    "new accounts"
+  ],
+  "loans/credit": [
+    "loans",
+    "loan processing",
+    "lending",
+    "credit analysis",
+    "mortgage",
+    "mortgages",
+    "underwriting"
+  ],
+  "kyc/aml": [
+    "kyc",
+    "aml",
+    "anti-money laundering",
+    "know your customer",
+    "bsa"
+  ],
+  "risk management": [
+    "risk management",
+    "risk assessment",
+    "compliance",
+    "regulatory compliance"
+  ],
+  "sales": [
+    "sales",
+    "selling",
+    "upselling",
+    "cross-selling",
+    "b2b sales",
+    "quota attainment"
+  ],
+  "customer service": [
+    "customer service",
+    "customer support",
+    "client service",
+    "customer relations",
+    "customer satisfaction"
+  ],
+  "merchandising": [
+    "merchandising",
+    "visual merchandising"
+  ],
+  "inventory management": [
+    "inventory",
+    "inventory management",
+    "stock management",
+    "stocking",
+    "inventory control"
+  ],
+  "loss prevention": [
+    "loss prevention",
+    "shrinkage"
+  ],
+  "crm": [
+    "crm",
+    "salesforce",
+    "hubspot"
+  ],
+  "lead generation": [
+    "lead generation",
+    "prospecting",
+    "cold calling"
+  ],
+  "negotiation": [
+    "negotiation",
+    "contract negotiation"
+  ],
+  "lesson planning": [
+    "lesson planning",
+    "lesson plans",
+    "lesson plan"
+  ],
+  "classroom management": [
+    "classroom management",
+    "behavior management"
+  ],
+  "curriculum development": [
+    "curriculum development",
+    "curriculum design",
+    "instructional design",
+    "curriculum"
+  ],
+  "student assessment": [
+    "student assessment",
+    "grading",
+    "student evaluation"
+  ],
+  "parent communication": [
+    "parent communication",
+    "parent-teacher conferences",
+    "family communication"
+  ],
+  "special education": [
+    "special education",
+    "iep",
+    "ieps"
+  ],
+  "teaching certification": [
+    "teaching certification",
+    "teaching credential",
+    "teaching license"
+  ],
+  "tutoring/mentoring": [
+    "tutoring",
+    "mentoring",
+    "mentorship",
+    "coaching"
+  ],
+  "research": [
+    "research",
+    "research methodology",
+    "research projects"
+  ],
+  "data collection": [
+    "data collection",
+    "surveys",
+    "fieldwork"
+  ],
+  "literature review": [
+    "literature review",
+    "literature reviews"
+  ],
+  "publications": [
+    "publications",
+    "peer-reviewed",
+    "journal articles"
+  ],
+  "academic writing": [
+    "academic writing",
+    "scientific writing",
+    "technical writing",
+    "grant writing"
+  ],
+  "requirements gathering": [
+    "requirements gathering",
+    "requirements elicitation",
+    "business requirements",
+    "user stories"
+  ],
+  "stakeholder management": [
+    "stakeholder management",
+    "stakeholder communication"
+  ],
+  "process analysis": [
+    "process analysis",
+    "process mapping",
+    "process improvement",
+    "process modeling",
+    "bpmn"
+  ],
+  "project management": [
+    "project management",
+    "program management"
+  ],
+  "product management": [
+    "product management",
+    "product strategy",
+    "roadmapping",
+    "product roadmap"
+  ],
+  "seo": [
+    "seo",
+    "search engine optimization"
+  ],
+  "sem": [
+    "sem",
+    "google ads",
+    "ppc",
+    "paid search"
+  ],
+  "digital marketing": [
+    "digital marketing",
+    "social media marketing",
+    "content marketing",
+    "email marketing"
+  ],
+  "google analytics": [
+    "google analytics",
+    "ga4"
+  ],
+  "documentation": [
+    "documentation",
+    "report writing"
+  ],
+  "presentation": [
+    "presentation",
+    "presentations",
+    "public speaking"
+  ],
+  "communication": [
+    "communication",
+    "communication skills"
+  ],
+  "teamwork": [
+    "teamwork",
+    "collaboration"
+  ],
+  "leadership": [
+    "leadership",
+    "team leadership",
+    "people management"
+  ],
+  "time management": [
+    "time management"
+  ],
+  "problem solving": [
+    "problem solving",
+    "problem-solving"
+  ],
+  "threat modeling": [
+    "threat modeling",
+    "threat modelling",
+    "stride"
+  ],
+  "penetration testing": [
+    "penetration testing",
+    "pentesting",
+    "pen testing"
+  ],
+  "oauth": [
+    "oauth",
+    "oauth2",
+    "openid connect",
+    "oidc"
+  ],
+  "cryptography": [
+    "cryptography",
+    "encryption"
+  ],
+  "account reconciliation": [
+    "bank reconciliation",
+    "account reconciliation",
+    "account reconciliations",
+    "bank reconciliations",
+    "reconciliations"
+  ],
+  "application security": [
+    "application security",
+    "appsec",
+    "owasp",
+    "sast",
+    "dast"
   ]
 }

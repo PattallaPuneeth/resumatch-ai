@@ -141,10 +141,44 @@ def _extract_all_resume_skills(skills_data: Any) -> tuple[set[str], set[str]]:
     return canonical_set, raw_set
 
 
+def extract_skills_from_text(text: str) -> list[str]:
+    """Extracts canonical taxonomy skills mentioned anywhere in free text (word-boundary match)."""
+    if not text:
+        return []
+
+    aliases = load_skill_aliases()
+    found_canonical: set[str] = set()
+    clean_text = text.lower()
+
+    for alias_pattern, canonical in aliases.items():
+        escaped = re.escape(alias_pattern)
+        regex = rf"(?:^|[\s,;/()\[\].!?:-]){escaped}(?:$|[\s,;/()\[\].!?:-])"
+        if re.search(regex, clean_text):
+            found_canonical.add(canonical)
+
+    return sorted(found_canonical)
+
+
+def resolve_required_skills(
+    required_skills: list[str] | None,
+    job_title: str = "",
+    job_description: str = "",
+) -> list[str]:
+    """
+    Returns the job's structured required skills, or, when none were supplied (the UI only
+    sends a title and raw description), the taxonomy skills mentioned in the title + description.
+    """
+    clean = [s for s in (required_skills or []) if isinstance(s, str) and s.strip()]
+    if clean:
+        return clean
+    return extract_skills_from_text(f"{job_title}\n{job_description}")
+
+
 def analyze_skill_gap(
     required_skills: list[str] | None,
     resume_skills_data: Any,
     preferred_skills: list[str] | None = None,
+    resume_text: str | None = None,
 ) -> dict[str, Any]:
     """
     Performs skill-gap analysis between job requirements and resume skills.
@@ -153,13 +187,17 @@ def analyze_skill_gap(
         required_skills: List of required skill strings from the Job record.
         resume_skills_data: Parsed skills from ParsedResume.skills (list or dict).
         preferred_skills: Optional preferred skill strings.
+        resume_text: Optional full resume text. Taxonomy skills mentioned anywhere in it count as
+            resume skills too, so skills written in experience bullets (not only in the parsed
+            skills list) are credited.
 
     Returns:
         Dict containing:
             - 'matched': list of matched skill names
             - 'partial': list of partially matched skill names
             - 'missing': list of missing skill names
-            - 'coverage_ratio': float (0.0 to 1.0)
+            - 'coverage_ratio': float (0.0 to 1.0), or None when the job has no known
+              requirements (coverage is unknown, not perfect; the scorer then drops the term)
             - 'coverageRatio': alias for coverage_ratio
     """
     if not required_skills:
@@ -167,11 +205,15 @@ def analyze_skill_gap(
             "matched": [],
             "partial": [],
             "missing": [],
-            "coverage_ratio": 1.0,
-            "coverageRatio": 1.0,
+            "coverage_ratio": None,
+            "coverageRatio": None,
         }
 
     canonical_resume_skills, raw_resume_skills = _extract_all_resume_skills(resume_skills_data)
+    if resume_text:
+        for skill in extract_skills_from_text(resume_text):
+            canonical_resume_skills.add(skill)
+            raw_resume_skills.add(skill)
 
     matched: list[str] = []
     partial: list[str] = []
@@ -198,8 +240,9 @@ def analyze_skill_gap(
             missing.append(req)
 
     total_reqs = len(matched) + len(partial) + len(missing)
+    coverage: float | None
     if total_reqs == 0:
-        coverage = 1.0
+        coverage = None
     else:
         # Partial matches receive half credit (0.5)
         coverage = round((len(matched) + 0.5 * len(partial)) / total_reqs, 4)

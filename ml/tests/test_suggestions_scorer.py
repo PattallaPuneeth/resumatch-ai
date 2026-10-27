@@ -10,16 +10,15 @@ Tests:
 from __future__ import annotations
 
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from pydantic import ValidationError
 
+from ml.pipelines.matching.skill_gap import extract_skills_from_text
 from ml.pipelines.matching.suggestions_scorer import (
     CandidateListingItem,
     ScoreCandidateListingsRequest,
     SuggestionsScoringService,
-    extract_skills_from_text,
 )
 
 
@@ -49,7 +48,7 @@ def test_score_listings_deterministic() -> None:
          patch("ml.pipelines.matching.suggestions_scorer.rerank_candidates", return_value=[{"chunk_id": "c1", "cross_encoder_logit": 3.0}]):
 
         request = ScoreCandidateListingsRequest(
-            resumeId=fake_resume_id,
+            resume_id=fake_resume_id,
             listings=[
                 CandidateListingItem(
                     id="list-1",
@@ -121,16 +120,17 @@ def test_score_integrity_against_prompt_injection() -> None:
          patch("ml.pipelines.matching.suggestions_scorer.rerank_candidates", return_value=[{"chunk_id": "c1", "cross_encoder_logit": 0.5}]):
 
         res_normal = service.score_listings(
-            ScoreCandidateListingsRequest(resumeId=fake_resume_id, listings=[normal_listing])
+            ScoreCandidateListingsRequest(resume_id=fake_resume_id, listings=[normal_listing])
         )
         res_injected = service.score_listings(
-            ScoreCandidateListingsRequest(resumeId=fake_resume_id, listings=[injected_listing])
+            ScoreCandidateListingsRequest(resume_id=fake_resume_id, listings=[injected_listing])
         )
 
         score_normal = res_normal.results[0].match_score
         score_injected = res_injected.results[0].match_score
 
-        # Both scores are mathematically calculated. Injected listing is NOT 100.
+        # Both scores are mathematically calculated. Injected text changes nothing.
+        assert score_injected == score_normal
         assert score_injected < 100.0
         assert isinstance(score_injected, float)
 
@@ -149,7 +149,7 @@ def test_score_listings_non_parsed_resume_fails() -> None:
         with pytest.raises(ValueError, match="must be PARSED"):
             service.score_listings(
                 ScoreCandidateListingsRequest(
-                    resumeId=fake_resume_id,
+                    resume_id=fake_resume_id,
                     listings=[
                         CandidateListingItem(
                             id="l1",

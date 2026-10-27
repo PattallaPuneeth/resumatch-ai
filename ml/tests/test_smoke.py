@@ -124,9 +124,9 @@ def test_pydantic_match_result_schema() -> None:
         gaps=["Docker"],
         evidence=[
             EvidenceItem(
-                chunkId="c-1",
+                chunk_id="c-1",
                 snippet="Experienced with FastAPI and pgvector",
-                relevanceScore=0.94,
+                relevance_score=0.94,
                 reason="Direct semantic match on tech stack",
             )
         ],
@@ -139,7 +139,7 @@ def test_pydantic_match_result_schema() -> None:
 
 def test_stage_event_schema() -> None:
     event = StageEvent(
-        analysisId="a-1",
+        analysis_id="a-1",
         stage="MATCHING",
         progress=0.75,
         message="Executing cross-encoder reranking",

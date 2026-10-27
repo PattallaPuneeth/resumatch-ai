@@ -39,7 +39,7 @@ def get_tokenizer() -> Any:
     """Returns singleton tokenizer instance for all-MiniLM-L6-v2."""
     global _TOKENIZER
     if _TOKENIZER is None:
-        _TOKENIZER = AutoTokenizer.from_pretrained(MODEL_NAME)
+        _TOKENIZER = AutoTokenizer.from_pretrained(MODEL_NAME)  # type: ignore[no-untyped-call]
     return _TOKENIZER
 
 

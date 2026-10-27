@@ -39,6 +39,28 @@ def calibrate_ce_logit(
     return round(prob * 100.0, 2)
 
 
+def blend_final_score(
+    ce_score: float,
+    coverage: float | None,
+    best_vector: float,
+    w_ce: float = DEFAULT_W_CE,
+    w_skill: float = DEFAULT_W_SKILL,
+    w_vec: float = DEFAULT_W_VEC,
+) -> float:
+    """
+    Composite 0-100 score. When skill coverage is unknown (job has no known requirements),
+    its weight is dropped and the CE and vector weights are renormalized, so a job without
+    requirements never hands every resume free coverage points.
+    """
+    vec_term = w_vec * max(0.0, best_vector * 100.0)
+    if coverage is None:
+        remaining = w_ce + w_vec
+        raw_final = (w_ce * ce_score + vec_term) / remaining if remaining > 0 else 0.0
+    else:
+        raw_final = w_ce * ce_score + w_skill * (coverage * 100.0) + vec_term
+    return max(0.0, min(100.0, round(raw_final, 2)))
+
+
 def compute_match_scores(
     lexical_hits: list[dict[str, Any]],
     semantic_hits: list[dict[str, Any]],
@@ -65,12 +87,13 @@ def compute_match_scores(
         w_vec: Weight for semantic vector similarity score (default: 0.10).
 
     Returns:
-        Dict containing best_bm25, best_vector, best_ce_score, skill_coverage,
-        best_ce_logit, and final_score.
+        Dict containing best_bm25, best_vector, best_ce_score, skill_coverage (None when the
+        job has no known requirements), best_ce_logit, and final_score.
     """
     best_bm25 = round(max([c["score"] for c in lexical_hits]), 4) if lexical_hits else 0.0
     best_vector = round(max([c["score"] for c in semantic_hits]), 4) if semantic_hits else 0.0
-    coverage = float(skill_gap.get("coverage_ratio", 1.0))
+    raw_coverage = skill_gap.get("coverage_ratio")
+    coverage: float | None = None if raw_coverage is None else float(raw_coverage)
 
     if reranked_chunks:
         # Use raw cross_encoder_logit if available to re-calibrate with custom shift/temp
@@ -80,12 +103,9 @@ def compute_match_scores(
         best_logit = -25.0
         best_ce_score = 0.0
 
-    # Composite blend formula
-    final_score = round(
-        w_ce * best_ce_score + w_skill * (coverage * 100.0) + w_vec * max(0.0, best_vector * 100.0),
-        2,
+    final_score = blend_final_score(
+        best_ce_score, coverage, best_vector, w_ce=w_ce, w_skill=w_skill, w_vec=w_vec
     )
-    final_score = max(0.0, min(100.0, final_score))
 
     return {
         "best_bm25": best_bm25,

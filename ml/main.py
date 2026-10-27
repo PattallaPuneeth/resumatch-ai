@@ -24,7 +24,6 @@ from ml.pipelines.rewriter.models import (
 )
 from ml.pipelines.rewriter.service import BulletRewriterService
 
-
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
@@ -112,7 +111,7 @@ def run_analysis(
 
     return AnalysisQueuedResponse(
         status="ACCEPTED",
-        analysisId=payload.analysis_id,
+        analysis_id=payload.analysis_id,
         message=f"Analysis pipeline queued for resume {payload.resume_id}",
         stage="QUEUED",
     )
