@@ -1,0 +1,2 @@
+Cybersecurity Analyst
+Job title: Cybersecurity Analyst (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: network security; siem/soc; vulnerability assessment; incident response; linux or security compliance. Preferred skills: penetration testing; cryptography; security compliance; python. Responsibilities: Monitor security events, triage alerts, run vulnerability scans, respond to incidents and document findings and remediation. Education/experience: B.Tech/B.E. in Computer Science, IT or Cybersecurity; 0-3 years of security experience; CEH/Security+ is a plus.

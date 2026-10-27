@@ -1,0 +1,2 @@
+Java Backend Developer
+Job title: Java Backend Developer (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: java; spring; sql; rest api; git. Preferred skills: hibernate/jpa; microservices; maven/gradle; docker; cloud (aws/azure/gcp); manual testing. Responsibilities: Design and build REST services in Java and Spring Boot, model and query relational databases, write unit tests, review code and deploy services with the team. Education/experience: B.Tech/B.E./B.Sc. in Computer Science or related field; 0-3 years of backend experience.

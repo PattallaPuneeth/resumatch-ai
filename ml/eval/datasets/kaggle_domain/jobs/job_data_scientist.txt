@@ -1,0 +1,2 @@
+Data Scientist
+Job title: Data Scientist (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: python or r; statistics; machine learning; pandas/numpy or scikit-learn; data analysis or sql. Preferred skills: nlp; deep learning; data visualization; publications; presentation. Responsibilities: Explore data, build statistical and machine learning models, validate results and communicate findings to technical and business audiences. Education/experience: Bachelor's/Master's in Computer Science, Statistics, Mathematics or related field; 0-4 years of data science experience.

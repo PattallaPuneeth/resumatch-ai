@@ -1,0 +1,35 @@
+Job Title: Full-Stack Developer
+Company: Mosaic Harbor Digital
+Location: Portland, OR (hybrid)
+Employment Type: Full-time
+
+About the Role
+Mosaic Harbor Digital is a product studio that builds web applications for retail and hospitality clients. We are hiring a Full-Stack Developer to work across our React front ends and Node.js back ends. You will own features end to end, from the user interface to the API and data layer.
+
+Responsibilities
+- Build responsive, accessible user interfaces in React and TypeScript.
+- Develop and maintain REST APIs and services in Node.js.
+- Work with designers and product managers to turn mockups into working features.
+- Integrate with third-party services such as payment gateways and email providers.
+- Write unit and end-to-end tests and keep the build healthy.
+- Investigate performance problems in both the browser and the server.
+
+Required Skills
+- At least 2 years of professional experience with React and modern JavaScript or TypeScript.
+- Solid Node.js experience, including building REST APIs with Express or a similar framework.
+- Practical knowledge of HTML, CSS and responsive design.
+- Experience with at least one database, either SQL or NoSQL.
+- Comfort with Git and code review workflows.
+
+Preferred Skills
+- Next.js and server-side rendering.
+- MongoDB or another document database.
+- Testing tools such as Jest, React Testing Library or Cypress.
+- Experience improving Lighthouse scores and Core Web Vitals.
+- Basic Docker knowledge.
+
+Experience Level
+Mid-level. We are looking for 2 to 4 years of full-stack experience. Enthusiastic engineers with a strong portfolio of shipped projects are encouraged to apply.
+
+What We Offer
+Hybrid schedule, health benefits, a conference budget and a friendly team that ships regularly. We review applications on a rolling basis.

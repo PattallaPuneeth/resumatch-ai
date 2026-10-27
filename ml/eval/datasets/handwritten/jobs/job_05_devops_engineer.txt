@@ -1,0 +1,35 @@
+Job Title: DevOps Engineer
+Company: Redfield Streaming Co.
+Location: Atlanta, GA (hybrid)
+Employment Type: Full-time
+
+About the Role
+Redfield Streaming Co. delivers live and on-demand video to millions of viewers. Our platform team is hiring a DevOps Engineer to keep our cloud infrastructure reliable, observable and easy for developers to use. You will build the tooling that lets product teams deploy safely many times a day.
+
+Responsibilities
+- Operate and improve our Kubernetes clusters, including upgrades, scaling and security hardening.
+- Define cloud infrastructure with Terraform and review infrastructure changes with other engineers.
+- Build and maintain CI/CD pipelines that test, scan and deploy services automatically.
+- Set up monitoring, dashboards and alerting with Prometheus and Grafana.
+- Respond to incidents, run post-incident reviews and drive follow-up improvements.
+- Help developers troubleshoot deployment and performance problems.
+
+Required Skills
+- Hands-on production experience with Kubernetes and Docker.
+- Strong working knowledge of Terraform or a similar infrastructure-as-code tool.
+- Experience building CI/CD pipelines with tools such as GitLab CI, GitHub Actions or Jenkins.
+- Experience with monitoring and alerting, such as Prometheus and Grafana.
+- Scripting skills in Python or Bash.
+- Experience with a major cloud provider, preferably AWS.
+
+Preferred Skills
+- Experience with Helm and GitOps tools such as ArgoCD.
+- Knowledge of log aggregation using the ELK stack.
+- Cost optimization experience.
+- Experience managing databases in the cloud.
+
+Experience Level
+Mid to senior. We are looking for 4 or more years in DevOps, site reliability or platform engineering roles.
+
+What We Offer
+Competitive pay, on-call compensation, a learning budget and a collaborative team culture. We review applications on a rolling basis.

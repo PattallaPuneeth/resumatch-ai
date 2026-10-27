@@ -1,0 +1,35 @@
+Job Title: Senior Backend Engineer
+Company: Halcyon Ledger Technologies
+Location: Chicago, IL (hybrid, three days on-site)
+Employment Type: Full-time
+
+About the Role
+Halcyon Ledger Technologies builds billing and reconciliation software for mid-sized wholesalers. We are looking for a Senior Backend Engineer to own the design and delivery of our core transaction services. You will join a small team that values clean APIs, careful data modeling and dependable releases.
+
+Responsibilities
+- Design, build and maintain Node.js and TypeScript services that process millions of ledger events every day.
+- Model and optimize data in PostgreSQL, including schema design, indexing and query tuning.
+- Deploy and operate services on Kubernetes, working with the platform team on Helm charts, autoscaling and rollout strategies.
+- Review code, mentor mid-level engineers and raise the bar on testing practices.
+- Break down ambiguous product requirements into well-scoped technical work.
+- Join the on-call rotation and lead blameless post-incident reviews.
+
+Required Skills
+- Strong production experience with Node.js and TypeScript.
+- Solid Postgres skills, including query plans, indexing and migrations.
+- Hands-on experience with Docker and K8s in a production environment.
+- Experience designing and versioning REST APIs.
+- Automated testing habits, including unit and integration tests.
+
+Preferred Skills
+- GraphQL and Redis.
+- Message queues such as RabbitMQ or Kafka.
+- Observability tooling such as Prometheus and Grafana.
+- CI/CD pipelines with GitHub Actions.
+- Prior work on billing, payments or other financial systems.
+
+Experience Level
+Senior. We expect 5 or more years of professional backend development, including at least 2 years owning services in production.
+
+What We Offer
+A collaborative engineering culture, a learning budget, flexible hours and generous parental leave. We review applications on a rolling basis and welcome candidates from all backgrounds.

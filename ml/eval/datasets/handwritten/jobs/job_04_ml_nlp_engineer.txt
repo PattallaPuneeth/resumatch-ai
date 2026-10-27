@@ -1,0 +1,35 @@
+Job Title: Machine Learning Engineer (NLP)
+Company: Cobaltine AI Labs
+Location: Boston, MA (hybrid)
+Employment Type: Full-time
+
+About the Role
+Cobaltine AI Labs develops language-understanding tools for legal and compliance teams. We are looking for an ML/NLP Engineer to help build and ship models that search, classify and summarize long documents. You will move work from research notebooks into reliable production systems.
+
+Responsibilities
+- Train and fine-tune transformer models in PyTorch for classification and extraction tasks.
+- Build embedding-based retrieval and semantic search pipelines, including vector indexing.
+- Design evaluation sets and metrics to measure model quality and track regressions.
+- Work with data engineers to prepare clean training data from large text corpora.
+- Package models as services and monitor their accuracy and latency in production.
+- Share findings with product and engineering teams through clear write-ups.
+
+Required Skills
+- Strong Python and hands-on experience with PyTorch.
+- Practical NLP experience, such as text classification, named entity recognition or retrieval.
+- Experience creating and using embeddings for similarity search.
+- Good grounding in machine learning fundamentals and evaluation methods.
+- Proficiency with SQL and data manipulation libraries such as pandas.
+
+Preferred Skills
+- Experience with Hugging Face Transformers and scikit-learn baselines.
+- Familiarity with vector databases or FAISS.
+- Experience serving models through an API such as FastAPI.
+- Knowledge of MLOps tools such as MLflow.
+- A graduate degree in a quantitative field.
+
+Experience Level
+Mid to senior. We are looking for 3 or more years of applied machine learning experience, with at least one NLP project shipped to production.
+
+What We Offer
+Research time, a conference budget, flexible hours and a collaborative team. We review applications on a rolling basis.

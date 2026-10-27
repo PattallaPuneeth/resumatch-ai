@@ -1,0 +1,33 @@
+resume,job,expected,reason
+resume_01_backend_node.docx,job_01_senior_backend_node.txt,strong,"Node.js, TypeScript, PostgreSQL, Docker and K8s all match at the required seniority."
+resume_01_backend_node.docx,job_02_backend_python.txt,medium,"Synonym test: Kubernetes/K8s and PostgreSQL map to 'container orchestration' and 'relational database', but the Python/FastAPI requirement is missing."
+resume_01_backend_node.docx,job_03_fullstack_react.txt,medium,"Strong Node.js and TypeScript overlap, but there is no React or front-end experience."
+resume_01_backend_node.docx,job_08_android_developer.txt,weak,Backend web engineer with no Kotlin or Android experience.
+resume_02_backend_python.pdf,job_02_backend_python.txt,strong,"Synonym test: 'Postgres' on the resume satisfies 'relational database' in the job, and Python, FastAPI, AWS and container orchestration match directly."
+resume_02_backend_python.pdf,job_01_senior_backend_node.txt,medium,"Synonym test: 'container orchestration' on the resume should match Kubernetes/K8s and Postgres matches, but Node.js and TypeScript are missing."
+resume_02_backend_python.pdf,job_04_ml_nlp_engineer.txt,medium,"Strong Python and some embedding-model integration, but no PyTorch training or NLP research depth."
+resume_02_backend_python.pdf,job_06_digital_marketing_lead.txt,weak,Backend engineer applying to a marketing leadership role.
+resume_03_fullstack_react.docx,job_03_fullstack_react.txt,strong,"React, Node.js, TypeScript, Next.js and MongoDB cover required and preferred skills at the right level."
+resume_03_fullstack_react.docx,job_01_senior_backend_node.txt,medium,"Node.js and TypeScript match, but no PostgreSQL depth or Kubernetes and the role is senior."
+resume_03_fullstack_react.docx,job_06_digital_marketing_lead.txt,weak,Web developer applying to a marketing leadership role.
+resume_03_fullstack_react.docx,job_08_android_developer.txt,weak,Web front-end and Node.js skills do not cover Kotlin or Android development.
+resume_04_data_scientist.docx,job_04_ml_nlp_engineer.txt,strong,"Python, PyTorch, NLP and embeddings match the core requirements."
+resume_04_data_scientist.docx,job_02_backend_python.txt,medium,"Python, SQL and FastAPI model serving overlap, but little general backend or cloud engineering experience."
+resume_04_data_scientist.docx,job_01_senior_backend_node.txt,weak,"Data scientist without Node.js, TypeScript or Kubernetes for a senior backend role."
+resume_04_data_scientist.docx,job_05_devops_engineer.txt,weak,"Modelling background with no Terraform, Kubernetes or CI/CD ownership."
+resume_05_devops_sre.pdf,job_05_devops_engineer.txt,strong,"Kubernetes, Terraform, CI/CD, Prometheus and Grafana all match at the right seniority."
+resume_05_devops_sre.pdf,job_01_senior_backend_node.txt,medium,"Docker, Kubernetes and PostgreSQL operations overlap, but no Node.js or TypeScript application development."
+resume_05_devops_sre.pdf,job_02_backend_python.txt,medium,"Synonym test: Kubernetes on the resume maps to 'container orchestration' in the job, plus AWS and Python scripting, but no FastAPI API development."
+resume_05_devops_sre.pdf,job_08_android_developer.txt,weak,Infrastructure engineer with no mobile development experience.
+resume_06_marketing_manager.docx,job_06_digital_marketing_lead.txt,strong,"SEO, Google Ads, analytics and team leadership match the lead role."
+resume_06_marketing_manager.docx,job_01_senior_backend_node.txt,weak,Marketing manager applying to a senior backend engineering role.
+resume_06_marketing_manager.docx,job_05_devops_engineer.txt,weak,Marketing background has no DevOps tooling or infrastructure experience.
+resume_06_marketing_manager.docx,job_08_android_developer.txt,weak,Marketing manager applying to an Android development role.
+resume_07_fresher_java.docx,job_07_junior_java_developer.txt,strong,"Java, Spring Boot, SQL, internship and final-year project match an entry-level role exactly."
+resume_07_fresher_java.docx,job_08_android_developer.txt,medium,"Android project in Java and solid fundamentals, but no Kotlin and no professional Android experience."
+resume_07_fresher_java.docx,job_01_senior_backend_node.txt,weak,Fresher with no Node.js or Kubernetes applying to a senior role requiring 5+ years.
+resume_07_fresher_java.docx,job_02_backend_python.txt,weak,"Java-focused fresher without Python, FastAPI or cloud experience for a mid-level role."
+resume_08_mobile_kotlin.pdf,job_08_android_developer.txt,strong,"Kotlin, Jetpack Compose, MVVM and Firebase match the required and preferred skills."
+resume_08_mobile_kotlin.pdf,job_07_junior_java_developer.txt,medium,"Some Java and a Spring Boot service, but the role is entry-level Java backend and the candidate is a mobile specialist."
+resume_08_mobile_kotlin.pdf,job_01_senior_backend_node.txt,weak,"Mobile developer with no Node.js, PostgreSQL or Kubernetes for a senior backend role."
+resume_08_mobile_kotlin.pdf,job_03_fullstack_react.txt,weak,Android specialist without React or Node.js for a web full-stack role.

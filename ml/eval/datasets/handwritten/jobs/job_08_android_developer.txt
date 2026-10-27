@@ -1,0 +1,34 @@
+Job Title: Android Developer
+Company: Trailnote Fitness
+Location: Denver, CO (remote-friendly)
+Employment Type: Full-time
+
+About the Role
+Trailnote Fitness makes an outdoor activity and training app used by more than a million people. We are looking for an Android Developer to build new features and keep our app fast, stable and well loved. You will work with designers, backend engineers and a small QA team.
+
+Responsibilities
+- Build and maintain Android features in Kotlin using Jetpack libraries and Jetpack Compose.
+- Follow MVVM architecture and keep code modular and testable.
+- Integrate REST APIs and handle offline behavior and data caching.
+- Improve app startup time, battery use and crash-free session rates.
+- Write unit and UI tests and take part in code review.
+- Support releases through the Google Play Console.
+
+Required Skills
+- At least 2 years of professional Android development.
+- Strong Kotlin, including coroutines and Flow.
+- Experience with the Android SDK, Jetpack components and MVVM.
+- Experience with Retrofit, Room or similar libraries.
+- Familiarity with Git and CI workflows.
+
+Preferred Skills
+- Firebase services such as Authentication, Cloud Messaging and Crashlytics.
+- Jetpack Compose in production apps.
+- Experience with Java on Android is a plus.
+- Espresso or other UI testing tools.
+
+Experience Level
+Mid-level. We are looking for 2 to 5 years of Android development experience. Strong candidates with published apps are encouraged to apply.
+
+What We Offer
+Remote-friendly working, an annual gear allowance, health benefits and a supportive team. We review applications on a rolling basis.

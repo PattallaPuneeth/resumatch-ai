@@ -13,6 +13,7 @@ Verifies:
 from __future__ import annotations
 
 import csv
+import math
 from pathlib import Path
 
 import pytest
@@ -327,3 +328,31 @@ def test_run_evaluation_suite_end_to_end(tmp_path: Path) -> None:
     # 4. Cache files created
     cache_files = list(cache_dir.glob("*.json"))
     assert len(cache_files) >= 5  # 3 resumes + 2 jobs cached
+
+
+def test_ranking_metrics_per_job() -> None:
+    from ml.eval.metrics import calculate_ranking_metrics
+
+    pairs = [
+        {"job": "j1", "resume": "a", "expected": "strong", "final_score": 90.0},
+        {"job": "j1", "resume": "b", "expected": "medium", "final_score": 95.0},
+        {"job": "j1", "resume": "c", "expected": "weak", "final_score": 10.0},
+        {"job": "j2", "resume": "a", "expected": "weak", "final_score": 50.0},
+    ]
+    m = calculate_ranking_metrics(pairs, group_key="job")
+    assert m["n_queries"] == 1.0  # j2 has no strong candidate
+    assert m["mrr"] == 0.5
+    assert m["precision@1"] == 0.0
+    assert m["recall@3"] == 1.0
+    # DCG@3 = 1/log2(2) + 3/log2(3); IDCG@3 = 3 + 1/log2(3)
+    assert m["ndcg@3"] == round((1 + 3 / math.log2(3)) / (3 + 1 / math.log2(3)), 4)
+
+
+def test_ranking_metrics_ties_are_pessimistic() -> None:
+    from ml.eval.metrics import calculate_ranking_metrics
+
+    pairs = [
+        {"job": "j", "expected": "strong", "final_score": 50.0},
+        {"job": "j", "expected": "weak", "final_score": 50.0},
+    ]
+    assert calculate_ranking_metrics(pairs)["mrr"] == 0.5

@@ -1,0 +1,2 @@
+DevOps Engineer
+Job title: DevOps Engineer (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: linux; docker; ci/cd; cloud (aws/azure/gcp); git. Preferred skills: kubernetes; infrastructure as code; monitoring; python. Responsibilities: Automate build and deployment pipelines, manage cloud infrastructure and containers, and monitor service reliability. Education/experience: B.Tech/B.E. in Computer Science, IT or related field; 1-3 years of DevOps or systems experience.

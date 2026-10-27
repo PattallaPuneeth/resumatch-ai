@@ -1,0 +1,2 @@
+Software Tester / QA Engineer
+Job title: Software Tester / QA Engineer (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: manual testing; selenium/test automation; bug tracking; sdlc/agile; sql or rest api. Preferred skills: java; python; git; documentation/reporting. Responsibilities: Design and execute test cases, automate regression suites, log and track defects, and work with developers in agile sprints. Education/experience: B.Tech/B.E./B.Sc. in Computer Science or related field; 0-3 years of testing experience; ISTQB certification is a plus.

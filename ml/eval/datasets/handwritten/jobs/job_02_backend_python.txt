@@ -1,0 +1,34 @@
+Job Title: Backend Engineer (Python)
+Company: Greywing Freight Systems
+Location: Remote (United States or Canada)
+Employment Type: Full-time
+
+About the Role
+Greywing Freight Systems provides shipment tracking and rate-quoting tools to freight brokers. Our platform is growing quickly, and we need a Backend Engineer to help build the APIs behind it. You will work closely with front-end engineers and a data team in a fully remote setting.
+
+Responsibilities
+- Build and maintain Python services using FastAPI that expose shipment, quote and billing data.
+- Design and tune schemas in a relational database, writing efficient queries and safe migrations.
+- Package services as containers and deploy them to the cloud using container orchestration.
+- Improve performance and reliability by profiling endpoints and adding caching where it helps.
+- Write automated tests and take part in code review.
+- Document APIs and support internal teams that depend on them.
+
+Required Skills
+- Strong Python, with production experience in FastAPI or a comparable framework such as Flask.
+- Working knowledge of a relational database, including SQL, indexing and transactions.
+- Experience deploying to a cloud provider, ideally AWS.
+- Familiarity with containers and container orchestration concepts.
+- Comfort with Git, pull requests and CI pipelines.
+
+Preferred Skills
+- Asynchronous Python and message queues.
+- Infrastructure as code.
+- Experience integrating machine learning models or search services into an API.
+- Monitoring and alerting for production services.
+
+Experience Level
+Mid-level. We are looking for 3 to 5 years of professional backend experience. Candidates with deep experience in another backend language and a strong grasp of the fundamentals will also be considered.
+
+What We Offer
+Competitive salary, a home-office stipend, flexible working hours and an annual learning allowance. We are an equal opportunity employer and review applications on a rolling basis.

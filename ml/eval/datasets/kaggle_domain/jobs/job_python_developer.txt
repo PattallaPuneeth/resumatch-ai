@@ -1,0 +1,2 @@
+Python Developer
+Job title: Python Developer (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: python; sql or nosql; git; django/flask/fastapi or rest api; data structures & algorithms or database design. Preferred skills: docker; cloud (aws/azure/gcp); pandas/numpy; linux; manual testing. Responsibilities: Develop and maintain Python applications and APIs, write clean tested code, work with databases and automate internal workflows. Education/experience: B.Tech/B.E./B.Sc. in Computer Science or related field; 0-3 years of Python experience.

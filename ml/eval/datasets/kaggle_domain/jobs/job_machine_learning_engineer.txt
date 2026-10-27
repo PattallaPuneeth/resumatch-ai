@@ -1,0 +1,2 @@
+Machine Learning Engineer
+Job title: Machine Learning Engineer (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: python; machine learning; tensorflow/pytorch or scikit-learn; deep learning or nlp or computer vision; git. Preferred skills: docker; cloud (aws/azure/gcp); sql; pandas/numpy; publications. Responsibilities: Train, evaluate and deploy machine learning models, build data and inference pipelines, and monitor model quality in production. Education/experience: B.Tech/M.Tech/M.S. in Computer Science, AI or related field; 0-3 years of applied ML experience.

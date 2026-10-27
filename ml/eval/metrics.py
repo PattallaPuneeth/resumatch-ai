@@ -10,6 +10,7 @@ Calculates:
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 LABEL_RANK_ORDER = {
@@ -150,6 +151,63 @@ def calculate_label_accuracy(
     return round(correct / len(scored_examples), 4)
 
 
+GRADED_RELEVANCE = {"strong": 2, "medium": 1, "weak": 0}
+
+
+def calculate_ranking_metrics(
+    scored_examples: list[dict[str, Any]],
+    score_key: str = "final_score",
+    group_key: str = "job",
+    ks: tuple[int, ...] = (1, 3, 5),
+) -> dict[str, float]:
+    """
+    Retrieval-style metrics, treating each `group_key` value as a query and its labeled
+    pairs as the candidates (group_key="job": rank resumes for a job; "resume": rank jobs
+    for a resume, as job suggestions do).
+
+    Relevant = 'strong'. NDCG uses graded gains (strong=2, medium=1, weak=0).
+    Ties are broken pessimistically (lower label first) so equal scores never look good.
+    Queries without any strong candidate are skipped.
+    """
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for ex in scored_examples:
+        groups.setdefault(str(ex.get(group_key, "")), []).append(ex)
+
+    sums: dict[str, float] = {}
+    n_queries = 0
+    for items in groups.values():
+        rels_unsorted = [GRADED_RELEVANCE.get(str(i.get("expected", "")).lower(), 0) for i in items]
+        if 2 not in rels_unsorted:
+            continue
+        n_queries += 1
+        ranked = sorted(
+            items,
+            key=lambda x: (
+                -float(x.get(score_key, 0.0)),
+                GRADED_RELEVANCE.get(str(x.get("expected", "")).lower(), 0),
+            ),
+        )
+        rels = [GRADED_RELEVANCE.get(str(i.get("expected", "")).lower(), 0) for i in ranked]
+        n_relevant = sum(1 for r in rels if r == 2)
+        first_hit = next(idx for idx, r in enumerate(rels) if r == 2)
+        sums["mrr"] = sums.get("mrr", 0.0) + 1.0 / (first_hit + 1)
+        ideal = sorted(rels, reverse=True)
+        for k in ks:
+            top = rels[:k]
+            hits = sum(1 for r in top if r == 2)
+            dcg = sum((2**r - 1) / math.log2(i + 2) for i, r in enumerate(top))
+            idcg = sum((2**r - 1) / math.log2(i + 2) for i, r in enumerate(ideal[:k]))
+            sums[f"precision@{k}"] = sums.get(f"precision@{k}", 0.0) + hits / k
+            sums[f"recall@{k}"] = sums.get(f"recall@{k}", 0.0) + hits / n_relevant
+            sums[f"ndcg@{k}"] = sums.get(f"ndcg@{k}", 0.0) + (dcg / idcg if idcg else 0.0)
+
+    if n_queries == 0:
+        return {"n_queries": 0.0}
+    out = {name: round(total / n_queries, 4) for name, total in sums.items()}
+    out["n_queries"] = float(n_queries)
+    return out
+
+
 def compute_comprehensive_metrics(
     scored_examples: list[dict[str, Any]],
     score_key: str = "final_score",
@@ -173,4 +231,6 @@ def compute_comprehensive_metrics(
         "mean_scores": means,
         "label_gaps": gaps,
         "sample_count": len(scored_examples),
+        "ranking_by_job": calculate_ranking_metrics(scored_examples, score_key, "job"),
+        "ranking_by_resume": calculate_ranking_metrics(scored_examples, score_key, "resume"),
     }

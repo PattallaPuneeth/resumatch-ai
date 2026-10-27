@@ -32,7 +32,10 @@ class DatasetValidationError(ValueError):
     """Raised when evaluation dataset structure, files, or labels are invalid."""
 
 
-def load_and_validate_dataset(dataset_dir: str | Path) -> list[EvaluationExample]:
+def load_and_validate_dataset(
+    dataset_dir: str | Path,
+    split: str | None = None,
+) -> list[EvaluationExample]:
     """
     Loads and rigorously validates an evaluation dataset directory.
 
@@ -46,6 +49,8 @@ def load_and_validate_dataset(dataset_dir: str | Path) -> list[EvaluationExample
 
     Args:
         dataset_dir: Path to directory containing resumes/, jobs/, and labels.csv.
+        split: Optional value of the labels.csv 'split' column to keep (e.g. 'test' for a
+            held-out split); rows with another split value are skipped.
 
     Returns:
         List of validated EvaluationExample instances.
@@ -93,6 +98,9 @@ def load_and_validate_dataset(dataset_dir: str | Path) -> list[EvaluationExample
 
             resume_name = row.get("resume", "")
             job_name = row.get("job", "")
+            if split is not None and row.get("split", "") != split:
+                continue
+
             expected = row.get("expected", "").lower()
             reason = row.get("reason", "")
 

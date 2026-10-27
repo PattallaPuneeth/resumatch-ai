@@ -1,0 +1,2 @@
+Web Developer
+Job title: Web Developer (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: html; css; javascript; react or angular or vue or node.js; git. Preferred skills: typescript; rest api; responsive design; sql; ui/ux design. Responsibilities: Build responsive, accessible web interfaces, integrate them with backend APIs, test across browsers and maintain front-end code. Education/experience: B.Tech/B.E./B.Sc. in Computer Science or equivalent practical experience; 0-3 years of web development experience.

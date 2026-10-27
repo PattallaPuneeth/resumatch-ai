@@ -1,0 +1,34 @@
+Job Title: Junior Java Developer
+Company: Dovetail Insurance Software
+Location: Hyderabad, India (on-site)
+Employment Type: Full-time
+
+About the Role
+Dovetail Insurance Software builds policy administration tools used by regional insurers. We are hiring Junior Java Developers to join our graduate program. This is an entry-level role, and recent graduates and final-year students are welcome to apply. You will learn on real projects with the support of a dedicated mentor.
+
+Responsibilities
+- Develop and maintain REST endpoints using Java and Spring Boot under the guidance of senior engineers.
+- Write SQL queries and map data using Spring Data JPA or Hibernate.
+- Write unit tests with JUnit and Mockito for the code you deliver.
+- Fix defects, take part in code reviews and learn the team's coding standards.
+- Contribute to technical documentation.
+- Attend daily stand-ups and sprint ceremonies.
+
+Required Skills
+- Good knowledge of Java and object-oriented programming.
+- Familiarity with Spring Boot, even if only through academic or personal projects.
+- Working knowledge of SQL and a relational database such as MySQL.
+- Understanding of data structures and algorithms.
+- Experience with Git.
+
+Preferred Skills
+- An internship or substantial project using Spring Boot.
+- Knowledge of Maven, Postman and basic REST concepts.
+- Exposure to Spring Security or JWT authentication.
+- Curiosity about testing and clean code.
+
+Experience Level
+Entry level. We expect 0 to 1 years of professional experience. Final-year projects and internships count as relevant experience.
+
+What We Offer
+A structured onboarding program, a mentor, health insurance and training in modern engineering practices. We review applications on a rolling basis.

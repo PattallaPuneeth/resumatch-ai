@@ -266,10 +266,22 @@ def process_eval_pair(
     }
 
 
+def _format_ranking_line(label: str, ranking: dict[str, float]) -> str:
+    if not ranking.get("n_queries"):
+        return f"- **{label}:** n/a (no query has a strong candidate)"
+    return (
+        f"- **{label}** ({int(ranking['n_queries'])} queries): "
+        f"MRR {ranking['mrr']:.3f}, P@1 {ranking['precision@1']:.3f}, "
+        f"P@3 {ranking['precision@3']:.3f}, R@3 {ranking['recall@3']:.3f}, "
+        f"NDCG@3 {ranking['ndcg@3']:.3f}, NDCG@5 {ranking['ndcg@5']:.3f}"
+    )
+
+
 def run_evaluation_suite(
     dataset_dir: str | Path,
     output_dir: str | Path | None = None,
     cache_dir: str | Path | None = None,
+    split: str | None = None,
 ) -> dict[str, Any]:
     """
     Main evaluation workflow:
@@ -278,7 +290,7 @@ def run_evaluation_suite(
     3. Computes comprehensive metrics, ablation study, and calibration study.
     4. Writes machine-readable JSON/CSV and Markdown report.
     """
-    examples = load_and_validate_dataset(dataset_dir)
+    examples = load_and_validate_dataset(dataset_dir, split=split)
     root = Path(dataset_dir)
 
     c_dir = Path(cache_dir) if cache_dir else root / ".eval_cache"
@@ -312,6 +324,8 @@ def run_evaluation_suite(
         f"- **Strong-to-Medium Margin:** "
         f"{metrics['label_gaps'].get('strong_to_medium', 0.0):+.1f} pts",
         f"- **Medium-to-Weak Margin:** {metrics['label_gaps'].get('medium_to_weak', 0.0):+.1f} pts",
+        _format_ranking_line("Rank resumes per job", metrics["ranking_by_job"]),
+        _format_ranking_line("Rank jobs per resume", metrics["ranking_by_resume"]),
         "",
         "## 2. Component Ablation Study",
         "",

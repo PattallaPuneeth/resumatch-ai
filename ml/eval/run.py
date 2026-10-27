@@ -44,6 +44,12 @@ def parse_args() -> argparse.Namespace:
         help="Custom directory for caching parsed text and embeddings.",
     )
     parser.add_argument(
+        "--split",
+        type=str,
+        default=None,
+        help="Only evaluate labels.csv rows whose 'split' column equals this value (e.g. test).",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress printing markdown report to console.",
@@ -65,6 +71,7 @@ def main() -> int:
             dataset_dir=dataset_path,
             output_dir=args.output_dir,
             cache_dir=args.cache_dir,
+            split=args.split,
         )
 
         if not args.quiet:
