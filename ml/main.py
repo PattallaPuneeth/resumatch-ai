@@ -23,6 +23,7 @@ from ml.pipelines.rewriter.models import (
     RewriterServiceResponse,
 )
 from ml.pipelines.rewriter.service import BulletRewriterService
+from ml.utils.telemetry import init_telemetry, instrument_fastapi
 
 app = FastAPI(
     title=settings.app_name,
@@ -30,6 +31,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set (Phase 10B Workstream B)
+if init_telemetry("resumatch-ml-api"):
+    instrument_fastapi(app)
 
 app.add_middleware(
     CORSMiddleware,

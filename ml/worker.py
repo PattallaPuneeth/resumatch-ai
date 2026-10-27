@@ -61,6 +61,7 @@ from ml.pipelines.matching.scorer import compute_match_scores
 from ml.pipelines.matching.semantic import search_semantic
 from ml.pipelines.matching.skill_gap import analyze_skill_gap, resolve_required_skills
 from ml.storage.s3 import download_file
+from ml.utils.telemetry import init_telemetry, queue_carrier, stage_span
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,6 +130,12 @@ async def enqueue_embed_job(resume_id: str) -> None:
 
 
 async def process_parse_document(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Traced entry point; the span joins the backend request that enqueued the job."""
+    with stage_span("job", carrier=queue_carrier(job.data), queue="resume-parsing-queue"):
+        return await _process_parse_document(job, token)
+
+
+async def _process_parse_document(job: Job, token: str | None = None) -> dict[str, Any]:
     """Processes a PARSE_DOCUMENT job from resume-parsing-queue."""
     data = job.data
     resume_id = data.get("resumeId")
@@ -253,6 +260,12 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
 
 
 async def process_embed_document(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Traced entry point; the span joins the backend request that enqueued the job."""
+    with stage_span("job", carrier=queue_carrier(job.data), queue="embedding-queue"):
+        return await _process_embed_document(job, token)
+
+
+async def _process_embed_document(job: Job, token: str | None = None) -> dict[str, Any]:
     """Processes an EMBED_DOCUMENT job from embedding-queue."""
     data = job.data
     entity_type = data.get("entityType", "RESUME")
@@ -345,6 +358,12 @@ async def process_embed_document(job: Job, token: str | None = None) -> dict[str
 
 
 async def process_match_scoring(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Traced entry point; the span joins the backend request that enqueued the job."""
+    with stage_span("job", carrier=queue_carrier(job.data), queue="match-scoring-queue"):
+        return await _process_match_scoring(job, token)
+
+
+async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str, Any]:
     """Processes a match calculation job from match-scoring-queue."""
     data = job.data
     job_id = data.get("jobId")
@@ -387,14 +406,16 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
 
     try:
         # 1. Sparse Lexical Search (BM25-style with GIN index)
-        lexical_hits = await asyncio.to_thread(
-            search_lexical, query_text, resume_id=resume_id, limit=50
-        )
+        with stage_span("retrieve.bm25"):
+            lexical_hits = await asyncio.to_thread(
+                search_lexical, query_text, resume_id=resume_id, limit=50
+            )
 
         # 2. Dense Semantic Search (pgvector cosine <=> with HNSW index)
-        semantic_hits = await asyncio.to_thread(
-            search_semantic, query_text, resume_id=resume_id, limit=50
-        )
+        with stage_span("retrieve.vector"):
+            semantic_hits = await asyncio.to_thread(
+                search_semantic, query_text, resume_id=resume_id, limit=50
+            )
 
         # 3. Reciprocal Rank Fusion
         fused_chunks = fuse_ranks(lexical_hits, semantic_hits, k=settings.rrf_k)
@@ -404,9 +425,10 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
         job_rerank_query = build_bounded_rerank_query(
             job_title, job_req_skills, job_desc, max_tokens=180
         )
-        reranked_chunks = await asyncio.to_thread(
-            rerank_candidates, job_rerank_query, fused_chunks, top_n=settings.top_k_candidates
-        )
+        with stage_span("rerank", candidates=min(len(fused_chunks), settings.top_k_candidates)):
+            reranked_chunks = await asyncio.to_thread(
+                rerank_candidates, job_rerank_query, fused_chunks, top_n=settings.top_k_candidates
+            )
 
         # 5. Skill-Gap Analysis
         skill_gap = analyze_skill_gap(
@@ -480,6 +502,12 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
 
 
 async def process_analysis(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Traced entry point; the span joins the backend request that enqueued the job."""
+    with stage_span("job", carrier=queue_carrier(job.data), queue="analysis-queue"):
+        return await _process_analysis(job, token)
+
+
+async def _process_analysis(job: Job, token: str | None = None) -> dict[str, Any]:
     """Processes an analysis job from analysis-queue."""
     data = job.data
     resume_id = data.get("resumeId")
@@ -691,6 +719,7 @@ async def main_async() -> None:
     global _parse_worker, _embed_worker, _match_worker, _analysis_worker
     redis_opts = {"connection": settings.redis_url, "prefix": "bull", "concurrency": 2}
 
+    init_telemetry("resumatch-ml-worker")
     await asyncio.to_thread(warm_models)
 
     logger.info(
