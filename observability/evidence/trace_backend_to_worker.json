@@ -1,0 +1,160 @@
+{
+ "trace": {
+  "resourceSpans": [
+   {
+    "resource": {
+     "attributes": [
+      {
+       "key": "service.name",
+       "value": {
+        "stringValue": "resumatch-backend"
+       }
+      }
+     ]
+    },
+    "scopeSpans": [
+     {
+      "scope": {
+       "name": "resumatch-backend"
+      },
+      "spans": [
+       {
+        "traceId": "lkxbMW6HZJ/vmPou9Fv06g==",
+        "spanId": "uZZSH7cu4jc=",
+        "name": "POST /v1/jobs/:id/match",
+        "kind": "SPAN_KIND_SERVER",
+        "startTimeUnixNano": "1793140456534000000",
+        "endTimeUnixNano": "1793140456534834700",
+        "attributes": [
+         {
+          "key": "http.request.method",
+          "value": {
+           "stringValue": "POST"
+          }
+         },
+         {
+          "key": "http.response.status_code",
+          "value": {
+           "intValue": "200"
+          }
+         },
+         {
+          "key": "http.route",
+          "value": {
+           "stringValue": "/v1/jobs/:id/match"
+          }
+         }
+        ],
+        "status": {}
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "resource": {
+     "attributes": [
+      {
+       "key": "service.instance.id",
+       "value": {
+        "stringValue": "55aa27c1-9305-4681-9815-ac68600ff4d7"
+       }
+      },
+      {
+       "key": "telemetry.sdk.language",
+       "value": {
+        "stringValue": "python"
+       }
+      },
+      {
+       "key": "telemetry.sdk.name",
+       "value": {
+        "stringValue": "opentelemetry"
+       }
+      },
+      {
+       "key": "telemetry.sdk.version",
+       "value": {
+        "stringValue": "1.45.1"
+       }
+      },
+      {
+       "key": "service.name",
+       "value": {
+        "stringValue": "resumatch-ml-worker"
+       }
+      }
+     ]
+    },
+    "scopeSpans": [
+     {
+      "scope": {
+       "name": "resumatch-ml"
+      },
+      "spans": [
+       {
+        "traceId": "lkxbMW6HZJ/vmPou9Fv06g==",
+        "spanId": "qe5i15xeSpk=",
+        "parentSpanId": "uZZSH7cu4jc=",
+        "name": "ml.job",
+        "kind": "SPAN_KIND_INTERNAL",
+        "startTimeUnixNano": "1793140464840265803",
+        "endTimeUnixNano": "1793140464963531028",
+        "attributes": [
+         {
+          "key": "resumatch.queue",
+          "value": {
+           "stringValue": "match-scoring-queue"
+          }
+         }
+        ],
+        "status": {}
+       },
+       {
+        "traceId": "lkxbMW6HZJ/vmPou9Fv06g==",
+        "spanId": "wRxgPoEMC10=",
+        "parentSpanId": "qe5i15xeSpk=",
+        "name": "ml.retrieve.bm25",
+        "kind": "SPAN_KIND_INTERNAL",
+        "startTimeUnixNano": "1793140464840384792",
+        "endTimeUnixNano": "1793140464851742568",
+        "status": {}
+       },
+       {
+        "traceId": "lkxbMW6HZJ/vmPou9Fv06g==",
+        "spanId": "yhbUGww1HU4=",
+        "parentSpanId": "qe5i15xeSpk=",
+        "name": "ml.retrieve.vector",
+        "kind": "SPAN_KIND_INTERNAL",
+        "startTimeUnixNano": "1793140464851872228",
+        "endTimeUnixNano": "1793140464882430557",
+        "status": {}
+       },
+       {
+        "traceId": "lkxbMW6HZJ/vmPou9Fv06g==",
+        "spanId": "BVVIxYElsI0=",
+        "parentSpanId": "qe5i15xeSpk=",
+        "name": "ml.rerank",
+        "kind": "SPAN_KIND_INTERNAL",
+        "startTimeUnixNano": "1793140464882594844",
+        "endTimeUnixNano": "1793140464963435294",
+        "attributes": [
+         {
+          "key": "resumatch.candidates",
+          "value": {
+           "intValue": "20"
+          }
+         }
+        ],
+        "status": {}
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "metrics": {
+  "inspectedBytes": "36857"
+ }
+}

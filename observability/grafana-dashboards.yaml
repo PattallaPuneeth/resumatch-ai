@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: "ResuMatch"
+    folder: "ResuMatch"
+    type: file
+    disableDeletion: true
+    options:
+      path: /otel-lgtm/resumatch-dashboards
+      foldersFromFilesStructure: false
