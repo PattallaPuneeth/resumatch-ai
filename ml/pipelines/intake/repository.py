@@ -35,7 +35,8 @@ def update_resume_status(
                     return True
                 if not eval_res.allowed:
                     logger.warning(
-                        "Rejected invalid state transition for resume %s: %s (current=%s, requested=%s)",
+                        "Rejected invalid state transition for resume %s: %s "
+                        "(current=%s, requested=%s)",
                         resume_id,
                         eval_res.reason,
                         current_status,
@@ -230,13 +231,13 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> boo
                     ),
                 )
                 conn.commit()
-                return True
         logger.info(
             "Successfully saved parsed resume for %s (method=%s, ats_score=%.1f)",
             resume_id,
             parse_result.extraction_method,
             parse_result.ats_score,
         )
+        return True
     except Exception as e:
         logger.error("Failed to save parsed resume for %s: %s", resume_id, e)
         raise
