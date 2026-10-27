@@ -4,6 +4,7 @@ import logging
 import psycopg
 from ml.config import settings
 from ml.pipelines.intake.models import DocumentParseResult
+from ml.pipelines.intake.state_machine import evaluate_resume_transition
 
 logger = logging.getLogger("resumatch-ml-repository")
 
@@ -14,12 +15,34 @@ def update_resume_status(
     extraction_method: str | None = None,
 ) -> bool:
     """
-    Updates status and optionally extractionMethod of a resume record.
-    Returns False if resume not found (e.g. deleted).
+    Updates status and optionally extractionMethod of a resume record,
+    guarded by the central state machine.
+    Returns False if resume not found or transition is rejected.
     """
     try:
         with psycopg.connect(settings.database_url) as conn:
             with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT status FROM resumes WHERE id = %s FOR UPDATE;",
+                    (resume_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return False
+                current_status = row[0]
+                eval_res = evaluate_resume_transition(current_status, status)
+                if eval_res.is_noop:
+                    return True
+                if not eval_res.allowed:
+                    logger.warning(
+                        "Rejected invalid state transition for resume %s: %s (current=%s, requested=%s)",
+                        resume_id,
+                        eval_res.reason,
+                        current_status,
+                        status,
+                    )
+                    return False
+
                 if extraction_method:
                     cur.execute(
                         """
@@ -52,11 +75,31 @@ def update_resume_status(
 def mark_resume_failed(resume_id: str, error_code: str, error_message: str) -> bool:
     """
     Transitions resume to FAILED status with user-safe error code and message.
-    Returns False if resume not found (e.g. deleted).
+    Guarded by state machine: no-op if already FAILED; rejected if already PARSED.
+    Returns False if resume not found or transition is rejected.
     """
     try:
         with psycopg.connect(settings.database_url) as conn:
             with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT status FROM resumes WHERE id = %s FOR UPDATE;",
+                    (resume_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return False
+                current_status = row[0]
+                eval_res = evaluate_resume_transition(current_status, "FAILED")
+                if eval_res.is_noop:
+                    return True
+                if not eval_res.allowed:
+                    logger.warning(
+                        "Cannot mark resume %s as FAILED: already in terminal status %s",
+                        resume_id,
+                        current_status,
+                    )
+                    return False
+
                 cur.execute(
                     """
                     UPDATE resumes

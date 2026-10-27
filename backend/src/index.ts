@@ -5,6 +5,7 @@ import {
   startCleanupWorker,
   stopCleanupWorker,
 } from './queues/cleanupQueue.js';
+import { closeDlqQueues } from './queues/dlq.js';
 import { redisClient } from './queues/redis.js';
 import { buildServer } from './server.js';
 
@@ -18,6 +19,7 @@ async function main(): Promise<void> {
       try {
         await app.close();
         await stopCleanupWorker().catch(() => {});
+        await closeDlqQueues().catch(() => {});
         await prisma.$disconnect();
         await redisClient.quit().catch(() => {});
         app.log.info('Server and background connections shut down cleanly.');
