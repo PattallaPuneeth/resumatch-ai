@@ -2,7 +2,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { FastifyInstance } from 'fastify';
-import { env } from './config/env.js';
+import { env, scaledRateLimit } from './config/env.js';
 import { registerErrorHandler } from './plugins/errorHandler.js';
 import authPlugin from './plugins/auth.js';
 import { authRoutes } from './routes/auth.js';
@@ -103,7 +103,7 @@ export function buildServer(options?: { onRoute?: (routeOptions: any) => void })
   // Rate limiting (required by spec for upload-url endpoint)
   app.register(rateLimit, {
     global: false, // Only apply to routes that opt in via config.rateLimit
-    max: 100,
+    max: scaledRateLimit(100),
     timeWindow: '1 minute',
   });
 

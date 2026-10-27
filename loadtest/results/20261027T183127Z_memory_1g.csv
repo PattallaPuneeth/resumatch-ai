@@ -1,0 +1,7 @@
+phase,fixture,peak_mib,after_mib,oom_killed,k6_exit
+idle_cold,-,348.6,348.6,false,0
+process,text,526.9,527.0,false,0
+process,docx,527.2,526.9,false,0
+process,scan1,710.2,510.3,false,0
+process,scan5,729.0,546.3,false,0
+process,heavy,772.4,575.8,false,0

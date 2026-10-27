@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { loadEnv, EnvSchema } from '../config/env.js';
+import { loadEnv, EnvSchema, scaledRateLimit } from '../config/env.js';
 
 describe('Environment Configuration - INTERNAL_API_TOKEN', () => {
   const validBaseEnv: Record<string, string> = {
@@ -219,5 +219,46 @@ describe('Environment Configuration - Test Database Isolation Guard', () => {
       DATABASE_URL: 'postgresql://ci_user:ci_pass@127.0.0.1:55432/resumatch?schema=public',
     };
     expect(() => loadEnv(devDbEnv)).toThrow('Refusing to run tests against development database');
+  });
+});
+
+describe('Environment Configuration - Load Test Rate Limit Guard (Phase 10B)', () => {
+  const baseEnv: Record<string, string> = {
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://prod_user:StrongProdPass123!@db.prod.internal:5432/resumatch',
+    JWT_SECRET: 'super-strong-production-jwt-secret-9876543210123456789',
+    INTERNAL_API_TOKEN: 'super-strong-production-internal-token-987654321',
+  };
+
+  it('defaults RATE_LIMIT_MULTIPLIER to 1 and LOADTEST_ALLOW to false', () => {
+    const loaded = loadEnv(baseEnv);
+    expect(loaded.RATE_LIMIT_MULTIPLIER).toBe(1);
+    expect(loaded.LOADTEST_ALLOW).toBe(false);
+  });
+
+  it('refuses to boot in production with a raised multiplier and no LOADTEST_ALLOW', () => {
+    expect(() => loadEnv({ ...baseEnv, RATE_LIMIT_MULTIPLIER: '50' })).toThrow(
+      'RATE_LIMIT_MULTIPLIER != 1 in production requires LOADTEST_ALLOW=true'
+    );
+  });
+
+  it('boots in production with a raised multiplier only when LOADTEST_ALLOW=true', () => {
+    const loaded = loadEnv({ ...baseEnv, RATE_LIMIT_MULTIPLIER: '50', LOADTEST_ALLOW: 'true' });
+    expect(loaded.RATE_LIMIT_MULTIPLIER).toBe(50);
+  });
+
+  it('allows a raised multiplier outside production', () => {
+    const loaded = loadEnv({ ...baseEnv, NODE_ENV: 'development', RATE_LIMIT_MULTIPLIER: '50' });
+    expect(loaded.RATE_LIMIT_MULTIPLIER).toBe(50);
+  });
+
+  it('rejects multipliers below 1 or above 1000', () => {
+    expect(() => loadEnv({ ...baseEnv, RATE_LIMIT_MULTIPLIER: '0' })).toThrow('Environment configuration error');
+    expect(() => loadEnv({ ...baseEnv, RATE_LIMIT_MULTIPLIER: '1001' })).toThrow('Environment configuration error');
+  });
+
+  it('scaledRateLimit multiplies the base ceiling', () => {
+    expect(scaledRateLimit(10, 1)).toBe(10);
+    expect(scaledRateLimit(10, 50)).toBe(500);
   });
 });

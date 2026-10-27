@@ -385,7 +385,7 @@ class LLMGateway:
                 remaining_time = max(0.1, deadline - time.monotonic())
                 call_timeout = min(self.settings.per_call_timeout_s, remaining_time)
 
-                endpoint_url = f"{tier.base_url.rstrip('/')}/chat/completions"
+                endpoint_url = f"{tier.get_base_url().rstrip('/')}/chat/completions"
                 call_start = time.monotonic()
 
                 try:
@@ -651,7 +651,7 @@ class LLMGateway:
                 remaining_time = max(0.1, deadline - time.monotonic())
                 call_timeout = min(self.settings.per_call_timeout_s, remaining_time)
 
-                endpoint_url = f"{tier.base_url.rstrip('/')}/chat/completions"
+                endpoint_url = f"{tier.get_base_url().rstrip('/')}/chat/completions"
                 call_start = time.monotonic()
 
                 try:
@@ -897,7 +897,7 @@ class LLMGateway:
                 remaining_time = max(0.1, deadline - time.monotonic())
                 call_timeout = min(self.settings.per_call_timeout_s, remaining_time)
 
-                endpoint_url = f"{tier.base_url.rstrip('/')}/chat/completions"
+                endpoint_url = f"{tier.get_base_url().rstrip('/')}/chat/completions"
                 call_start = time.monotonic()
 
                 try:

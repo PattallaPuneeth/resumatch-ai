@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 logger = logging.getLogger("resumatch-llm-config")
 
@@ -20,6 +21,21 @@ DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 DEFAULT_GROQ_PRIMARY_MODEL = "openai/gpt-oss-120b"
 DEFAULT_OPENROUTER_MODEL = "openrouter/free"
 DEFAULT_GROQ_EMERGENCY_MODEL = "openai/gpt-oss-20b"
+
+
+# Phase 10B: LLM_BASE_URL_OVERRIDE redirects every tier to the local mock LLM during load tests.
+# Only these hosts are accepted so the override can never send resume data to a third party.
+ALLOWED_OVERRIDE_HOSTS = frozenset({"mock-llm", "localhost", "127.0.0.1"})
+
+
+def validate_base_url_override(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or parsed.hostname not in ALLOWED_OVERRIDE_HOSTS:
+        raise ValueError(
+            "LLM_BASE_URL_OVERRIDE must point at a local mock host "
+            f"({', '.join(sorted(ALLOWED_OVERRIDE_HOSTS))}); refusing to use it."
+        )
+    return url
 
 
 @dataclass(frozen=True)
@@ -36,6 +52,13 @@ class ProviderTierConfig:
     def get_api_key(self) -> str | None:
         val = os.getenv(self.env_key_var, "").strip()
         return val if val else None
+
+    def get_base_url(self) -> str:
+        """Returns LLM_BASE_URL_OVERRIDE (load-test mock only) or the provider's real endpoint."""
+        override = os.getenv("LLM_BASE_URL_OVERRIDE", "").strip()
+        if not override:
+            return self.base_url
+        return validate_base_url_override(override)
 
     def get_model(self) -> str:
         override = os.getenv(self.env_model_var, "").strip()

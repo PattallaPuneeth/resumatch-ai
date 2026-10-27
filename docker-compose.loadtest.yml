@@ -1,0 +1,70 @@
+# Load-test overlay (Phase 10B). Never use for production.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml run --rm k6 run /loadtest/k6/scenarios/smoke.js
+#
+# What it changes:
+# - backend: per-route rate limits x RATE_LIMIT_MULTIPLIER (boot guard requires LOADTEST_ALLOW).
+#   Auth limits are NOT scaled.
+# - ml / ml-worker: every LLM tier goes to the local mock-llm. Real provider keys are blanked
+#   so no third-party LLM request is possible (RULE S2). Firecrawl key blanked -> MockJobSource.
+# - adds mock-llm and the k6 runner (k6 only starts via `run`, profile "loadtest").
+
+services:
+  backend:
+    environment:
+      RATE_LIMIT_MULTIPLIER: ${RATE_LIMIT_MULTIPLIER:-100}
+      LOADTEST_ALLOW: "true"
+      FIRECRAWL_API_KEY: ""
+
+  ml:
+    environment: &mock_llm_env
+      LLM_BASE_URL_OVERRIDE: http://mock-llm:8080
+      OPENROUTER_API_KEY: mock-key-not-a-real-provider-key
+      OPENROUTER_MODEL: mock-model
+      GEMINI_API_KEY: ""
+      GROQ_API_KEY: ""
+    depends_on:
+      mock-llm:
+        condition: service_healthy
+
+  ml-worker:
+    environment: *mock_llm_env
+    depends_on:
+      mock-llm:
+        condition: service_healthy
+
+  mock-llm:
+    build:
+      context: ./loadtest/mock-llm
+      dockerfile: Dockerfile
+    container_name: resumatch-mock-llm
+    environment:
+      MOCK_LLM_LATENCY_MS: ${MOCK_LLM_LATENCY_MS:-800}
+      MOCK_LLM_FAIL_RATE: ${MOCK_LLM_FAIL_RATE:-0.0}
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/health').status == 200 else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - resumatch-network
+
+  k6:
+    image: grafana/k6:1.0.0
+    profiles: ["loadtest"]
+    working_dir: /loadtest
+    volumes:
+      - ./loadtest:/loadtest
+    environment:
+      BASE_URL: http://backend:4000
+      S3_REWRITE_FROM: http://localhost:9000
+      S3_REWRITE_TO: http://minio:9000
+    networks:
+      - resumatch-network

@@ -1,0 +1,50 @@
+ Container resumatch-frontend Running 
+ Container resumatch-redis Running 
+ Container resumatch-backend Running 
+ Container resumatch-ml Running 
+ Container resumatch-minio Running 
+ Container resumatch-postgres Running 
+ Container resumatch-mock-llm Running 
+ Container resumatch-ml-worker Running 
+ Container project-cbp-k6-run-44ace1f5618f Creating 
+ Container project-cbp-k6-run-44ace1f5618f Created 
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1.0' rate=100.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......................: 4       0.101687/s
+    checks_succeeded...................: 100.00% 4 out of 4
+    checks_failed......................: 0.00%   0 out of 4
+
+    ✓ upload-url 201/200
+    ✓ s3 PUT 200
+    ✓ complete 200/202
+    ✓ resume reached PARSED
+
+    CUSTOM
+    ingestion_e2e...........................................................: avg=38.12s min=38.12s med=38.12s max=38.12s p(90)=38.12s  p(95)=38.12s 
+
+    HTTP
+    http_req_duration.......................................................: avg=7.78ms min=2.99ms med=4.24ms max=75.9ms p(90)=13.72ms p(95)=30.84ms
+      { expected_response:true }............................................: avg=7.78ms min=2.99ms med=4.24ms max=75.9ms p(90)=13.72ms p(95)=30.84ms
+    http_req_failed.........................................................: 0.00%  0 out of 81
+    http_reqs...............................................................: 81     2.059166/s
+
+    EXECUTION
+    iteration_duration......................................................: avg=38.13s min=38.13s med=38.13s max=38.13s p(90)=38.13s  p(95)=38.13s 
+    iterations..............................................................: 1      0.025422/s
+    vus.....................................................................: 1      min=0       max=1
+    vus_max.................................................................: 1      min=1       max=1
+
+    NETWORK
+    data_received...........................................................: 115 kB 2.9 kB/s
+    data_sent...............................................................: 4.6 MB 116 kB/s
+
+
+

@@ -118,6 +118,19 @@ export const EnvSchema = z.object({
   JOB_SOURCE_ALLOWLIST: z.string().default('boards.greenhouse.io,jobs.lever.co,jobs.ashbyhq.com'),
   JOB_SOURCE_MAX_QUERIES: z.coerce.number().int().positive().default(1),
 
+  // Load Testing (Phase 10B): scales every per-route rate limit. Must stay 1 in production
+  // unless LOADTEST_ALLOW is explicitly set (see loadEnv guard below).
+  RATE_LIMIT_MULTIPLIER: z.coerce.number().int().min(1).max(1000).default(1),
+  LOADTEST_ALLOW: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return false;
+    })
+    .default(false),
+
   // Production Boot Guard Controls (Phase 9 - C5)
   ALLOW_DEV_DEFAULTS: z
     .union([z.boolean(), z.string()])
@@ -209,6 +222,13 @@ export function loadEnv(overrideEnv?: Record<string, string | undefined>): Env {
     }
   }
 
+  // Refuse relaxed rate limits in production unless a load test explicitly opts in
+  if (envData.NODE_ENV === 'production' && envData.RATE_LIMIT_MULTIPLIER !== 1 && !envData.LOADTEST_ALLOW) {
+    throw new Error(
+      'Refusing to boot: RATE_LIMIT_MULTIPLIER != 1 in production requires LOADTEST_ALLOW=true (load-test environments only).'
+    );
+  }
+
   // If strict boot guard is explicitly requested or running in strict production, validate secrets
   if (envData.ENFORCE_PRODUCTION_BOOT_GUARD) {
     validateProductionBootGuard(envData);
@@ -218,3 +238,8 @@ export function loadEnv(overrideEnv?: Record<string, string | undefined>): Env {
 }
 
 export const env: Env = loadEnv();
+
+/** Per-route rate-limit ceiling, scaled by RATE_LIMIT_MULTIPLIER (1 outside load tests). */
+export function scaledRateLimit(max: number, multiplier: number = env.RATE_LIMIT_MULTIPLIER): number {
+  return max * multiplier;
+}

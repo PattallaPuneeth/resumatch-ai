@@ -1,0 +1,5 @@
+scenario=mixed label=baseline started=20261027T181432Z
+commit=24d4664 dirty=16
+docker=cpus=4 mem_bytes=6214496256 server=29.6.1
+k6_args=
+k6_exit=99 provider_hits=0

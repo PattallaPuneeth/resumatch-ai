@@ -1,0 +1,2 @@
+time="2026-10-27T18:02:38Z" level=error msg="could not initialize '/loadtest/k6/scenarios/ingestion.js': could not load JS test 'file:///loadtest/k6/scenarios/ingestion.js': parsing options from script got error while parsing \"\\\"scenarios\\\"\": json: cannot unmarshal number 0.5 into Go struct field Options.scenarios.stages.target of type int64"
+

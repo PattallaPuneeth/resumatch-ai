@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { scaledRateLimit } from '../config/env.js';
 import { prisma } from '../db/prisma.js';
 import { analysisQueue, embeddingQueue, matchScoringQueue } from '../queues/bullmq.js';
 import { withMeter } from '../services/meterGuard.js';
@@ -47,7 +48,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 20,
+          max: scaledRateLimit(20),
           timeWindow: '1 minute',
         },
       },
@@ -175,7 +176,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 20,
+          max: scaledRateLimit(20),
           timeWindow: '1 minute',
         },
       },
@@ -328,7 +329,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 20,
+          max: scaledRateLimit(20),
           timeWindow: '1 minute',
         },
       },

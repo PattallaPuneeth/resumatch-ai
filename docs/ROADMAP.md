@@ -363,6 +363,7 @@ A dedicated, evidence-based audit of the whole system with zero open Critical or
   - Ran automated browser evaluation under `llm-off` across responsive breakpoints (1280px, 768px, 375px); zero horizontal scroll, zero console errors.
 
 ### Phase 10B: Load Testing, OpenTelemetry, Production Deployment & Documentation (Upcoming)
+- **Detailed plan:** [`docs/PHASE_10B_PLAN.md`](PHASE_10B_PLAN.md)
 1. **k6 load test:** p95 latency and throughput for upload, match, analysis; results recorded.
 2. OpenTelemetry traces across Node, Redis, Python, LLM; metrics and structured logs; cost and token dashboards.
 3. `render.yaml`, Cloudflare R2, managed Postgres (pgvector) and Redis, production secrets.

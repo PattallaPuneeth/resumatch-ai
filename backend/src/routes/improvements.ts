@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { env } from '../config/env.js';
+import { env, scaledRateLimit } from '../config/env.js';
 import { prisma } from '../db/prisma.js';
 import { withMeter } from '../services/meterGuard.js';
 import { usageService } from '../services/usageService.js';
@@ -20,7 +20,7 @@ export const improvementsRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 30,
+          max: scaledRateLimit(30),
           timeWindow: '1 minute',
         },
       },

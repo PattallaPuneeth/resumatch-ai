@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { env } from '../config/env.js';
+import { env, scaledRateLimit } from '../config/env.js';
 import { prisma } from '../db/prisma.js';
 import { redisClient } from '../queues/redis.js';
 import { withMeter } from '../services/meterGuard.js';
@@ -67,7 +67,7 @@ export const suggestionsRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 20,
+          max: scaledRateLimit(20),
           timeWindow: '1 minute',
         },
       },

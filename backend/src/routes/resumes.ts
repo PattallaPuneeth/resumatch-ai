@@ -7,6 +7,7 @@ import {
   handleDeleteResume,
   handleListResumes,
 } from './resumeController.js';
+import { scaledRateLimit } from '../config/env.js';
 
 /**
  * Resume routes — Phase 2B & 2D implementation.
@@ -31,7 +32,7 @@ export const resumesRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 10,
+          max: scaledRateLimit(10),
           timeWindow: '1 minute',
         },
       },
