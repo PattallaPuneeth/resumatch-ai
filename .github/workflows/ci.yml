@@ -105,6 +105,10 @@ jobs:
           DATABASE_URL: postgres://test_user:test_password@localhost:5432/resumatch_test
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          # backend/vitest.config.ts falls back to REDIS_URL=redis://127.0.0.1:56379 (the local
+          # CI stack); redis.ts prefers REDIS_URL, so without this the runner's Redis service is
+          # never reached and ioredis retries until the 10-minute job timeout.
+          REDIS_URL: redis://localhost:6379
           JWT_SECRET: supersecretjwtkeyforciqualitygate123456789012
           INTERNAL_API_TOKEN: supersecretinternalapitokenforciqualitygate1234
         run: npm test
