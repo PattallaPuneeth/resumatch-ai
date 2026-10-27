@@ -181,6 +181,9 @@ jobs:
       - name: Run Pytest Suite
         # Tests marked `integration` need the migrated Postgres schema and MinIO; the e2e job
         # runs them inside the compose stack.
+        env:
+          # CI-only placeholder; without it the internal-token auth tests get 401 (no .env on runners)
+          INTERNAL_API_TOKEN: supersecretinternalapitokenforciqualitygate1234
         run: python -m pytest ml/tests -m "not live and not integration"
 
   ml-eval-gate:
