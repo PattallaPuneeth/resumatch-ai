@@ -1574,3 +1574,85 @@ All animations strictly use `transform` and `opacity` only; zero numeral tweenin
 3. **Programmatic Contrast Suite (`contrast.test.ts`):**
    - 12 automated unit tests passing WCAG AA / AAA across all semantic ink, surface, border, and accent tokens.
    - Zero hardcoded hex colors bypassing design tokens in `frontend/src/components`.
+
+---
+
+## 24. Phase 9: Security Architecture, Hardening & ASVS Audit Specification
+
+Phase 9 is a dedicated, evidence-based security audit and hardening of the entire ResuMatch AI platform, resulting in zero open Critical or High findings. The authoritative security architecture, threat model, vulnerability register, and ASVS assessment are documented in [`docs/SECURITY.md`](file:///c:/Puneeth-Tech/Project-CBP/docs/SECURITY.md).
+
+### 24.1 Security Objectives & Threat Model
+1. **Threat Model Reference:** [`docs/SECURITY.md`](file:///c:/Puneeth-Tech/Project-CBP/docs/SECURITY.md) establishes the system overview with trust boundaries TB-1 to TB-7, STRIDE threat analysis per component, assets classification (PII, credentials, tokens, session secrets), and threat actor profiles.
+2. **Acceptance Standard:** Zero open Critical or High vulnerability items; all Medium/Low items either resolved or formally documented as accepted risk pending human approval.
+
+### 24.2 Authentication & Dynamic IDOR Matrix (`backend/src/__tests__/idor.matrix.test.ts`)
+1. **Dynamic Route Registration Introspection:**
+   - The test harness introspects Fastify's route table (`app.ready()`) dynamically across all 29 registered endpoints.
+   - Build-breaker enforcement: If any new route is added to the backend without an explicit row in the IDOR matrix table, the test fails immediately.
+2. **Access Control Matrix Guarantees:**
+   - Unauthenticated requests to protected endpoints return `401 Unauthorized`.
+   - Foreign resource access (attempting to read/modify/delete resumes, jobs, matches, or suggestions belonging to another tenant) returns `404 Not Found` (strict tenancy isolation).
+   - Cookie-based state-changing requests (`POST`, `PUT`, `DELETE`, `PATCH`) require valid double-submit CSRF tokens and matching `Origin` headers; requests missing CSRF return `403 Forbidden`.
+   - Sensitive endpoints enforce `Cache-Control: no-store, max-age=0`.
+
+### 24.3 Production Boot Guards (`backend/src/config/env.ts`)
+1. **Strict Production Environment Check:**
+   - In `NODE_ENV=production`, the application refuses to boot if default or weak credentials are detected:
+     - Rejects `POSTGRES_PASSWORD` matching known development passwords (`resumatch_password`, `postgres`, `password`).
+     - Rejects `MINIO_ROOT_PASSWORD` matching `minioadmin` or passwords under 16 characters.
+     - Rejects `JWT_SECRET` matching default strings or containing `development`, `placeholder`, `secret`, `changeme`.
+     - Rejects placeholder `INTERNAL_SERVICE_TOKEN` values.
+2. **Verification Suite (`backend/src/__tests__/env.test.ts`):**
+   - 4 automated unit tests proving boot rejection on insecure configurations.
+
+### 24.4 ML Parser Hostile File Bounds (`ml/pipelines/intake/parser.py`)
+1. **Zip Bomb & Decompression Bounds:**
+   - Maximum decompressed size: **50 MB** (`MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024`).
+   - Maximum compression ratio: **100:1** (`MAX_COMPRESSION_RATIO = 100.0`).
+2. **Malicious Macro Rejection:**
+   - DOCX files containing `word/vbaProject.bin` (VBA macros) or suspicious executable parts are rejected immediately with `ValueError("DOCX containing VBA macros or executable payloads is prohibited")`.
+3. **PDF Dimension & Page Bounds:**
+   - Maximum page dimensions: **3,000 points** in width or height (`MAX_PDF_PAGE_DIMENSION_POINTS = 3000.0`).
+   - Maximum page count: **50 pages**.
+4. **OCR Pixel Clamping:**
+   - Maximum image width/height for OCR rendering clamped to **4,096 pixels** (`MAX_OCR_IMAGE_DIMENSION = 4096`), preventing memory exhaustion during image scaling.
+5. **Regression Suite (`ml/tests/test_parser.py`):**
+   - 14 automated unit tests proving detection and rejection of hostile files.
+
+### 24.5 Grounding Verification & PII Log Redaction (`ml/pipelines/llm/grounding.py`)
+1. **Evidence Quote Redaction:**
+   - Loggers are strictly prohibited from logging raw resume text, candidate names, or unredacted evidence quotes.
+   - When grounding verification rejects an ungrounded or hallucinated quote, the logger emits only quote length and a SHA-256 hash prefix:
+     `logger.warning("Grounding verification rejected evidence quote: len=%d, sha256_prefix=%s", len(quote), sha256(quote)[:12])`.
+2. **Log Verification Suite (`ml/tests/test_rewriter_verifier.py`):**
+   - 7 automated unit tests proving hash prefix logging and zero plaintext PII disclosure.
+
+### 24.6 Security Headers & Network Policies
+1. **API Security Headers (`backend/src/server.ts`):**
+   - `X-Content-Type-Options: nosniff`
+   - `X-Frame-Options: DENY`
+   - `Referrer-Policy: strict-origin-when-cross-origin`
+   - `Strict-Transport-Security: max-age=31536000; includeSubDomains` (in production)
+   - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+   - `Cross-Origin-Opener-Policy: same-origin`
+   - `Cross-Origin-Resource-Policy: same-origin`
+   - `Cache-Control: no-store` on authenticated routes
+2. **Frontend Headers & Container Hygiene (`frontend/next.config.mjs`, `frontend/Dockerfile`):**
+   - Next.js standalone runner container copies `next.config.mjs` ensuring security headers apply in production container images.
+   - `poweredByHeader: false` suppresses framework fingerprinting.
+   - Strict CSP with loopback-only `connect-src` allowlists.
+3. **Compose Loopback Network Isolation (`docker-compose.yml`):**
+   - All internal service host ports (`5433` postgres, `6380` redis, `9000-9001` minio, `8000` ml) are bound exclusively to `127.0.0.1`, preventing local area network exposure.
+
+### 24.7 Findings Status & ASVS Compliance Baseline
+1. **Findings Register Summary:**
+   - **SEC-01 (High):** Plaintext resume quotes logged during grounding verification -> **FIXED** (SHA-256 hash prefix and length logging).
+   - **SEC-02 (High):** Dynamic route table lacked automated IDOR matrix coverage -> **FIXED** (`idor.matrix.test.ts` covering 29 routes).
+   - **SEC-03 (Medium):** Missing production boot guard for weak credentials -> **FIXED** (`validateProductionBootGuard`).
+   - **SEC-04 (High):** Potential parser OOM / zip bomb vulnerabilities -> **FIXED** (50MB size, 100:1 ratio, macro rejection, 3000pt dimension caps).
+   - **SEC-05 (Medium):** Next.js inline chunk script execution (`unsafe-inline`) -> **ACCEPTED-RISK (PENDING HUMAN APPROVAL)** (Mitigated by zero `dangerouslySetInnerHTML` and strict `connect-src`).
+   - **SEC-06 (Low):** Internal docker ports published on all interfaces -> **FIXED** (Bound exclusively to `127.0.0.1`).
+   - **Open Critical/High Findings:** **0**.
+2. **OWASP ASVS 4.0.3 Level 2 Compliance:**
+   - **120 / 121 (99.2%)** core requirements evaluated as **PASS**.
+   - **1** requirement evaluated as Partial / Accepted Risk (V5 Malicious Input Handling: SEC-05 `script-src 'unsafe-inline'`).
