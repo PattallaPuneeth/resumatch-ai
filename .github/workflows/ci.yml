@@ -14,9 +14,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Code & Container Linting (Actionlint / Hadolint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run Actionlint Workflow Linter
+        run: docker run --rm -v "${{ github.workspace }}:/repo" -w /repo rhysd/actionlint:1.7.7
+
+      - name: Run Hadolint Dockerfile Linter
+        run: docker run --rm -v "${{ github.workspace }}:/repo" -w /repo hadolint/hadolint:v2.12.0 hadolint -c /repo/.hadolint.yaml backend/Dockerfile frontend/Dockerfile ml/Dockerfile
+
   backend-ci:
     name: Backend CI (Fastify / TypeScript / Node 22)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -64,11 +79,17 @@ jobs:
         working-directory: backend
         run: npx prisma generate --schema=db/schema.prisma
 
-      - name: Push Test Database Schema
+      - name: Deploy Prisma Migrations on Empty Database
         working-directory: backend
         env:
           DATABASE_URL: postgres://test_user:test_password@localhost:5432/resumatch_test
-        run: npx prisma db push --schema=db/schema.prisma
+        run: npx prisma migrate deploy --schema=db/schema.prisma
+
+      - name: Check Migration Status & Drift
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/resumatch_test
+        run: npx prisma migrate status --schema=db/schema.prisma
 
       - name: Typecheck & Build
         working-directory: backend
@@ -88,6 +109,7 @@ jobs:
   frontend-ci:
     name: Frontend CI (Next.js 15 / React / TypeScript)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -102,6 +124,10 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: ESLint Check
+        working-directory: frontend
+        run: npm run lint
 
       - name: Typecheck
         working-directory: frontend
@@ -118,12 +144,13 @@ jobs:
   ml-ci:
     name: ML Service CI (Python 3.11 / FastAPI / PyTorch)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Python
-        uses: actions/setup-python@0a5c61591373683505ea898e09a6ea86ab843b41 # v5.0.0
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -137,6 +164,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r ml/requirements.txt
+          pip install pip-audit
+
+      - name: Run Pip Audit Security Scan
+        run: python -m pip_audit -r ml/requirements.txt || true
 
       - name: Run Ruff Lint
         run: python -m ruff check ml
@@ -145,18 +176,19 @@ jobs:
         run: python -m mypy --config-file ml/pyproject.toml ml
 
       - name: Run Pytest Suite
-        run: python -m pytest ml/tests
+        run: python -m pytest ml/tests -m "not live"
 
   ml-eval-gate:
     name: ML Eval Quality Gate (Ranking Accuracy & Calibration)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [ml-ci]
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Python
-        uses: actions/setup-python@0a5c61591373683505ea898e09a6ea86ab843b41 # v5.0.0
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -177,6 +209,7 @@ jobs:
   security-ci:
     name: Security Quality Gate (Gitleaks & Trivy)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -184,7 +217,41 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks Secret Detection
-        uses: gitleaks/gitleaks-action@e364ebc49dd309bf6dbd5b8813cc8d1a12365dfb # v2.3.8
+        uses: gitleaks/gitleaks-action@f586c14365d4643c6aa59d472ae6e984bf47bb34 # v2.3.8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
+
+      - name: Run Trivy Vulnerability Scanner (Filesystem)
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '0'
+
+  e2e:
+    name: End-to-End API Smoke Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 22
+
+      - name: Start Docker Stack in Isolated Mock Mode
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.llm-off.yml up -d --wait
+
+      - name: Run End-to-End API Smoke Suite
+        run: node e2e/smoke.mjs
+
+      - name: Teardown Docker Stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.llm-off.yml down

@@ -1,0 +1,33 @@
+resume,job,expected,final_score,cross_encoder_logit,calibrated_ce_score,skill_coverage,semantic_score,lexical_score,rrf_score,reason
+resume_01_backend_node.docx,job_01_senior_backend_node.txt,strong,82.54,2.2819,88.75,0.8889,0.2631,0.4898,0.040527,"Node.js, TypeScript, PostgreSQL, Docker and K8s all match at the required seniority."
+resume_01_backend_node.docx,job_02_backend_python.txt,medium,63.06,0.7319,81.93,0.25,0.3556,0.3878,0.040292,"Synonym test: Kubernetes/K8s and PostgreSQL map to 'container orchestration' and 'relational database', but the Python/FastAPI requirement is missing."
+resume_01_backend_node.docx,job_03_fullstack_react.txt,medium,64.07,-1.9506,63.49,0.8,0.2802,0.3673,0.04025,"Strong Node.js and TypeScript overlap, but there is no React or front-end experience."
+resume_01_backend_node.docx,job_08_android_developer.txt,weak,11.16,-8.6733,13.62,0.0,0.2304,0.3265,0.03972,Backend web engineer with no Kotlin or Android experience.
+resume_02_backend_python.pdf,job_02_backend_python.txt,strong,84.62,4.5294,94.62,0.75,0.4368,0.5682,0.040568,"Synonym test: 'Postgres' on the resume satisfies 'relational database' in the job, and Python, FastAPI, AWS and container orchestration match directly."
+resume_02_backend_python.pdf,job_01_senior_backend_node.txt,medium,61.91,-0.0902,77.17,0.3333,0.3413,0.4318,0.040243,"Synonym test: 'container orchestration' on the resume should match Kubernetes/K8s and Postgres matches, but Node.js and TypeScript are missing."
+resume_02_backend_python.pdf,job_04_ml_nlp_engineer.txt,medium,59.21,-2.2486,60.99,0.6667,0.2894,0.4545,0.040507,"Strong Python and some embedding-model integration, but no PyTorch training or NLP research depth."
+resume_02_backend_python.pdf,job_06_digital_marketing_lead.txt,weak,38.5,-8.1294,16.07,1.0,0.3052,0.2727,0.039965,Backend engineer applying to a marketing leadership role.
+resume_03_fullstack_react.docx,job_03_fullstack_react.txt,strong,86.01,4.8949,95.25,0.8,0.4097,0.5581,0.040243,"React, Node.js, TypeScript, Next.js and MongoDB cover required and preferred skills at the right level."
+resume_03_fullstack_react.docx,job_01_senior_backend_node.txt,medium,24.23,-7.3618,20.11,0.3333,0.2831,0.4681,0.040771,"Node.js and TypeScript match, but no PostgreSQL depth or Kubernetes and the role is senior."
+resume_03_fullstack_react.docx,job_06_digital_marketing_lead.txt,weak,39.57,-7.7188,18.14,1.0,0.2775,0.3404,0.040507,Web developer applying to a marketing leadership role.
+resume_03_fullstack_react.docx,job_08_android_developer.txt,weak,18.79,-6.8091,23.47,0.0,0.3539,0.3617,0.04021,Web front-end and Node.js skills do not cover Kotlin or Android development.
+resume_04_data_scientist.docx,job_04_ml_nlp_engineer.txt,strong,79.59,3.0367,91.17,0.6667,0.3662,0.6522,0.040588,"Python, PyTorch, NLP and embeddings match the core requirements."
+resume_04_data_scientist.docx,job_02_backend_python.txt,medium,71.82,-0.356,75.45,0.75,0.4027,0.4783,0.040588,"Python, SQL and FastAPI model serving overlap, but little general backend or cloud engineering experience."
+resume_04_data_scientist.docx,job_01_senior_backend_node.txt,weak,12.38,-9.388,10.88,0.1111,0.2527,0.413,0.040588,"Data scientist without Node.js, TypeScript or Kubernetes for a senior backend role."
+resume_04_data_scientist.docx,job_05_devops_engineer.txt,weak,30.16,-5.9951,29.09,0.3333,0.2914,0.3478,0.040312,"Modelling background with no Terraform, Kubernetes or CI/CD ownership."
+resume_05_devops_sre.pdf,job_05_devops_engineer.txt,strong,82.3,4.3432,94.27,0.6667,0.4361,0.575,0.040332,"Kubernetes, Terraform, CI/CD, Prometheus and Grafana all match at the right seniority."
+resume_05_devops_sre.pdf,job_01_senior_backend_node.txt,medium,66.41,-0.2023,76.45,0.5556,0.2827,0.4286,0.04029,"Docker, Kubernetes and PostgreSQL operations overlap, but no Node.js or TypeScript application development."
+resume_05_devops_sre.pdf,job_02_backend_python.txt,medium,36.72,-4.4759,41.37,0.25,0.3578,0.3571,0.040332,"Synonym test: Kubernetes on the resume maps to 'container orchestration' in the job, plus AWS and Python scripting, but no FastAPI API development."
+resume_05_devops_sre.pdf,job_08_android_developer.txt,weak,11.76,-8.646,13.73,0.0,0.2832,0.2857,0.039963,Infrastructure engineer with no mobile development experience.
+resume_06_marketing_manager.docx,job_06_digital_marketing_lead.txt,strong,87.29,2.4509,89.33,1.0,0.4228,0.6034,0.04002,"SEO, Google Ads, analytics and team leadership match the lead role."
+resume_06_marketing_manager.docx,job_01_senior_backend_node.txt,weak,8.33,-9.9575,9.06,0.0,0.2442,0.3171,0.040312,Marketing manager applying to a senior backend engineering role.
+resume_06_marketing_manager.docx,job_05_devops_engineer.txt,weak,8.77,-9.9951,8.95,0.0,0.295,0.2927,0.040568,Marketing background has no DevOps tooling or infrastructure experience.
+resume_06_marketing_manager.docx,job_08_android_developer.txt,weak,10.68,-9.2532,11.36,0.0,0.3291,0.3171,0.040568,Marketing manager applying to an Android development role.
+resume_07_fresher_java.docx,job_07_junior_java_developer.txt,strong,85.12,1.2967,84.72,1.0,0.5056,0.5532,0.040312,"Java, Spring Boot, SQL, internship and final-year project match an entry-level role exactly."
+resume_07_fresher_java.docx,job_08_android_developer.txt,medium,62.97,-3.3764,51.1,1.0,0.4752,0.2921,0.040568,"Android project in Java and solid fundamentals, but no Kotlin and no professional Android experience."
+resume_07_fresher_java.docx,job_01_senior_backend_node.txt,weak,18.29,-8.3046,15.24,0.2222,0.2827,0.2584,0.040568,Fresher with no Node.js or Kubernetes applying to a senior role requiring 5+ years.
+resume_07_fresher_java.docx,job_02_backend_python.txt,weak,57.47,-1.8574,64.26,0.5,0.3202,0.2809,0.040527,"Java-focused fresher without Python, FastAPI or cloud experience for a mid-level role."
+resume_08_mobile_kotlin.pdf,job_08_android_developer.txt,strong,81.29,0.4286,80.27,1.0,0.4118,0.561,0.04029,"Kotlin, Jetpack Compose, MVVM and Firebase match the required and preferred skills."
+resume_08_mobile_kotlin.pdf,job_07_junior_java_developer.txt,medium,43.73,-6.7399,23.92,1.0,0.3182,0.3171,0.040527,"Some Java and a Spring Boot service, but the role is entry-level Java backend and the candidate is a mobile specialist."
+resume_08_mobile_kotlin.pdf,job_01_senior_backend_node.txt,weak,8.77,-9.774,9.62,0.0,0.2513,0.3171,0.04023,"Mobile developer with no Node.js, PostgreSQL or Kubernetes for a senior backend role."
+resume_08_mobile_kotlin.pdf,job_03_fullstack_react.txt,weak,22.37,-7.0397,22.03,0.2,0.3051,0.3902,0.040488,Android specialist without React or Node.js for a web full-stack role.

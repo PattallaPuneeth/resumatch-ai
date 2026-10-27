@@ -1,0 +1,592 @@
+{
+  "evaluated_pairs": [
+    {
+      "resume": "resume_01_backend_node.docx",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "strong",
+      "reason": "Node.js, TypeScript, PostgreSQL, Docker and K8s all match at the required seniority.",
+      "lexical_score": 0.4898,
+      "semantic_score": 0.2631,
+      "rrf_score": 0.040527,
+      "cross_encoder_logit": 2.2819,
+      "calibrated_ce_score": 88.75,
+      "skill_coverage": 0.8889,
+      "final_score": 82.54
+    },
+    {
+      "resume": "resume_01_backend_node.docx",
+      "job": "job_02_backend_python.txt",
+      "expected": "medium",
+      "reason": "Synonym test: Kubernetes/K8s and PostgreSQL map to 'container orchestration' and 'relational database', but the Python/FastAPI requirement is missing.",
+      "lexical_score": 0.3878,
+      "semantic_score": 0.3556,
+      "rrf_score": 0.040292,
+      "cross_encoder_logit": 0.7319,
+      "calibrated_ce_score": 81.93,
+      "skill_coverage": 0.25,
+      "final_score": 63.06
+    },
+    {
+      "resume": "resume_01_backend_node.docx",
+      "job": "job_03_fullstack_react.txt",
+      "expected": "medium",
+      "reason": "Strong Node.js and TypeScript overlap, but there is no React or front-end experience.",
+      "lexical_score": 0.3673,
+      "semantic_score": 0.2802,
+      "rrf_score": 0.04025,
+      "cross_encoder_logit": -1.9506,
+      "calibrated_ce_score": 63.49,
+      "skill_coverage": 0.8,
+      "final_score": 64.07
+    },
+    {
+      "resume": "resume_01_backend_node.docx",
+      "job": "job_08_android_developer.txt",
+      "expected": "weak",
+      "reason": "Backend web engineer with no Kotlin or Android experience.",
+      "lexical_score": 0.3265,
+      "semantic_score": 0.2304,
+      "rrf_score": 0.03972,
+      "cross_encoder_logit": -8.6733,
+      "calibrated_ce_score": 13.62,
+      "skill_coverage": 0.0,
+      "final_score": 11.16
+    },
+    {
+      "resume": "resume_02_backend_python.pdf",
+      "job": "job_02_backend_python.txt",
+      "expected": "strong",
+      "reason": "Synonym test: 'Postgres' on the resume satisfies 'relational database' in the job, and Python, FastAPI, AWS and container orchestration match directly.",
+      "lexical_score": 0.5682,
+      "semantic_score": 0.4368,
+      "rrf_score": 0.040568,
+      "cross_encoder_logit": 4.5294,
+      "calibrated_ce_score": 94.62,
+      "skill_coverage": 0.75,
+      "final_score": 84.62
+    },
+    {
+      "resume": "resume_02_backend_python.pdf",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "medium",
+      "reason": "Synonym test: 'container orchestration' on the resume should match Kubernetes/K8s and Postgres matches, but Node.js and TypeScript are missing.",
+      "lexical_score": 0.4318,
+      "semantic_score": 0.3413,
+      "rrf_score": 0.040243,
+      "cross_encoder_logit": -0.0902,
+      "calibrated_ce_score": 77.17,
+      "skill_coverage": 0.3333,
+      "final_score": 61.91
+    },
+    {
+      "resume": "resume_02_backend_python.pdf",
+      "job": "job_04_ml_nlp_engineer.txt",
+      "expected": "medium",
+      "reason": "Strong Python and some embedding-model integration, but no PyTorch training or NLP research depth.",
+      "lexical_score": 0.4545,
+      "semantic_score": 0.2894,
+      "rrf_score": 0.040507,
+      "cross_encoder_logit": -2.2486,
+      "calibrated_ce_score": 60.99,
+      "skill_coverage": 0.6667,
+      "final_score": 59.21
+    },
+    {
+      "resume": "resume_02_backend_python.pdf",
+      "job": "job_06_digital_marketing_lead.txt",
+      "expected": "weak",
+      "reason": "Backend engineer applying to a marketing leadership role.",
+      "lexical_score": 0.2727,
+      "semantic_score": 0.3052,
+      "rrf_score": 0.039965,
+      "cross_encoder_logit": -8.1294,
+      "calibrated_ce_score": 16.07,
+      "skill_coverage": 1.0,
+      "final_score": 38.5
+    },
+    {
+      "resume": "resume_03_fullstack_react.docx",
+      "job": "job_03_fullstack_react.txt",
+      "expected": "strong",
+      "reason": "React, Node.js, TypeScript, Next.js and MongoDB cover required and preferred skills at the right level.",
+      "lexical_score": 0.5581,
+      "semantic_score": 0.4097,
+      "rrf_score": 0.040243,
+      "cross_encoder_logit": 4.8949,
+      "calibrated_ce_score": 95.25,
+      "skill_coverage": 0.8,
+      "final_score": 86.01
+    },
+    {
+      "resume": "resume_03_fullstack_react.docx",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "medium",
+      "reason": "Node.js and TypeScript match, but no PostgreSQL depth or Kubernetes and the role is senior.",
+      "lexical_score": 0.4681,
+      "semantic_score": 0.2831,
+      "rrf_score": 0.040771,
+      "cross_encoder_logit": -7.3618,
+      "calibrated_ce_score": 20.11,
+      "skill_coverage": 0.3333,
+      "final_score": 24.23
+    },
+    {
+      "resume": "resume_03_fullstack_react.docx",
+      "job": "job_06_digital_marketing_lead.txt",
+      "expected": "weak",
+      "reason": "Web developer applying to a marketing leadership role.",
+      "lexical_score": 0.3404,
+      "semantic_score": 0.2775,
+      "rrf_score": 0.040507,
+      "cross_encoder_logit": -7.7188,
+      "calibrated_ce_score": 18.14,
+      "skill_coverage": 1.0,
+      "final_score": 39.57
+    },
+    {
+      "resume": "resume_03_fullstack_react.docx",
+      "job": "job_08_android_developer.txt",
+      "expected": "weak",
+      "reason": "Web front-end and Node.js skills do not cover Kotlin or Android development.",
+      "lexical_score": 0.3617,
+      "semantic_score": 0.3539,
+      "rrf_score": 0.04021,
+      "cross_encoder_logit": -6.8091,
+      "calibrated_ce_score": 23.47,
+      "skill_coverage": 0.0,
+      "final_score": 18.79
+    },
+    {
+      "resume": "resume_04_data_scientist.docx",
+      "job": "job_04_ml_nlp_engineer.txt",
+      "expected": "strong",
+      "reason": "Python, PyTorch, NLP and embeddings match the core requirements.",
+      "lexical_score": 0.6522,
+      "semantic_score": 0.3662,
+      "rrf_score": 0.040588,
+      "cross_encoder_logit": 3.0367,
+      "calibrated_ce_score": 91.17,
+      "skill_coverage": 0.6667,
+      "final_score": 79.59
+    },
+    {
+      "resume": "resume_04_data_scientist.docx",
+      "job": "job_02_backend_python.txt",
+      "expected": "medium",
+      "reason": "Python, SQL and FastAPI model serving overlap, but little general backend or cloud engineering experience.",
+      "lexical_score": 0.4783,
+      "semantic_score": 0.4027,
+      "rrf_score": 0.040588,
+      "cross_encoder_logit": -0.356,
+      "calibrated_ce_score": 75.45,
+      "skill_coverage": 0.75,
+      "final_score": 71.82
+    },
+    {
+      "resume": "resume_04_data_scientist.docx",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "weak",
+      "reason": "Data scientist without Node.js, TypeScript or Kubernetes for a senior backend role.",
+      "lexical_score": 0.413,
+      "semantic_score": 0.2527,
+      "rrf_score": 0.040588,
+      "cross_encoder_logit": -9.388,
+      "calibrated_ce_score": 10.88,
+      "skill_coverage": 0.1111,
+      "final_score": 12.38
+    },
+    {
+      "resume": "resume_04_data_scientist.docx",
+      "job": "job_05_devops_engineer.txt",
+      "expected": "weak",
+      "reason": "Modelling background with no Terraform, Kubernetes or CI/CD ownership.",
+      "lexical_score": 0.3478,
+      "semantic_score": 0.2914,
+      "rrf_score": 0.040312,
+      "cross_encoder_logit": -5.9951,
+      "calibrated_ce_score": 29.09,
+      "skill_coverage": 0.3333,
+      "final_score": 30.16
+    },
+    {
+      "resume": "resume_05_devops_sre.pdf",
+      "job": "job_05_devops_engineer.txt",
+      "expected": "strong",
+      "reason": "Kubernetes, Terraform, CI/CD, Prometheus and Grafana all match at the right seniority.",
+      "lexical_score": 0.575,
+      "semantic_score": 0.4361,
+      "rrf_score": 0.040332,
+      "cross_encoder_logit": 4.3432,
+      "calibrated_ce_score": 94.27,
+      "skill_coverage": 0.6667,
+      "final_score": 82.3
+    },
+    {
+      "resume": "resume_05_devops_sre.pdf",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "medium",
+      "reason": "Docker, Kubernetes and PostgreSQL operations overlap, but no Node.js or TypeScript application development.",
+      "lexical_score": 0.4286,
+      "semantic_score": 0.2827,
+      "rrf_score": 0.04029,
+      "cross_encoder_logit": -0.2023,
+      "calibrated_ce_score": 76.45,
+      "skill_coverage": 0.5556,
+      "final_score": 66.41
+    },
+    {
+      "resume": "resume_05_devops_sre.pdf",
+      "job": "job_02_backend_python.txt",
+      "expected": "medium",
+      "reason": "Synonym test: Kubernetes on the resume maps to 'container orchestration' in the job, plus AWS and Python scripting, but no FastAPI API development.",
+      "lexical_score": 0.3571,
+      "semantic_score": 0.3578,
+      "rrf_score": 0.040332,
+      "cross_encoder_logit": -4.4759,
+      "calibrated_ce_score": 41.37,
+      "skill_coverage": 0.25,
+      "final_score": 36.72
+    },
+    {
+      "resume": "resume_05_devops_sre.pdf",
+      "job": "job_08_android_developer.txt",
+      "expected": "weak",
+      "reason": "Infrastructure engineer with no mobile development experience.",
+      "lexical_score": 0.2857,
+      "semantic_score": 0.2832,
+      "rrf_score": 0.039963,
+      "cross_encoder_logit": -8.646,
+      "calibrated_ce_score": 13.73,
+      "skill_coverage": 0.0,
+      "final_score": 11.76
+    },
+    {
+      "resume": "resume_06_marketing_manager.docx",
+      "job": "job_06_digital_marketing_lead.txt",
+      "expected": "strong",
+      "reason": "SEO, Google Ads, analytics and team leadership match the lead role.",
+      "lexical_score": 0.6034,
+      "semantic_score": 0.4228,
+      "rrf_score": 0.04002,
+      "cross_encoder_logit": 2.4509,
+      "calibrated_ce_score": 89.33,
+      "skill_coverage": 1.0,
+      "final_score": 87.29
+    },
+    {
+      "resume": "resume_06_marketing_manager.docx",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "weak",
+      "reason": "Marketing manager applying to a senior backend engineering role.",
+      "lexical_score": 0.3171,
+      "semantic_score": 0.2442,
+      "rrf_score": 0.040312,
+      "cross_encoder_logit": -9.9575,
+      "calibrated_ce_score": 9.06,
+      "skill_coverage": 0.0,
+      "final_score": 8.33
+    },
+    {
+      "resume": "resume_06_marketing_manager.docx",
+      "job": "job_05_devops_engineer.txt",
+      "expected": "weak",
+      "reason": "Marketing background has no DevOps tooling or infrastructure experience.",
+      "lexical_score": 0.2927,
+      "semantic_score": 0.295,
+      "rrf_score": 0.040568,
+      "cross_encoder_logit": -9.9951,
+      "calibrated_ce_score": 8.95,
+      "skill_coverage": 0.0,
+      "final_score": 8.77
+    },
+    {
+      "resume": "resume_06_marketing_manager.docx",
+      "job": "job_08_android_developer.txt",
+      "expected": "weak",
+      "reason": "Marketing manager applying to an Android development role.",
+      "lexical_score": 0.3171,
+      "semantic_score": 0.3291,
+      "rrf_score": 0.040568,
+      "cross_encoder_logit": -9.2532,
+      "calibrated_ce_score": 11.36,
+      "skill_coverage": 0.0,
+      "final_score": 10.68
+    },
+    {
+      "resume": "resume_07_fresher_java.docx",
+      "job": "job_07_junior_java_developer.txt",
+      "expected": "strong",
+      "reason": "Java, Spring Boot, SQL, internship and final-year project match an entry-level role exactly.",
+      "lexical_score": 0.5532,
+      "semantic_score": 0.5056,
+      "rrf_score": 0.040312,
+      "cross_encoder_logit": 1.2967,
+      "calibrated_ce_score": 84.72,
+      "skill_coverage": 1.0,
+      "final_score": 85.12
+    },
+    {
+      "resume": "resume_07_fresher_java.docx",
+      "job": "job_08_android_developer.txt",
+      "expected": "medium",
+      "reason": "Android project in Java and solid fundamentals, but no Kotlin and no professional Android experience.",
+      "lexical_score": 0.2921,
+      "semantic_score": 0.4752,
+      "rrf_score": 0.040568,
+      "cross_encoder_logit": -3.3764,
+      "calibrated_ce_score": 51.1,
+      "skill_coverage": 1.0,
+      "final_score": 62.97
+    },
+    {
+      "resume": "resume_07_fresher_java.docx",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "weak",
+      "reason": "Fresher with no Node.js or Kubernetes applying to a senior role requiring 5+ years.",
+      "lexical_score": 0.2584,
+      "semantic_score": 0.2827,
+      "rrf_score": 0.040568,
+      "cross_encoder_logit": -8.3046,
+      "calibrated_ce_score": 15.24,
+      "skill_coverage": 0.2222,
+      "final_score": 18.29
+    },
+    {
+      "resume": "resume_07_fresher_java.docx",
+      "job": "job_02_backend_python.txt",
+      "expected": "weak",
+      "reason": "Java-focused fresher without Python, FastAPI or cloud experience for a mid-level role.",
+      "lexical_score": 0.2809,
+      "semantic_score": 0.3202,
+      "rrf_score": 0.040527,
+      "cross_encoder_logit": -1.8574,
+      "calibrated_ce_score": 64.26,
+      "skill_coverage": 0.5,
+      "final_score": 57.47
+    },
+    {
+      "resume": "resume_08_mobile_kotlin.pdf",
+      "job": "job_08_android_developer.txt",
+      "expected": "strong",
+      "reason": "Kotlin, Jetpack Compose, MVVM and Firebase match the required and preferred skills.",
+      "lexical_score": 0.561,
+      "semantic_score": 0.4118,
+      "rrf_score": 0.04029,
+      "cross_encoder_logit": 0.4286,
+      "calibrated_ce_score": 80.27,
+      "skill_coverage": 1.0,
+      "final_score": 81.29
+    },
+    {
+      "resume": "resume_08_mobile_kotlin.pdf",
+      "job": "job_07_junior_java_developer.txt",
+      "expected": "medium",
+      "reason": "Some Java and a Spring Boot service, but the role is entry-level Java backend and the candidate is a mobile specialist.",
+      "lexical_score": 0.3171,
+      "semantic_score": 0.3182,
+      "rrf_score": 0.040527,
+      "cross_encoder_logit": -6.7399,
+      "calibrated_ce_score": 23.92,
+      "skill_coverage": 1.0,
+      "final_score": 43.73
+    },
+    {
+      "resume": "resume_08_mobile_kotlin.pdf",
+      "job": "job_01_senior_backend_node.txt",
+      "expected": "weak",
+      "reason": "Mobile developer with no Node.js, PostgreSQL or Kubernetes for a senior backend role.",
+      "lexical_score": 0.3171,
+      "semantic_score": 0.2513,
+      "rrf_score": 0.04023,
+      "cross_encoder_logit": -9.774,
+      "calibrated_ce_score": 9.62,
+      "skill_coverage": 0.0,
+      "final_score": 8.77
+    },
+    {
+      "resume": "resume_08_mobile_kotlin.pdf",
+      "job": "job_03_fullstack_react.txt",
+      "expected": "weak",
+      "reason": "Android specialist without React or Node.js for a web full-stack role.",
+      "lexical_score": 0.3902,
+      "semantic_score": 0.3051,
+      "rrf_score": 0.040488,
+      "cross_encoder_logit": -7.0397,
+      "calibrated_ce_score": 22.03,
+      "skill_coverage": 0.2,
+      "final_score": 22.37
+    }
+  ],
+  "metrics": {
+    "label_accuracy": 0.875,
+    "pairwise_ordering_accuracy": 0.9759,
+    "mean_scores": {
+      "strong": 83.59,
+      "medium": 55.41,
+      "weak": 21.21
+    },
+    "label_gaps": {
+      "strong_to_medium": 28.18,
+      "medium_to_weak": 34.2,
+      "strong_to_weak": 62.38
+    },
+    "sample_count": 32
+  },
+  "ablation": [
+    {
+      "config_key": "lexical_only",
+      "display_name": "Lexical Only (BM25)",
+      "metrics": {
+        "label_accuracy": 0.4375,
+        "pairwise_ordering_accuracy": 0.9262,
+        "mean_scores": {
+          "strong": 34.21,
+          "medium": 23.9,
+          "weak": 19.38
+        },
+        "label_gaps": {
+          "strong_to_medium": 10.31,
+          "medium_to_weak": 4.52,
+          "strong_to_weak": 14.83
+        },
+        "sample_count": 32
+      }
+    },
+    {
+      "config_key": "semantic_only",
+      "display_name": "Semantic Only (Dense Cosine)",
+      "metrics": {
+        "label_accuracy": 0.4688,
+        "pairwise_ordering_accuracy": 0.8087,
+        "mean_scores": {
+          "strong": 40.65,
+          "medium": 33.86,
+          "weak": 28.73
+        },
+        "label_gaps": {
+          "strong_to_medium": 6.79,
+          "medium_to_weak": 5.13,
+          "strong_to_weak": 11.92
+        },
+        "sample_count": 32
+      }
+    },
+    {
+      "config_key": "rrf_only",
+      "display_name": "RRF Only (Internal Chunk Ranker)*",
+      "metrics": {
+        "label_accuracy": 0.25,
+        "pairwise_ordering_accuracy": 0.5813,
+        "mean_scores": {
+          "strong": 100.0,
+          "medium": 100.0,
+          "weak": 99.94
+        },
+        "label_gaps": {
+          "strong_to_medium": 0.0,
+          "medium_to_weak": 0.06,
+          "strong_to_weak": 0.06
+        },
+        "sample_count": 32
+      }
+    },
+    {
+      "config_key": "rrf_cross_encoder",
+      "display_name": "RRF + Cross-Encoder",
+      "metrics": {
+        "label_accuracy": 0.75,
+        "pairwise_ordering_accuracy": 0.9669,
+        "mean_scores": {
+          "strong": 89.8,
+          "medium": 57.2,
+          "weak": 18.97
+        },
+        "label_gaps": {
+          "strong_to_medium": 32.6,
+          "medium_to_weak": 38.23,
+          "strong_to_weak": 70.83
+        },
+        "sample_count": 32
+      }
+    },
+    {
+      "config_key": "plus_skill_gap",
+      "display_name": "RRF + Cross-Encoder + Skill-Gap",
+      "metrics": {
+        "label_accuracy": 0.875,
+        "pairwise_ordering_accuracy": 0.9759,
+        "mean_scores": {
+          "strong": 88.25,
+          "medium": 57.85,
+          "weak": 20.49
+        },
+        "label_gaps": {
+          "strong_to_medium": 30.4,
+          "medium_to_weak": 37.36,
+          "strong_to_weak": 67.76
+        },
+        "sample_count": 32
+      }
+    },
+    {
+      "config_key": "full_blend",
+      "display_name": "Full Blend (Production)",
+      "metrics": {
+        "label_accuracy": 0.875,
+        "pairwise_ordering_accuracy": 0.9759,
+        "mean_scores": {
+          "strong": 83.59,
+          "medium": 55.41,
+          "weak": 21.21
+        },
+        "label_gaps": {
+          "strong_to_medium": 28.18,
+          "medium_to_weak": 34.2,
+          "strong_to_weak": 62.38
+        },
+        "sample_count": 32
+      }
+    }
+  ],
+  "calibration": {
+    "train_count": 19,
+    "heldout_count": 13,
+    "fitted_params": {
+      "shift": -3.0,
+      "temp": 1.8,
+      "w_ce": 0.7,
+      "w_skill": 0.2,
+      "w_vec": 0.1
+    },
+    "baseline_metrics": {
+      "label_accuracy": 0.7692,
+      "pairwise_ordering_accuracy": 0.963,
+      "mean_scores": {
+        "strong": 82.98,
+        "medium": 48.77,
+        "weak": 22.91
+      },
+      "label_gaps": {
+        "strong_to_medium": 34.21,
+        "medium_to_weak": 25.86,
+        "strong_to_weak": 60.07
+      },
+      "sample_count": 13
+    },
+    "calibrated_metrics": {
+      "label_accuracy": 0.7692,
+      "pairwise_ordering_accuracy": 0.963,
+      "mean_scores": {
+        "strong": 87.03,
+        "medium": 45.16,
+        "weak": 17.44
+      },
+      "label_gaps": {
+        "strong_to_medium": 41.87,
+        "medium_to_weak": 27.72,
+        "strong_to_weak": 69.59
+      },
+      "sample_count": 13
+    }
+  }
+}

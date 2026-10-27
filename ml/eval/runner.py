@@ -141,22 +141,30 @@ def process_eval_pair(
         resume_chunks = cached_resume["chunks"]
     else:
         suffix = example.resume_path.suffix.lower()
-        mime_type = (
-            "application/pdf"
-            if suffix == ".pdf"
-            else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-        parsed_doc = parse_document(str(example.resume_path), mime_type)
-        resume_text = parsed_doc.raw_text
-        parsed_skills: list[str] = []
-        for s in parsed_doc.skills:
-            if hasattr(s, "name"):
-                parsed_skills.append(str(s.name))
-            else:
-                parsed_skills.append(str(s))
-        resume_skills = parsed_skills
-        chunks = chunk_resume_text(resume_text)
-        chunk_pairs = generate_chunk_embeddings(chunks)
+        if suffix == ".txt":
+            with open(example.resume_path, encoding="utf-8") as f:
+                resume_text = f.read()
+            resume_skills = _extract_job_skills_heuristic(resume_text)
+            chunks = chunk_resume_text(resume_text)
+            chunk_pairs = generate_chunk_embeddings(chunks)
+        else:
+            mime_type = (
+                "application/pdf"
+                if suffix == ".pdf"
+                else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            parsed_doc = parse_document(str(example.resume_path), mime_type)
+            resume_text = parsed_doc.raw_text
+            parsed_skills: list[str] = []
+            for s in parsed_doc.skills:
+                if hasattr(s, "name"):
+                    parsed_skills.append(str(s.name))
+                else:
+                    parsed_skills.append(str(s))
+            resume_skills = parsed_skills
+            chunks = chunk_resume_text(resume_text)
+            chunk_pairs = generate_chunk_embeddings(chunks)
+
 
         resume_chunks = [
             {

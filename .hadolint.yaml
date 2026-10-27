@@ -1,0 +1,8 @@
+# Hadolint configuration for ResuMatch AI
+# Ignores distro-level apt minor version pinning (DL3008) and pip upgrade pinning (DL3013)
+# Allows named user IDs (DL3066) and shell-style healthcheck commands (DL3025)
+ignored:
+  - DL3008
+  - DL3013
+  - DL3066
+  - DL3025

@@ -1,0 +1,101 @@
+resume,job,expected,final_score,cross_encoder_logit,calibrated_ce_score,skill_coverage,semantic_score,lexical_score,rrf_score,reason
+resume_backend_go.txt,job_backend_go.txt,strong,98.45,8.373,98.58,1.0,0.9372,0.4694,0.040984,Direct technical stack and seniority match for Senior Go Systems Engineer
+resume_backend_java.txt,job_backend_java.txt,strong,98.16,8.4773,98.63,1.0,0.9052,0.4583,0.040984,Direct technical stack and seniority match for Java Spring Boot Architect
+resume_frontend_vue.txt,job_frontend_vue.txt,strong,98.43,8.1309,98.45,1.0,0.9439,0.4423,0.040984,Direct technical stack and seniority match for Senior Vue.js / Nuxt Developer
+resume_mobile_ios.txt,job_mobile_ios.txt,strong,98.35,8.0972,98.44,1.0,0.9368,0.3958,0.040984,Direct technical stack and seniority match for Senior iOS Engineer (Swift)
+resume_security_eng.txt,job_security_eng.txt,strong,98.47,8.4098,98.6,1.0,0.9376,0.4,0.040984,Direct technical stack and seniority match for Application Security Engineer
+resume_qa_automation.txt,job_qa_automation.txt,strong,97.92,8.12,98.45,1.0,0.8928,0.4231,0.040984,Direct technical stack and seniority match for Lead SDET / QA Automation Engineer
+resume_data_engineer.txt,job_data_engineer.txt,strong,98.47,8.2341,98.51,1.0,0.9441,0.4615,0.040984,Direct technical stack and seniority match for Staff Data Engineer (Spark / Snowflake)
+resume_devops_cloud.txt,job_devops_cloud.txt,strong,98.44,8.5522,98.67,1.0,0.9306,0.4286,0.040984,Direct technical stack and seniority match for Cloud Platform Engineer (Terraform / GCP)
+resume_product_mgr.txt,job_product_mgr.txt,strong,97.33,8.4738,98.63,1.0,0.8223,0.4231,0.040984,Direct technical stack and seniority match for Technical Product Manager (Developer Platforms)
+resume_sales_exec.txt,job_sales_exec.txt,strong,98.05,8.7767,98.77,1.0,0.8848,0.3725,0.040984,Direct technical stack and seniority match for Enterprise Account Executive (SaaS)
+resume_backend_go.txt,job_backend_java.txt,medium,54.62,-1.8676,64.18,0.3333,0.4575,0.0816,0.040984,"Backend systems overlap, but language stack differs (Go vs Java)"
+resume_backend_go.txt,job_devops_cloud.txt,medium,64.59,0.0039,77.75,0.3333,0.5721,0.1429,0.040984,"Strong Kubernetes and Linux overlap, but infrastructure focus differs"
+resume_backend_java.txt,job_backend_go.txt,medium,50.47,-2.3805,59.86,0.25,0.5313,0.125,0.040984,"Backend microservices overlap, but Go and gRPC missing"
+resume_data_engineer.txt,job_backend_go.txt,medium,21.08,-6.4534,25.83,0.0,0.429,0.1538,0.040984,"Python and database experience, but lack of Go systems background"
+resume_security_eng.txt,job_backend_go.txt,medium,20.4,-6.5691,25.05,0.0,0.4122,0.16,0.040984,"API security knowledge, but primary software development stack differs"
+resume_qa_automation.txt,job_frontend_vue.txt,medium,54.15,-4.9515,37.32,1.0,0.4887,0.0962,0.040984,"TypeScript and web automation overlap, but lacks deep Vue component design"
+resume_devops_cloud.txt,job_backend_go.txt,medium,61.56,-0.2868,75.91,0.25,0.5971,0.1837,0.040984,"Cloud infrastructure overlap, but lacks core application code depth"
+resume_mobile_ios.txt,job_frontend_vue.txt,medium,24.66,-5.6729,31.52,0.0,0.4168,0.0833,0.040984,"Client-side frontend concepts, but iOS Swift native vs Vue web"
+resume_product_mgr.txt,job_backend_go.txt,medium,13.76,-8.3082,15.22,0.0,0.3865,0.1154,0.040984,"Technical understanding of APIs, but lacks hands-on engineering execution"
+resume_qa_automation.txt,job_devops_cloud.txt,medium,48.31,-2.9088,55.26,0.3333,0.4061,0.1154,0.040984,"CI/CD and automation overlap, but lacks cloud infrastructure ownership"
+resume_backend_go.txt,job_frontend_vue.txt,weak,25.32,-5.4899,32.94,0.0,0.3905,0.102,0.040984,Disparate skill domains (backend_go vs frontend_vue)
+resume_backend_go.txt,job_mobile_ios.txt,weak,74.82,-1.1504,69.83,1.0,0.4429,0.1633,0.040984,Disparate skill domains (backend_go vs mobile_ios)
+resume_backend_go.txt,job_security_eng.txt,weak,45.76,-6.5002,25.51,1.0,0.4174,0.102,0.040984,Disparate skill domains (backend_go vs security_eng)
+resume_backend_go.txt,job_qa_automation.txt,weak,22.26,-6.3284,26.7,0.0,0.4902,0.102,0.040984,Disparate skill domains (backend_go vs qa_automation)
+resume_backend_go.txt,job_data_engineer.txt,weak,17.81,-7.3686,20.07,0.0,0.4761,0.102,0.040984,Disparate skill domains (backend_go vs data_engineer)
+resume_backend_go.txt,job_product_mgr.txt,weak,40.01,-7.9628,16.88,1.0,0.4033,0.0408,0.040984,Disparate skill domains (backend_go vs product_mgr)
+resume_backend_go.txt,job_sales_exec.txt,weak,35.42,-9.3833,10.9,1.0,0.3331,0.0408,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_backend_java.txt,job_frontend_vue.txt,weak,12.48,-8.2533,15.48,0.0,0.2413,0.0417,0.040984,Disparate skill domains (backend_java vs frontend_vue)
+resume_backend_java.txt,job_mobile_ios.txt,weak,40.93,-7.3727,20.05,1.0,0.2895,0.0625,0.040984,Disparate skill domains (backend_java vs mobile_ios)
+resume_backend_java.txt,job_security_eng.txt,weak,38.9,-8.299,15.27,1.0,0.3976,0.0625,0.040984,Disparate skill domains (backend_java vs security_eng)
+resume_backend_java.txt,job_qa_automation.txt,weak,11.55,-9.042,12.14,0.0,0.3655,0.0625,0.040984,Disparate skill domains (backend_java vs qa_automation)
+resume_backend_java.txt,job_data_engineer.txt,weak,13.16,-9.1157,11.86,0.0,0.5447,0.0417,0.040984,Disparate skill domains (backend_java vs data_engineer)
+resume_backend_java.txt,job_devops_cloud.txt,weak,17.23,-7.4271,19.74,0.0,0.4402,0.0625,0.040984,Disparate skill domains (backend_java vs devops_cloud)
+resume_backend_java.txt,job_product_mgr.txt,weak,38.63,-8.2596,15.45,1.0,0.3589,0.0417,0.040984,Disparate skill domains (backend_java vs product_mgr)
+resume_backend_java.txt,job_sales_exec.txt,weak,39.01,-8.1958,15.75,1.0,0.3772,0.0625,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_frontend_vue.txt,job_backend_go.txt,weak,32.59,-4.1335,44.37,0.0,0.3747,0.1346,0.040984,Disparate skill domains (frontend_vue vs backend_go)
+resume_frontend_vue.txt,job_backend_java.txt,weak,14.97,-7.3954,19.92,0.0,0.202,0.0385,0.040984,Disparate skill domains (frontend_vue vs backend_java)
+resume_frontend_vue.txt,job_mobile_ios.txt,weak,61.3,-3.5942,49.16,1.0,0.4345,0.0962,0.040984,Disparate skill domains (frontend_vue vs mobile_ios)
+resume_frontend_vue.txt,job_security_eng.txt,weak,43.19,-6.9917,22.32,1.0,0.3684,0.0577,0.040984,Disparate skill domains (frontend_vue vs security_eng)
+resume_frontend_vue.txt,job_qa_automation.txt,weak,41.77,-4.8092,38.52,0.5,0.4234,0.0962,0.040984,Disparate skill domains (frontend_vue vs qa_automation)
+resume_frontend_vue.txt,job_data_engineer.txt,weak,12.47,-8.6141,13.87,0.0,0.3454,0.0577,0.040984,Disparate skill domains (frontend_vue vs data_engineer)
+resume_frontend_vue.txt,job_devops_cloud.txt,weak,16.01,-7.3722,20.05,0.0,0.2974,0.0769,0.040984,Disparate skill domains (frontend_vue vs devops_cloud)
+resume_frontend_vue.txt,job_product_mgr.txt,weak,61.02,-3.5995,49.11,1.0,0.41,0.0769,0.040984,Disparate skill domains (frontend_vue vs product_mgr)
+resume_frontend_vue.txt,job_sales_exec.txt,weak,33.84,-9.7269,9.76,1.0,0.2496,0.0385,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_mobile_ios.txt,job_backend_go.txt,weak,42.52,-2.4778,59.03,0.0,0.4151,0.1667,0.040984,Disparate skill domains (mobile_ios vs backend_go)
+resume_mobile_ios.txt,job_backend_java.txt,weak,8.83,-9.601,10.17,0.0,0.2219,0.0625,0.040984,Disparate skill domains (mobile_ios vs backend_java)
+resume_mobile_ios.txt,job_security_eng.txt,weak,63.42,-3.2999,51.79,1.0,0.4758,0.1042,0.040984,Disparate skill domains (mobile_ios vs security_eng)
+resume_mobile_ios.txt,job_qa_automation.txt,weak,22.74,-5.9006,29.79,0.0,0.3372,0.0833,0.040984,Disparate skill domains (mobile_ios vs qa_automation)
+resume_mobile_ios.txt,job_data_engineer.txt,weak,15.6,-7.8471,17.47,0.0,0.4242,0.1042,0.040984,Disparate skill domains (mobile_ios vs data_engineer)
+resume_mobile_ios.txt,job_devops_cloud.txt,weak,23.47,-5.8215,30.38,0.0,0.3724,0.1042,0.040984,Disparate skill domains (mobile_ios vs devops_cloud)
+resume_mobile_ios.txt,job_product_mgr.txt,weak,40.65,-7.8796,17.31,1.0,0.4403,0.0417,0.040984,Disparate skill domains (mobile_ios vs product_mgr)
+resume_mobile_ios.txt,job_sales_exec.txt,weak,34.23,-9.5006,10.5,1.0,0.2407,0.0417,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_security_eng.txt,job_backend_java.txt,weak,13.3,-8.257,15.46,0.0,0.3253,0.04,0.040984,Disparate skill domains (security_eng vs backend_java)
+resume_security_eng.txt,job_frontend_vue.txt,weak,12.42,-8.7828,13.16,0.0,0.3866,0.06,0.040984,Disparate skill domains (security_eng vs frontend_vue)
+resume_security_eng.txt,job_mobile_ios.txt,weak,60.45,-3.8531,46.85,1.0,0.4996,0.16,0.040984,Disparate skill domains (security_eng vs mobile_ios)
+resume_security_eng.txt,job_qa_automation.txt,weak,24.62,-5.6832,31.44,0.0,0.4187,0.14,0.040984,Disparate skill domains (security_eng vs qa_automation)
+resume_security_eng.txt,job_data_engineer.txt,weak,22.44,-6.2708,27.1,0.0,0.4825,0.12,0.040984,Disparate skill domains (security_eng vs data_engineer)
+resume_security_eng.txt,job_devops_cloud.txt,weak,27.61,-5.053,36.48,0.0,0.3898,0.12,0.040984,Disparate skill domains (security_eng vs devops_cloud)
+resume_security_eng.txt,job_product_mgr.txt,weak,55.71,-4.6483,39.89,1.0,0.4786,0.08,0.040984,Disparate skill domains (security_eng vs product_mgr)
+resume_security_eng.txt,job_sales_exec.txt,weak,36.25,-9.2342,11.43,1.0,0.3817,0.04,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_qa_automation.txt,job_backend_go.txt,weak,21.12,-6.6606,24.44,0.0,0.5234,0.1154,0.040984,Disparate skill domains (qa_automation vs backend_go)
+resume_qa_automation.txt,job_backend_java.txt,weak,10.95,-9.5773,10.24,0.0,0.4294,0.1154,0.040984,Disparate skill domains (qa_automation vs backend_java)
+resume_qa_automation.txt,job_mobile_ios.txt,weak,53.98,-4.8391,38.27,1.0,0.4107,0.1154,0.040984,Disparate skill domains (qa_automation vs mobile_ios)
+resume_qa_automation.txt,job_security_eng.txt,weak,51.31,-5.3909,33.73,1.0,0.4381,0.1346,0.040984,Disparate skill domains (qa_automation vs security_eng)
+resume_qa_automation.txt,job_data_engineer.txt,weak,16.15,-7.6893,18.3,0.0,0.4254,0.0962,0.040984,Disparate skill domains (qa_automation vs data_engineer)
+resume_qa_automation.txt,job_product_mgr.txt,weak,40.73,-7.811,17.66,1.0,0.425,0.0577,0.040984,Disparate skill domains (qa_automation vs product_mgr)
+resume_qa_automation.txt,job_sales_exec.txt,weak,38.35,-8.5173,14.28,1.0,0.4072,0.0962,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_data_engineer.txt,job_backend_java.txt,weak,12.87,-8.7925,13.12,0.0,0.4345,0.0385,0.040984,Disparate skill domains (data_engineer vs backend_java)
+resume_data_engineer.txt,job_frontend_vue.txt,weak,11.37,-9.0322,12.18,0.0,0.3452,0.0769,0.040984,Disparate skill domains (data_engineer vs frontend_vue)
+resume_data_engineer.txt,job_mobile_ios.txt,weak,54.09,-4.8429,38.23,1.0,0.4242,0.1154,0.040984,Disparate skill domains (data_engineer vs mobile_ios)
+resume_data_engineer.txt,job_security_eng.txt,weak,48.12,-6.0213,28.9,1.0,0.4334,0.0962,0.040984,Disparate skill domains (data_engineer vs security_eng)
+resume_data_engineer.txt,job_qa_automation.txt,weak,21.15,-6.3588,26.48,0.0,0.3938,0.0769,0.040984,Disparate skill domains (data_engineer vs qa_automation)
+resume_data_engineer.txt,job_devops_cloud.txt,weak,30.59,-4.5671,40.59,0.0,0.4207,0.1154,0.040984,Disparate skill domains (data_engineer vs devops_cloud)
+resume_data_engineer.txt,job_product_mgr.txt,weak,40.69,-7.7984,17.72,1.0,0.4169,0.0385,0.040984,Disparate skill domains (data_engineer vs product_mgr)
+resume_data_engineer.txt,job_sales_exec.txt,weak,35.33,-9.3844,10.89,1.0,0.3247,0.0385,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_devops_cloud.txt,job_backend_java.txt,weak,13.59,-8.3201,15.17,0.0,0.3734,0.0408,0.040984,Disparate skill domains (devops_cloud vs backend_java)
+resume_devops_cloud.txt,job_frontend_vue.txt,weak,11.05,-8.9343,12.56,0.0,0.2882,0.0612,0.040984,Disparate skill domains (devops_cloud vs frontend_vue)
+resume_devops_cloud.txt,job_mobile_ios.txt,weak,54.23,-4.7243,39.24,1.0,0.3723,0.1224,0.040984,Disparate skill domains (devops_cloud vs mobile_ios)
+resume_devops_cloud.txt,job_security_eng.txt,weak,52.6,-5.1093,36.01,1.0,0.4194,0.102,0.040984,Disparate skill domains (devops_cloud vs security_eng)
+resume_devops_cloud.txt,job_qa_automation.txt,weak,56.44,-2.1592,61.75,0.5,0.3802,0.1429,0.040984,Disparate skill domains (devops_cloud vs qa_automation)
+resume_devops_cloud.txt,job_data_engineer.txt,weak,20.48,-6.6107,24.77,0.0,0.4383,0.1633,0.040984,Disparate skill domains (devops_cloud vs data_engineer)
+resume_devops_cloud.txt,job_product_mgr.txt,weak,52.03,-5.2213,35.1,1.0,0.4216,0.102,0.040984,Disparate skill domains (devops_cloud vs product_mgr)
+resume_devops_cloud.txt,job_sales_exec.txt,weak,34.7,-9.5245,10.42,1.0,0.2926,0.0408,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_product_mgr.txt,job_backend_java.txt,weak,12.04,-8.6531,13.7,0.0,0.3137,0.0385,0.040984,Disparate skill domains (product_mgr vs backend_java)
+resume_product_mgr.txt,job_frontend_vue.txt,weak,31.1,-4.4484,41.61,0.0,0.4054,0.1154,0.040984,Disparate skill domains (product_mgr vs frontend_vue)
+resume_product_mgr.txt,job_mobile_ios.txt,weak,46.79,-6.2277,27.4,1.0,0.398,0.0577,0.040984,Disparate skill domains (product_mgr vs mobile_ios)
+resume_product_mgr.txt,job_security_eng.txt,weak,43.08,-7.3098,20.41,1.0,0.4817,0.0769,0.040984,Disparate skill domains (product_mgr vs security_eng)
+resume_product_mgr.txt,job_qa_automation.txt,weak,16.73,-7.5193,19.22,0.0,0.4241,0.0577,0.040984,Disparate skill domains (product_mgr vs qa_automation)
+resume_product_mgr.txt,job_data_engineer.txt,weak,14.38,-8.2027,15.72,0.0,0.4157,0.0962,0.040984,Disparate skill domains (product_mgr vs data_engineer)
+resume_product_mgr.txt,job_devops_cloud.txt,weak,31.95,-4.306,42.85,0.0,0.4102,0.0769,0.040984,Disparate skill domains (product_mgr vs devops_cloud)
+resume_product_mgr.txt,job_sales_exec.txt,weak,39.54,-8.2074,15.69,1.0,0.434,0.0385,0.040984,Technical engineering candidate applying to Enterprise Account Executive (SaaS)
+resume_sales_exec.txt,job_backend_go.txt,weak,9.13,-9.5333,10.39,0.0,0.2379,0.0784,0.040984,Non-technical sales background applied to Senior Go Systems Engineer
+resume_sales_exec.txt,job_backend_java.txt,weak,7.83,-10.7035,7.09,0.0,0.3218,0.098,0.040984,Non-technical sales background applied to Java Spring Boot Architect
+resume_sales_exec.txt,job_frontend_vue.txt,weak,7.56,-10.282,8.15,0.0,0.2267,0.0392,0.040984,Non-technical sales background applied to Senior Vue.js / Nuxt Developer
+resume_sales_exec.txt,job_mobile_ios.txt,weak,39.5,-7.4439,19.65,1.0,0.1726,0.0392,0.040984,Non-technical sales background applied to Senior iOS Engineer (Swift)
+resume_sales_exec.txt,job_security_eng.txt,weak,37.12,-8.5608,14.09,1.0,0.2966,0.0392,0.040984,Non-technical sales background applied to Application Security Engineer
+resume_sales_exec.txt,job_qa_automation.txt,weak,18.68,-6.7013,24.17,0.0,0.2972,0.0392,0.040984,Non-technical sales background applied to Lead SDET / QA Automation Engineer
+resume_sales_exec.txt,job_data_engineer.txt,weak,8.87,-9.7061,9.83,0.0,0.2482,0.0392,0.040984,Non-technical sales background applied to Staff Data Engineer (Spark / Snowflake)
+resume_sales_exec.txt,job_devops_cloud.txt,weak,10.02,-9.1521,11.73,0.0,0.2391,0.0392,0.040984,Non-technical sales background applied to Cloud Platform Engineer (Terraform / GCP)
+resume_sales_exec.txt,job_product_mgr.txt,weak,38.47,-8.0565,16.42,1.0,0.2796,0.0196,0.040984,Non-technical sales background applied to Technical Product Manager (Developer Platforms)
