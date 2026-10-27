@@ -8,8 +8,11 @@ import {
 import { closeDlqQueues } from './queues/dlq.js';
 import { redisClient } from './queues/redis.js';
 import { buildServer } from './server.js';
+import { initTelemetry, shutdownTelemetry } from './telemetry.js';
 
 async function main(): Promise<void> {
+  // No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set (Phase 10B Workstream B)
+  initTelemetry('resumatch-backend');
   const app = buildServer();
 
   const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
@@ -22,6 +25,7 @@ async function main(): Promise<void> {
         await closeDlqQueues().catch(() => {});
         await prisma.$disconnect();
         await redisClient.quit().catch(() => {});
+        await shutdownTelemetry();
         app.log.info('Server and background connections shut down cleanly.');
         process.exit(0);
       } catch (err) {

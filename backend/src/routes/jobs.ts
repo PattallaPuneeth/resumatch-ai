@@ -5,6 +5,7 @@ import { prisma } from '../db/prisma.js';
 import { analysisQueue, embeddingQueue, matchScoringQueue } from '../queues/bullmq.js';
 import { withMeter } from '../services/meterGuard.js';
 import { usageService } from '../services/usageService.js';
+import { withTraceContext } from '../telemetry.js';
 
 // ---------------------------------------------------------------------------
 // Validation Schemas
@@ -89,12 +90,12 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
       try {
         await embeddingQueue.add(
           `embed-job-${job.id}`,
-          {
+          withTraceContext(request, {
             type: 'EMBED_DOCUMENT',
             entityType: 'JOB',
             entityId: job.id,
             jobId: job.id,
-          },
+          }),
           {
             jobId: `embed-job-${job.id}`,
           }
@@ -230,10 +231,10 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
       try {
         await matchScoringQueue.add(
           `match-${jobId}-${resumeId}`,
-          {
+          withTraceContext(request, {
             jobId,
             resumeId,
-          },
+          }),
           {
             jobId: `match-${jobId}-${resumeId}`,
           }
@@ -402,10 +403,10 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         try {
           await analysisQueue.add(
             `analysis-${jobId}-${resumeId}`,
-            {
+            withTraceContext(request, {
               jobId,
               resumeId,
-            },
+            }),
             {
               jobId: `analysis-${jobId}-${resumeId}`,
             }

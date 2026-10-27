@@ -17,6 +17,7 @@ import { env } from '../config/env.js';
 import { withResumeCoordinationLock } from '../utils/coordinationLock.js';
 import { usageService } from '../services/usageService.js';
 import { sendUsageLimitExceeded } from '../services/meterGuard.js';
+import { withTraceContext } from '../telemetry.js';
 
 // ---------------------------------------------------------------------------
 // Supported formats per Section 2B of the specification
@@ -372,7 +373,7 @@ export async function handleCompleteUpload(
     };
 
     try {
-      await resumeParsingQueue.add('parse', jobPayload, {
+      await resumeParsingQueue.add('parse', withTraceContext(request, jobPayload), {
         jobId: `parse-${outcome.resume.id}`,
       });
       request.log.info({ resumeId, status: outcome.resume.status }, 'Idempotent complete call — ensured parse job in queue');
@@ -480,7 +481,7 @@ export async function handleCompleteUpload(
   };
 
   try {
-    await resumeParsingQueue.add('parse', jobPayload, {
+    await resumeParsingQueue.add('parse', withTraceContext(request, jobPayload), {
       jobId: `parse-${resumeId}`,
     });
     request.log.info({ resumeId, sha256: outcome.sha256 }, 'PARSE_DOCUMENT job enqueued');

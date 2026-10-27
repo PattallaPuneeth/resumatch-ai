@@ -15,6 +15,7 @@ import { improvementsRoutes } from './routes/improvements.js';
 import { usageRoutes } from './routes/usage.js';
 import { suggestionsRoutes } from './routes/suggestions.js';
 import { logJobSourceStatus } from './services/jobSource/factory.js';
+import { registerTracingHooks } from './telemetry.js';
 
 export function buildServer(options?: { onRoute?: (routeOptions: any) => void }): FastifyInstance {
   const isDev = env.NODE_ENV === 'development';
@@ -41,6 +42,9 @@ export function buildServer(options?: { onRoute?: (routeOptions: any) => void })
   if (options?.onRoute) {
     app.addHook('onRoute', options.onRoute);
   }
+
+  // Request spans; no-op unless initTelemetry() turned tracing on
+  registerTracingHooks(app);
 
   // Global Security Headers (C3 - Transport & Headers Hardening)
   app.addHook('onSend', async (_request, reply, _payload) => {
