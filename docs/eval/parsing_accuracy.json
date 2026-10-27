@@ -1,30 +1,50 @@
-﻿{
-  "total_test_cases": 24,
-  "mean_cer": 0.0292,
-  "mean_wer": 0.0248,
+{
+  "dataset_type": "SYNTHETIC",
+  "description": "60 synthetic resumes (20 DOCX, 20 PDF_TEXT, 20 PDF_SCANNED) across 5 engineering profiles with mild rotation/noise variants.",
+  "total_test_cases": 60,
+  "mean_cer": 0.0344,
+  "mean_wer": 0.0349,
   "mean_section_accuracy": 1.0,
   "formats": {
-    "PDF_TEXT": {
-      "count": 12,
-      "mean_cer": 0.0143,
-      "mean_wer": 0.0309,
-      "section_accuracy": 1.0
-    },
     "DOCX": {
-      "count": 12,
-      "mean_cer": 0.044,
-      "mean_wer": 0.0187,
-      "section_accuracy": 1.0
+      "count": 20,
+      "mean_cer": 0.0716,
+      "mean_wer": 0.0397,
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8978,
+      "skill_recall": 0.7833,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    "PDF_TEXT": {
+      "count": 20,
+      "mean_cer": 0.0157,
+      "mean_wer": 0.0315,
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8978,
+      "skill_recall": 0.7833,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    "PDF_SCANNED": {
+      "count": 20,
+      "mean_cer": 0.016,
+      "mean_wer": 0.0335,
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8978,
+      "skill_recall": 0.7833,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     }
   },
   "cases": [
     {
       "case_id": "case_01_docx",
       "format": "DOCX",
-      "char_count_ref": 836,
-      "char_count_hyp": 871,
-      "cer": 0.0419,
-      "wer": 0.0169,
+      "char_count_ref": 821,
+      "char_count_hyp": 874,
+      "cer": 0.0646,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -35,15 +55,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
       "case_id": "case_02_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 841,
-      "char_count_hyp": 850,
-      "cer": 0.0166,
-      "wer": 0.0339,
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -54,15 +78,42 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_03_docx",
+      "case_id": "case_03_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_04_docx",
       "format": "DOCX",
-      "char_count_ref": 740,
-      "char_count_hyp": 774,
-      "cer": 0.0459,
-      "wer": 0.02,
+      "char_count_ref": 821,
+      "char_count_hyp": 874,
+      "cer": 0.0646,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -73,15 +124,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_04_pdf_text",
+      "case_id": "case_05_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 745,
-      "char_count_hyp": 752,
-      "cer": 0.0134,
-      "wer": 0.03,
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -92,15 +147,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_05_docx",
-      "format": "DOCX",
-      "char_count_ref": 768,
-      "char_count_hyp": 802,
-      "cer": 0.0443,
-      "wer": 0.0192,
+      "case_id": "case_06_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -111,34 +170,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
-    },
-    {
-      "case_id": "case_06_pdf_text",
-      "format": "PDF_TEXT",
-      "char_count_ref": 773,
-      "char_count_hyp": 780,
-      "cer": 0.0129,
-      "wer": 0.0288,
-      "sections_expected": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "sections_found": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
       "case_id": "case_07_docx",
       "format": "DOCX",
-      "char_count_ref": 836,
-      "char_count_hyp": 871,
-      "cer": 0.0419,
-      "wer": 0.0169,
+      "char_count_ref": 821,
+      "char_count_hyp": 874,
+      "cer": 0.0646,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -149,15 +193,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
       "case_id": "case_08_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 841,
-      "char_count_hyp": 850,
-      "cer": 0.0166,
-      "wer": 0.0339,
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -168,15 +216,42 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_09_docx",
+      "case_id": "case_09_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_10_docx",
       "format": "DOCX",
-      "char_count_ref": 740,
-      "char_count_hyp": 774,
-      "cer": 0.0459,
-      "wer": 0.02,
+      "char_count_ref": 821,
+      "char_count_hyp": 874,
+      "cer": 0.0646,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -187,15 +262,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_10_pdf_text",
+      "case_id": "case_11_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 745,
-      "char_count_hyp": 752,
-      "cer": 0.0134,
-      "wer": 0.03,
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -206,15 +285,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_11_docx",
-      "format": "DOCX",
-      "char_count_ref": 768,
-      "char_count_hyp": 802,
-      "cer": 0.0443,
-      "wer": 0.0192,
+      "case_id": "case_12_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 826,
+      "char_count_hyp": 835,
+      "cer": 0.0169,
+      "wer": 0.0342,
       "sections_expected": [
         "experience",
         "education",
@@ -225,34 +308,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
-    },
-    {
-      "case_id": "case_12_pdf_text",
-      "format": "PDF_TEXT",
-      "char_count_ref": 773,
-      "char_count_hyp": 780,
-      "cer": 0.0129,
-      "wer": 0.0288,
-      "sections_expected": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "sections_found": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8889,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
       "case_id": "case_13_docx",
       "format": "DOCX",
-      "char_count_ref": 836,
-      "char_count_hyp": 871,
-      "cer": 0.0419,
-      "wer": 0.0169,
+      "char_count_ref": 706,
+      "char_count_hyp": 758,
+      "cer": 0.0737,
+      "wer": 0.0408,
       "sections_expected": [
         "experience",
         "education",
@@ -263,15 +331,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
       "case_id": "case_14_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 841,
-      "char_count_hyp": 850,
-      "cer": 0.0166,
-      "wer": 0.0339,
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0141,
+      "wer": 0.0306,
       "sections_expected": [
         "experience",
         "education",
@@ -282,15 +354,42 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_15_docx",
+      "case_id": "case_15_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0155,
+      "wer": 0.0408,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_16_docx",
       "format": "DOCX",
-      "char_count_ref": 740,
-      "char_count_hyp": 774,
-      "cer": 0.0459,
-      "wer": 0.02,
+      "char_count_ref": 706,
+      "char_count_hyp": 758,
+      "cer": 0.0737,
+      "wer": 0.0408,
       "sections_expected": [
         "experience",
         "education",
@@ -301,15 +400,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_16_pdf_text",
+      "case_id": "case_17_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 745,
-      "char_count_hyp": 752,
-      "cer": 0.0134,
-      "wer": 0.03,
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0141,
+      "wer": 0.0306,
       "sections_expected": [
         "experience",
         "education",
@@ -320,15 +423,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_17_docx",
-      "format": "DOCX",
-      "char_count_ref": 768,
-      "char_count_hyp": 802,
-      "cer": 0.0443,
-      "wer": 0.0192,
+      "case_id": "case_18_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0155,
+      "wer": 0.0408,
       "sections_expected": [
         "experience",
         "education",
@@ -339,34 +446,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
-    },
-    {
-      "case_id": "case_18_pdf_text",
-      "format": "PDF_TEXT",
-      "char_count_ref": 773,
-      "char_count_hyp": 780,
-      "cer": 0.0129,
-      "wer": 0.0288,
-      "sections_expected": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "sections_found": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
       "case_id": "case_19_docx",
       "format": "DOCX",
-      "char_count_ref": 836,
-      "char_count_hyp": 871,
-      "cer": 0.0419,
-      "wer": 0.0169,
+      "char_count_ref": 706,
+      "char_count_hyp": 758,
+      "cer": 0.0737,
+      "wer": 0.0408,
       "sections_expected": [
         "experience",
         "education",
@@ -377,15 +469,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
       "case_id": "case_20_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 841,
-      "char_count_hyp": 850,
-      "cer": 0.0166,
-      "wer": 0.0339,
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0141,
+      "wer": 0.0306,
       "sections_expected": [
         "experience",
         "education",
@@ -396,15 +492,42 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_21_docx",
+      "case_id": "case_21_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0155,
+      "wer": 0.0408,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_22_docx",
       "format": "DOCX",
-      "char_count_ref": 740,
-      "char_count_hyp": 774,
-      "cer": 0.0459,
-      "wer": 0.02,
+      "char_count_ref": 706,
+      "char_count_hyp": 758,
+      "cer": 0.0737,
+      "wer": 0.0408,
       "sections_expected": [
         "experience",
         "education",
@@ -415,15 +538,65 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_22_pdf_text",
+      "case_id": "case_23_pdf_text",
       "format": "PDF_TEXT",
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0141,
+      "wer": 0.0306,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_24_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 711,
+      "char_count_hyp": 718,
+      "cer": 0.0155,
+      "wer": 0.0408,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.5,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_25_docx",
+      "format": "DOCX",
       "char_count_ref": 745,
-      "char_count_hyp": 752,
-      "cer": 0.0134,
-      "wer": 0.03,
+      "char_count_hyp": 797,
+      "cer": 0.0698,
+      "wer": 0.0396,
       "sections_expected": [
         "experience",
         "education",
@@ -434,34 +607,19 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     },
     {
-      "case_id": "case_23_docx",
-      "format": "DOCX",
-      "char_count_ref": 768,
-      "char_count_hyp": 802,
-      "cer": 0.0443,
-      "wer": 0.0192,
-      "sections_expected": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "sections_found": [
-        "experience",
-        "education",
-        "skills"
-      ],
-      "section_accuracy": 1.0
-    },
-    {
-      "case_id": "case_24_pdf_text",
+      "case_id": "case_26_pdf_text",
       "format": "PDF_TEXT",
-      "char_count_ref": 773,
-      "char_count_hyp": 780,
-      "cer": 0.0129,
-      "wer": 0.0288,
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
       "sections_expected": [
         "experience",
         "education",
@@ -472,7 +630,793 @@
         "education",
         "skills"
       ],
-      "section_accuracy": 1.0
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_27_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_28_docx",
+      "format": "DOCX",
+      "char_count_ref": 745,
+      "char_count_hyp": 797,
+      "cer": 0.0698,
+      "wer": 0.0396,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_29_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_30_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_31_docx",
+      "format": "DOCX",
+      "char_count_ref": 745,
+      "char_count_hyp": 797,
+      "cer": 0.0698,
+      "wer": 0.0396,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_32_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_33_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_34_docx",
+      "format": "DOCX",
+      "char_count_ref": 745,
+      "char_count_hyp": 797,
+      "cer": 0.0698,
+      "wer": 0.0396,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_35_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_36_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 750,
+      "char_count_hyp": 757,
+      "cer": 0.0133,
+      "wer": 0.0297,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 0.6667,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_37_docx",
+      "format": "DOCX",
+      "char_count_ref": 703,
+      "char_count_hyp": 755,
+      "cer": 0.074,
+      "wer": 0.0426,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_38_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_39_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_40_docx",
+      "format": "DOCX",
+      "char_count_ref": 703,
+      "char_count_hyp": 755,
+      "cer": 0.074,
+      "wer": 0.0426,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_41_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_42_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_43_docx",
+      "format": "DOCX",
+      "char_count_ref": 703,
+      "char_count_hyp": 755,
+      "cer": 0.074,
+      "wer": 0.0426,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_44_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_45_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_46_docx",
+      "format": "DOCX",
+      "char_count_ref": 703,
+      "char_count_hyp": 755,
+      "cer": 0.074,
+      "wer": 0.0426,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_47_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_48_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 708,
+      "char_count_hyp": 716,
+      "cer": 0.0169,
+      "wer": 0.0319,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 1.0,
+      "skill_recall": 0.75,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_49_docx",
+      "format": "DOCX",
+      "char_count_ref": 687,
+      "char_count_hyp": 739,
+      "cer": 0.0757,
+      "wer": 0.0412,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_50_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_51_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_52_docx",
+      "format": "DOCX",
+      "char_count_ref": 687,
+      "char_count_hyp": 739,
+      "cer": 0.0757,
+      "wer": 0.0412,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_53_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_54_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_55_docx",
+      "format": "DOCX",
+      "char_count_ref": 687,
+      "char_count_hyp": 739,
+      "cer": 0.0757,
+      "wer": 0.0412,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_56_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_57_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_58_docx",
+      "format": "DOCX",
+      "char_count_ref": 687,
+      "char_count_hyp": 739,
+      "cer": 0.0757,
+      "wer": 0.0412,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_59_pdf_text",
+      "format": "PDF_TEXT",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
+    },
+    {
+      "case_id": "case_60_pdf_scanned",
+      "format": "PDF_SCANNED",
+      "char_count_ref": 692,
+      "char_count_hyp": 700,
+      "cer": 0.0173,
+      "wer": 0.0309,
+      "sections_expected": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "sections_found": [
+        "experience",
+        "education",
+        "skills"
+      ],
+      "section_accuracy": 1.0,
+      "skill_precision": 0.8,
+      "skill_recall": 1.0,
+      "hazard_precision": 1.0,
+      "hazard_recall": 1.0
     }
   ]
 }

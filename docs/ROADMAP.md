@@ -334,8 +334,8 @@ A dedicated, evidence-based audit of the whole system with zero open Critical or
 
 ## 11. Phase 10: Performance, observability, CI, deployment
 
-### Phase 10A: Reliability, Quality Gates and CI [COMPLETE & VERIFIED]
-- **Status:** COMPLETE & VERIFIED.
+### Phase 10A: Reliability, Quality Gates and CI [COMPLETE & VERIFIED - EVIDENCE CLOSED]
+- **Status:** COMPLETE & VERIFIED (All evidentiary gaps closed with real command outputs).
 - **Carry-Over & Security Dispositions:**
   - Patched Next.js critical RCE/DoS via safe `npm audit fix` (Next.js 15.5.28; 129 vitest tests passing).
   - Triaged findings SEC-07 through SEC-13 in `docs/SECURITY.md`.

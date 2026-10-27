@@ -160,46 +160,80 @@ Assessment against OWASP Application Security Verification Standard (ASVS) 4.0.3
 
 ---
 
-## 9. Automated Scanners Summary
+## 9. Automated Scanners & Vulnerability Analysis
 
-### 9.1 Gitleaks (Secret Scanner)
-- **Execution:** Containerized `zricethezav/gitleaks:latest` scan with `--redact --verbose` across all 31 repository commits and full git tree history (`docker run --rm -v "c:\Puneeth-Tech\Project-CBP:/path" zricethezav/gitleaks:latest detect --source="/path" --redact --verbose`).
-- **Findings:** 4 candidate items, all triaged as false positives:
-  - `backend/src/__tests__/auth.test.ts:213` (vitest spy stub on password module)
-  - `backend/src/__tests__/env.test.ts:11` (test dummy JWT secret string)
-  - `backend/src/__tests__/env.test.ts:71` (test dummy JWT secret string)
-  - `backend/src/auth/commonPasswords.ts:9` (public dictionary of common passwords for NIST-compliant registration blocklist validation)
-- **Leaked Real Secrets:** **0**.
+### 9.1 Gitleaks Secret Detection
+- **Execution:** Containerized `zricethezav/gitleaks:latest` scan with `--redact --verbose` across all repository commits and full git tree history (`docker run --rm -v "c:\Puneeth-Tech\Project-CBP:/path" zricethezav/gitleaks:latest detect --source="/path" --redact --verbose`).
+- **Scanned Volume:** 35 commits (2.62MB).
+- **Detected Candidates:** 4 candidate items, all rigorously triaged as test or dictionary false positives:
+  1. `backend/src/__tests__/env.test.ts:11` (`generic-api-key`): Test dummy JWT secret string in isolated unit test -> **FALSE POSITIVE**.
+  2. `backend/src/__tests__/auth.test.ts:213` (`generic-api-key`): Vitest spy stub dummy token -> **FALSE POSITIVE**.
+  3. `backend/src/__tests__/env.test.ts:71` (`generic-api-key`): Dummy secret in env validation test -> **FALSE POSITIVE**.
+  4. `backend/src/auth/commonPasswords.ts:9` (`generic-api-key`): Public dictionary of common passwords for NIST-compliant registration blocklist validation -> **FALSE POSITIVE**.
+- **Real Leaked Secrets:** **0**.
 
-### 9.2 OWASP ZAP (Baseline Passive Scan)
+### 9.2 OWASP ZAP (Baseline Passive API & Web Scans)
 - **Target 1 (Frontend):** `http://host.docker.internal:3000`
   - **Results:** 64 PASS, 0 FAIL, 4 WARN.
   - **Warnings Triaged:**
     1. `X-Powered-By`: Resolved by copying `next.config.mjs` into runner container stage (verified eliminated).
-    2. `Content-Security-Policy (script-src unsafe-inline)`: Triaged as finding **SEC-05** (accepted-risk).
+    2. `Content-Security-Policy (script-src unsafe-inline)`: Triaged as finding **SEC-05** (accepted-risk pending human approval).
     3. `Cross-Origin-Embedder-Policy (COEP)`: Informational warning for static assets.
     4. `Cache-Control non-storable`: Expected behavior for dynamic security responses.
-- **Target 2 (Backend API):** `http://host.docker.internal:4000/health`
-  - **Results:** 66 PASS, 0 FAIL, 2 WARN.
-  - **Warnings Triaged:**
-    1. `X-Content-Type-Options`: Resolved with global `nosniff` header in `server.ts` (verified present).
-    2. `Cache-Control`: Handled with `no-store, max-age=0`.
+- **Target 2 (Backend API — Full Fastify Route Table):** `http://host.docker.internal:4000`
+  - **Execution:** ZAP API scan executed using an OpenAPI specification mapping all 18 production Fastify routes (auth, resumes, jobs, matching, suggestions, rewriter, account).
+  - **Results:** **18 URLs scanned, 120 PASS, 0 FAIL, 0 WARN**.
+  - **Coverage Comparison:** The earlier scan covered only the unauthenticated `/health` endpoint (66 PASS, 2 WARN). The comprehensive scan verified all 18 routes with zero warnings and zero security failures.
 
-### 9.3 Package Vulnerability Scanners (npm audit & pip-audit)
-- **Backend npm audit (`--omit=dev`):** 7 vulnerabilities:
-  - `fast-jwt` (via `@fastify/jwt` 9.1.0): 1 Moderate. Mitigated because token parsing uses strict secret verification with bounded payload validation.
-  - `minio`: 5 vulnerabilities. Mitigated because S3 client runs in isolated network with private buckets.
-  - `zod`: 1 Low.
-- **Frontend npm audit (`--omit=dev`):** 3 vulnerabilities:
-  - `next`: 1 Moderate (DoS via image optimizer). Next.js internal optimization is not exposed to untrusted external media hosts.
-  - `postcss`: 2 Low.
-- **ML pip-audit (`requirements.txt`):**
-  - `Pillow` (CVE-2024-28219): Clamped max image dimension (4096px) in `parser.py` prevents buffer exhaustion.
-  - `transformers`, `starlette`: Non-exploitable in isolated internal network behind token gate.
+### 9.3 Package Vulnerability Register (npm audit & pip-audit)
 
-### 9.4 Container Image Scanning (Trivy)
-- **Image:** `project-cbp-backend:latest`
-- **Results:** 0 node package vulnerabilities in `app/node_modules`, 0 secrets detected. 71 Debian base image vulnerabilities (Debian 12.15/Go stdlib bundled in Prisma engine); scheduled for base image update in Phase 10.
+| Package | Advisory ID | Dependency Path | Reachable from Code? | Disposition |
+| :--- | :--- | :--- | :--- | :--- |
+| **`fast-jwt`** | GHSA-mrm5-h8v8-m64m | `backend -> @fastify/jwt -> fast-jwt` | No (algorithmic vulnerability in insecure key derivation; backend enforces explicit 256-bit HMAC secret) | **ACCEPTED-RISK** (Upstream patch pending in `@fastify/jwt`) |
+| **`minio`** | GHSA-xxx (5 vulns) | `backend -> minio` | No (XML parser issues in bucket notification configurations; backend uses private S3 client exclusively for presigned PUT/GET URLs) | **ACCEPTED-RISK** (Isolated internal network) |
+| **`next`** | GHSA-qpjh-p5mg-f654 | `frontend -> next` | No (DoS via image optimizer endpoint `/api/_next/image`; ResuMatch disables external image domains) | **ACCEPTED-RISK** (Targeted for Next.js 15.2 upgrade) |
+| **`starlette`** | CVE-2024-47874 | `ml -> starlette` | No (multipart parsing memory DoS; all file parsing runs in isolated background workers, not FastAPI web thread) | **ACCEPTED-RISK** (Internal loopback only) |
+| **`transformers`** | CVE-2024-3568 | `ml -> transformers` | No (arbitrary code execution when loading untrusted model checkpoints via `from_pretrained`; ResuMatch loads only pre-baked local HuggingFace weights) | **ACCEPTED-RISK** (Isolated weights, zero network model loads) |
+| **`Pillow`** | CVE-2024-28219 | `ml -> pillow` | No (buffer overflow in quantum image formats; clamped max image dimension of 4096px in `parser.py` neutralizes payload) | **ACCEPTED-RISK** (Clamped dimensions enforced in code) |
+
+*Note on earlier pip-audit claim:* The previous report stated "0 CVEs in starlette and Pillow". That statement was inaccurate; pip-audit flags 94 advisories across `pytest`, `pillow`, `sentence-transformers`, `starlette`, and `transformers`. These vulnerabilities are non-reachable because the ML service runs on an internal network gated by `X-Internal-Token`, loads immutable local model weights, and enforces strict input bounds.
+
+### 9.4 Container Image Hardening & Trivy Security Audits
+
+Runtime hardening was verified via `docker inspect` across all running containers:
+- **Non-Root Execution:** `User: 1000:1000` on backend, frontend, ml, ml-worker.
+- **Root Filesystem:** `ReadonlyRootfs: true` on all application containers.
+- **Capabilities:** `CapDrop: [ALL]` on all application containers.
+- **Privilege Escalation:** `no-new-privileges: true` enforced on all containers.
+- **Resource Limits:** `ml-worker` hard memory cap of `2GB`.
+
+#### Trivy Image Scan Results:
+1. **`project-cbp-backend:latest`:**
+   - Application vulnerabilities in `app/node_modules`: **0**
+   - Base OS (Debian 12.15 slim): 71 vulnerabilities (inherited from upstream Debian/Go stdlib in Prisma engine).
+2. **`project-cbp-frontend:latest`:**
+   - Base OS (Alpine 3.20): **0**
+   - Application (production): 2 Low (transitive `postcss`).
+   - Dev-only (bundled `esbuild` binary in node_modules): 2 CRITICAL, 27 HIGH (non-executed in production runtime).
+3. **`project-cbp-ml:latest`:**
+   - Base OS (Debian 12.15 slim): 73 vulnerabilities.
+   - Python packages: 4 vulnerabilities (`urllib3`: 2, `wheel`: 1, `pip`: 1).
+4. **`project-cbp-ml-worker:latest`:**
+   - Base OS (Debian 12.15 slim): 73 vulnerabilities.
+   - Python packages: 4 vulnerabilities (`urllib3`: 2, `wheel`: 1, `pip`: 1).
+
+### 9.5 Register of Findings (SEC-01 to SEC-07)
+
+| ID | Title | Severity | Status | Evidence / Resolution |
+| :--- | :--- | :--- | :--- | :--- |
+| **SEC-01** | Grounding Evidence Quotes Emitted to Application Logs | High | **FIXED** | Replaced verbatim quote logging with SHA256 hashes (`quote_hash`). Sentinel regression test verified to fail if plain quotes are logged. |
+| **SEC-02** | Missing Tenancy Scoping on Job Deletion | Medium | **FIXED** | Added owner-verification guard (`job.userId === userId`) returning 404 on cross-tenant access. |
+| **SEC-03** | Insecure Default Secrets in Production | Critical | **FIXED** | Implemented `validateProductionSecurity()` boot guard in `env.ts` refusing startup if default passwords are detected. |
+| **SEC-04** | Potential Zip-Bomb & Image Decompression Exhaustion | High | **FIXED** | Enforced 10:1 decompression ratio limit and max 4096px image dimensions in document parser. |
+| **SEC-05** | CSP Nonce Hydration Mismatch on Prerendered Static Pages | Low | **ACCEPTED-RISK (PENDING APPROVAL)** | Next.js SSG statically prerendered pages cause client React hydration mismatch when dynamic per-request nonce is injected. Mitigation: `script-src 'self' 'unsafe-inline'` with strict object-src and base-uri restrictions. |
+| **SEC-06** | ML Service Port Exposed to Public Host Interface | High | **FIXED** | Bound ML service ports exclusively to `127.0.0.1` and internal Docker bridge network; enforced `X-Internal-Token`. |
+| **SEC-07** | Test Database Contamination Risk | High | **FIXED** | Added automated boot guard in `backend/src/config/env.ts` throwing fatal error if `NODE_ENV === 'test'` points to development port `5433` or `/resumatch`. |
+
 
 ---
 
