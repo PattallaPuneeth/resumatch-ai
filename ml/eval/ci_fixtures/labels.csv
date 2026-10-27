@@ -1,0 +1,6 @@
+resume,job,expected,reason
+resume_senior_backend.pdf,job_backend_lead.txt,strong,Senior backend architect with deep Python PostgreSQL Kubernetes stack
+resume_frontend_dev.pdf,job_frontend_dev.txt,strong,Experienced frontend specialist with direct React TypeScript expertise
+resume_senior_backend.pdf,job_frontend_dev.txt,medium,Senior engineer with general software expertise but lacks specialized frontend experience
+resume_frontend_dev.pdf,job_backend_lead.txt,weak,Junior frontend profile lacking distributed systems Python and Kubernetes
+resume_sales_exec.pdf,job_backend_lead.txt,weak,Completely unrelated non-technical corporate sales background

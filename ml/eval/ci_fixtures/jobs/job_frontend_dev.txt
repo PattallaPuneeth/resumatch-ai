@@ -1,0 +1,13 @@
+Senior Frontend Developer
+We are looking for a Senior Frontend Developer to design and develop elegant, accessible, and responsive user interfaces.
+
+Responsibilities:
+- Build modular, maintainable client-side applications using React and TypeScript.
+- Implement reusable UI design systems and accessible CSS styling.
+- Ensure cross-browser compatibility and optimal rendering performance.
+- Collaborate with backend engineers to integrate RESTful APIs.
+
+Requirements:
+- 3+ years of professional web development with React and TypeScript.
+- Strong proficiency in modern JavaScript, HTML5, and responsive CSS.
+- Experience with modern frontend build tools and component testing.
