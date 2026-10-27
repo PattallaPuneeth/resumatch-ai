@@ -114,13 +114,27 @@ where the image baked the Hugging Face models. Each container start therefore re
 | smoke, **cold** worker | match never ran (stuck in queue) | [17/17 checks](../loadtest/results/20261027T193341Z_smoke_cachefix.txt); match 0.53 s, analysis 1.55 s (real mock-LLM call) | the original bug |
 | [analysis](../loadtest/results/20261027T190959Z_analysis_afterfix.txt), 1/s for 3 min | p95 52.3 s (and mostly LLM cache hits) | p95 **14.3 s**, median 1.05 s, 181/181 stored, every one a real mock-LLM call; all thresholds pass | |
 | [ingestion](../loadtest/results/20261027T192541Z_ingestion_afterfix2.txt), ramp to 2/s | 49 of 141 PARSED (35%); text p95 79 s, OCR p95 69 s | **70 of 144 PARSED (49%)**; text p95 77 s, OCR p95 67 s | now a throughput ceiling, see below |
-| match, 1/2/4 per s | 382 of 533 scored (72%); p95 81 s | _re-run pending_ | the after-fix run overlapped the Finding 2 OCR hang (one parse slot blocked for the whole run), so it isn't a fair comparison |
-| mixed, ramp to 6/s | uploads 46% PARSED, match 61% scored | _re-run pending_ | same contamination; reads stayed fast (resume list p95 36 ms) |
+| [match](../loadtest/results/20261027T200246Z_match_afterfix2.txt), 1/2/4 per s | 382 of 533 scored (72%); median 26.8 s, p95 81 s | 338 of 576 scored (58%); **median 2.1 s**, p95 74 s | median fixed (stalls gone), but completion within 90 s is lower; see throughput note |
+| [mixed](../loadtest/results/20261027T201108Z_mixed_afterfix2.txt), ramp to 6/s | uploads 46% PARSED; match 61% scored, p95 78 s | uploads 29% PARSED; **match 99% scored**, p95 55 s; analysis p95 12 s | uploads now queue behind serialized OCR; reads fast (resume list p95 45 ms) |
+
+(An earlier after-fix [match](../loadtest/results/20261027T190136Z_match_afterfix.txt) and
+[mixed](../loadtest/results/20261027T191332Z_mixed_afterfix.txt) run overlapped the Finding 2 OCR hang
+and is kept only as a record.)
+
+**Throughput didn't improve.** Worker logs for the after-fix match run show 396 matches completed in
+the 8.3-minute window (about 0.8/s), and 105 in the 2.5-minute 4/s step (about 0.7/s). The baseline
+scored at least 382 matches in the same window, so its throughput was at least about 0.76/s. The
+fixes removed the stalls (median latency, cold starts, stuck jobs), not the capacity limit.
+
+Leading hypothesis (not yet tested): CPU oversubscription. Up to four inference threads can now run
+at once (embed and match queues, concurrency 2 each), and each lets PyTorch use all 4 vCPUs. The old
+worker ran inference one call at a time. The next experiment is to cap PyTorch intra-op threads
+(`torch.set_num_threads` / `OMP_NUM_THREADS`), or serialize inference like parsing, and re-run `match`.
 
 0 failed HTTP requests and 0 real provider calls in every run.
 
 **What's left is capacity, not stalls.** With the stalls gone, the worker processes match jobs back
-to back at about 1 per second on this 4-vCPU VM, and parsing is serialized, so OCR (about 6 to 7 s
+to back at about 0.7 to 0.8 per second on this 4-vCPU VM, and parsing is serialized, so OCR (about 6 to 7 s
 per scan) caps this upload mix at roughly 1 upload per second per worker process. Higher throughput
 needs more worker processes or replicas (each with its own PyMuPDF), not code fixes. That's a sizing
 input for deployment.
