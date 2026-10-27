@@ -73,6 +73,9 @@ jobs:
 
       - name: Validate Prisma Schema
         working-directory: backend
+        env:
+          # schema.prisma reads env("DATABASE_URL"); validate fails without it on a clean runner
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/resumatch_test
         run: npx prisma validate --schema=db/schema.prisma
 
       - name: Generate Prisma Client
@@ -223,7 +226,8 @@ jobs:
         continue-on-error: true
 
       - name: Run Trivy Vulnerability Scanner (Filesystem)
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
+        # v0.29.0 depended on aquasecurity/setup-trivy@v0.2.2, a tag that no longer exists
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -236,6 +240,11 @@ jobs:
     name: End-to-End API Smoke Gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # CI-only placeholder secrets (same pattern as k6-smoke). backend and ml refuse to start
+      # without them, so the stack never became healthy and `up --wait` failed.
+      JWT_SECRET: supersecretjwtkeyforciqualitygate123456789012
+      INTERNAL_API_TOKEN: supersecretinternalapitokenforciqualitygate1234
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
