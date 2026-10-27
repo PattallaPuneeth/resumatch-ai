@@ -17,6 +17,9 @@ from ml.storage.s3 import get_s3_client
 from ml.tests.test_parser import create_sample_pdf
 from ml.worker import process_parse_document
 
+# Every test here reads and writes the real Postgres schema and S3 storage.
+pytestmark = pytest.mark.integration
+
 
 def get_or_create_test_user() -> str:
     """Ensures a test user exists in DB and returns user ID."""

@@ -179,7 +179,9 @@ jobs:
         run: python -m mypy --config-file ml/pyproject.toml ml
 
       - name: Run Pytest Suite
-        run: python -m pytest ml/tests -m "not live"
+        # Tests marked `integration` need the migrated Postgres schema and MinIO; the e2e job
+        # runs them inside the compose stack.
+        run: python -m pytest ml/tests -m "not live and not integration"
 
   ml-eval-gate:
     name: ML Eval Quality Gate (Ranking Accuracy & Calibration)
@@ -260,6 +262,10 @@ jobs:
 
       - name: Run End-to-End API Smoke Suite
         run: node e2e/smoke.mjs
+
+      - name: Run ML Integration Tests Inside the Stack (Postgres + MinIO)
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.llm-off.yml exec -T ml             sh -c 'cd /workspace/ml && python -m pytest -p no:cacheprovider -m integration'
 
       - name: Teardown Docker Stack
         if: always()

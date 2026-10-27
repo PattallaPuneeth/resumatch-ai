@@ -19,6 +19,9 @@ from ml.pipelines.embeddings.repository import (
 )
 from ml.worker import process_embed_document
 
+# Every test here reads and writes the real Postgres schema.
+pytestmark = pytest.mark.integration
+
 
 def _create_test_user_and_resume(status: str = "PARSED") -> tuple[str, str]:
     """Helper to insert a test user, resume, and parsed_resume into the database."""
