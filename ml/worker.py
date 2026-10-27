@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import signal
+import time
 from types import FrameType
 from typing import Any, Literal
 
@@ -13,7 +14,7 @@ from ml.eval.metrics import (
     DEFAULT_WEAK_THRESHOLD,
 )
 from ml.pipelines.embeddings.chunker import chunk_job_text, chunk_resume_text
-from ml.pipelines.embeddings.embedder import generate_chunk_embeddings
+from ml.pipelines.embeddings.embedder import generate_chunk_embeddings, get_embedder
 from ml.pipelines.embeddings.repository import (
     get_job_data,
     get_parsed_resume_data,
@@ -51,6 +52,7 @@ from ml.pipelines.matching.lexical import search_lexical
 from ml.pipelines.matching.repository import get_match_context, persist_match_result
 from ml.pipelines.matching.reranker import (
     build_bounded_rerank_query,
+    get_cross_encoder,
     rerank_candidates,
 )
 from ml.pipelines.matching.rrf import aggregate_resume_rrf, fuse_ranks
@@ -64,6 +66,11 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("resumatch-ml-worker")
+
+# All four BullMQ workers share this process's event loop. Blocking work (S3 I/O, parsing/OCR,
+# model inference, synchronous DB calls) runs via asyncio.to_thread so the loop keeps serving
+# every worker's Redis waits and lock renewals. Blocking it stalled job pickup for tens of
+# seconds (docs/PERFORMANCE.md, Finding 1).
 
 _parse_worker: Worker | None = None
 _embed_worker: Worker | None = None
@@ -159,7 +166,7 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
     try:
         # 2. Download from S3 storage
         try:
-            download_file(storage_key, temp_file, bucket=bucket)
+            await asyncio.to_thread(download_file, storage_key, temp_file, bucket=bucket)
         except Exception as dl_err:
             logger.error("Failed to download storage object for resume %s: %s", resume_id, dl_err)
             raise StorageObjectNotFoundError(
@@ -172,10 +179,12 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
             update_resume_status(resume_id, status)
 
         # 4. Parse document
-        result = parse_document(temp_file, mime_type, status_callback=on_status_change)
+        result = await asyncio.to_thread(
+            parse_document, temp_file, mime_type, status_callback=on_status_change
+        )
 
         # 5. Persist results and transition to PARSED
-        persisted = save_parsed_resume(resume_id, result)
+        persisted = await asyncio.to_thread(save_parsed_resume, resume_id, result)
         if not persisted:
             logger.info(
                 "Resume %s was deleted during processing. Aborting job %s.", resume_id, job.id
@@ -257,8 +266,8 @@ async def process_embed_document(job: Job, token: str | None = None) -> dict[str
 
         chunks = chunk_job_text(raw_desc)
         logger.info("Generated %d chunks for Job %s", len(chunks), job_id)
-        chunk_vectors = generate_chunk_embeddings(chunks)
-        saved_count = persist_job_chunks(job_id, chunk_vectors)
+        chunk_vectors = await asyncio.to_thread(generate_chunk_embeddings, chunks)
+        saved_count = await asyncio.to_thread(persist_job_chunks, job_id, chunk_vectors)
 
         return {
             "status": "EMBEDDED",
@@ -307,10 +316,10 @@ async def process_embed_document(job: Job, token: str | None = None) -> dict[str
         logger.info("Generated %d chunks for resume %s", len(chunks), resume_id)
 
         # 3. Generate 384-dimensional vector embeddings
-        chunk_vectors = generate_chunk_embeddings(chunks)
+        chunk_vectors = await asyncio.to_thread(generate_chunk_embeddings, chunks)
 
         # 4. Atomically persist chunks to database
-        saved_count = persist_resume_chunks(resume_id, chunk_vectors)
+        saved_count = await asyncio.to_thread(persist_resume_chunks, resume_id, chunk_vectors)
 
         return {
             "status": "EMBEDDED",
@@ -362,10 +371,14 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
 
     try:
         # 1. Sparse Lexical Search (BM25-style with GIN index)
-        lexical_hits = search_lexical(query_text, resume_id=resume_id, limit=50)
+        lexical_hits = await asyncio.to_thread(
+            search_lexical, query_text, resume_id=resume_id, limit=50
+        )
 
         # 2. Dense Semantic Search (pgvector cosine <=> with HNSW index)
-        semantic_hits = search_semantic(query_text, resume_id=resume_id, limit=50)
+        semantic_hits = await asyncio.to_thread(
+            search_semantic, query_text, resume_id=resume_id, limit=50
+        )
 
         # 3. Reciprocal Rank Fusion
         fused_chunks = fuse_ranks(lexical_hits, semantic_hits, k=settings.rrf_k)
@@ -375,8 +388,8 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
         job_rerank_query = build_bounded_rerank_query(
             job_title, job_req_skills, job_desc, max_tokens=180
         )
-        reranked_chunks = rerank_candidates(
-            job_rerank_query, fused_chunks, top_n=settings.top_k_candidates
+        reranked_chunks = await asyncio.to_thread(
+            rerank_candidates, job_rerank_query, fused_chunks, top_n=settings.top_k_candidates
         )
 
         # 5. Skill-Gap Analysis
@@ -420,7 +433,8 @@ async def process_match_scoring(job: Job, token: str | None = None) -> dict[str,
         }
 
         # 7. Atomic persistence to matches table
-        match_id = persist_match_result(
+        match_id = await asyncio.to_thread(
+            persist_match_result,
             resume_id=resume_id,
             job_id=job_id,
             bm25_score=best_bm25,
@@ -641,9 +655,22 @@ async def process_analysis(job: Job, token: str | None = None) -> dict[str, Any]
         raise e
 
 
+def warm_models() -> None:
+    """Loads both transformer models before any worker starts consuming jobs.
+
+    Lazy loading on the first job blocked the event loop ~30 s per model.
+    """
+    started = time.monotonic()
+    get_embedder()
+    get_cross_encoder()
+    logger.info("ML models preloaded in %.1fs", time.monotonic() - started)
+
+
 async def main_async() -> None:
     global _parse_worker, _embed_worker, _match_worker, _analysis_worker
     redis_opts = {"connection": settings.redis_url, "prefix": "bull", "concurrency": 2}
+
+    await asyncio.to_thread(warm_models)
 
     logger.info(
         "Starting BullMQ Workers for resume-parsing-queue, "

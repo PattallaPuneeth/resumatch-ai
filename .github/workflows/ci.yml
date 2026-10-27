@@ -255,3 +255,46 @@ jobs:
       - name: Teardown Docker Stack
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.llm-off.yml down
+
+  k6-smoke:
+    name: k6 Load-Test Smoke (mock LLM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # CI-only placeholder secrets (same pattern as backend-ci); never used outside CI.
+      JWT_SECRET: supersecretjwtkeyforciqualitygate123456789012
+      INTERNAL_API_TOKEN: supersecretinternalapitokenforciqualitygate1234
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Start Docker Stack in Load-Test Mode (mock LLM, no provider keys)
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.loadtest.yml up -d --build --wait
+
+      - name: Wait for ml-worker to preload models and start consuming
+        run: |
+          timeout 300 bash -c 'until docker compose logs ml-worker 2>&1 | grep -q "Starting BullMQ"; do sleep 5; done'
+
+      - name: Run k6 smoke scenario
+        run: |
+          # the k6 image runs as a non-root user; let it write its summary into the checkout
+          chmod a+w loadtest/results
+          loadtest/run.sh smoke ci
+
+      - name: Fail if any real provider was called
+        run: |
+          if [ -s "$(ls loadtest/results/*_smoke_ci.provider_ledger.txt)" ]; then
+            echo "Real provider request detected during load test"; exit 1
+          fi
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8c75cf882 # v4.4.3
+        with:
+          name: k6-smoke-results
+          path: loadtest/results/*_smoke_ci*
+
+      - name: Teardown Docker Stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.loadtest.yml down

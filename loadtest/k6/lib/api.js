@@ -102,7 +102,9 @@ export function createJob(headers, marker) {
     JSON.stringify({
       title: 'Senior Backend Engineer',
       company: 'Loadtest Corp',
-      rawDescription: `${JD_TEMPLATE} Reference ${marker}.`,
+      // Digits are mapped to letters: PII redaction turns long digit runs into [PHONE_NUMBER],
+      // which made every JD identical after redaction and turned analyses into LLM cache hits.
+      rawDescription: `${JD_TEMPLATE} Reference ${marker.replace(/[0-9]/g, (d) => 'abcdefghij'[d])}.`,
     }),
     { headers, tags: { name: 'job_create' } }
   );
