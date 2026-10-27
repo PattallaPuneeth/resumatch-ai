@@ -1,0 +1,86 @@
+name: resumatch-ci
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: resumatch-ci-postgres
+    restart: "no"
+    environment:
+      POSTGRES_USER: ci_test_user
+      POSTGRES_PASSWORD: ci_test_password_123
+      POSTGRES_DB: resumatch_ci_test
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data:rw,noexec,nosuid,size=512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ci_test_user -d resumatch_ci_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 3s
+    networks:
+      - resumatch-ci-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: resumatch-ci-redis
+    restart: "no"
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy noeviction
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    networks:
+      - resumatch-ci-net
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    container_name: resumatch-ci-minio
+    restart: "no"
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ci_minio_user
+      MINIO_ROOT_PASSWORD: ci_minio_password_123
+      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:3000,http://127.0.0.1:3000"
+    ports:
+      - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"
+    tmpfs:
+      - /data:rw,noexec,nosuid,size=256m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 3s
+    networks:
+      - resumatch-ci-net
+
+  minio-setup:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    container_name: resumatch-ci-minio-setup
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set myminio http://minio:9000 ci_minio_user ci_minio_password_123; do
+        echo 'Waiting for CI MinIO...';
+        sleep 1;
+      done;
+      /usr/bin/mc mb --ignore-existing myminio/resumes;
+      /usr/bin/mc anonymous set none myminio/resumes;
+      echo 'CI MinIO private bucket initialization complete.';
+      exit 0;
+      "
+    networks:
+      - resumatch-ci-net
+
+networks:
+  resumatch-ci-net:
+    driver: bridge

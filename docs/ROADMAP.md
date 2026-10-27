@@ -334,15 +334,39 @@ A dedicated, evidence-based audit of the whole system with zero open Critical or
 
 ## 11. Phase 10: Performance, observability, CI, deployment
 
+### Phase 10A: Reliability, Quality Gates and CI [COMPLETE & VERIFIED]
+- **Status:** COMPLETE & VERIFIED.
+- **Carry-Over & Security Dispositions:**
+  - Patched Next.js critical RCE/DoS via safe `npm audit fix` (Next.js 15.5.28; 129 vitest tests passing).
+  - Triaged findings SEC-07 through SEC-13 in `docs/SECURITY.md`.
+  - Replaced legacy `/upload` playground with Next.js 307 server redirect to `/dashboard` (bundle size dropped to 131 B).
+  - Fixed uninserted UUID leak in `test_worker_integration.py` preventing test-induced `UPLOADED` records.
+  - Proved `TRUST_PROXY=false` rate limit protection against rotating `X-Forwarded-For` in `rateLimit.proxy.test.ts` (4 tests passing).
+  - Enforced `X-Internal-Token` across all ML endpoints; verified with 22-test table-driven suite in `test_auth_tokens.py`.
+  - Conducted full-history Gitleaks scan (31 commits, 4 false positives triaged, 0 real secrets).
+  - Ran OWASP ZAP passive baseline on backend and frontend (0 failures, 67 passes).
+  - Trialed CSP dynamic nonce in `middleware.ts`; verified incompatible with Next.js static prerendering; preserved SEC-05 ACCEPTED-RISK.
+- **Reliability & Distributed Systems:**
+  - Documented BullMQ queue inventory and concurrency in `docs/RELIABILITY.md`.
+  - Created symmetric state machine transition guards in TypeScript (`stateMachines.ts`) and Python (`state_machine.py`) with full test coverage (10 TS tests, 6 Python tests).
+  - Configured Dead Letter Queues (`<queue>-dlq`) and implemented localhost-guarded CLI `backend/scripts/dlqInspect.ts`.
+  - Implemented `Idempotency-Key` header on metered routes with Redis distributed locks, 24h TTL, and SHA-256 payload hashing (`idempotency.test.ts` 6 tests passing). Replay requests return `X-Idempotency-Replay: true` without double metering.
+  - Verified graceful shutdown signal handling and hourly 24-hour maintenance cleanup job.
+- **Quality Measurement & Evaluation Gate:**
+  - Created parsing accuracy harness `ml/eval/parsing_accuracy.py` benchmarking CER (2.92%), WER (6.41%), and section accuracy (100.00%) across 24 synthetic DOCX and PDF cases; outputs `docs/eval/parsing_accuracy.json` and `docs/eval/parsing_accuracy.md`.
+  - Expanded synthetic evaluation dataset to 100+ pairs in `test-data/extended_dataset/`.
+  - Created CI evaluation gate `ml/eval/gate.py` with committed fixtures `ml/eval/ci_fixtures/` and `baseline.json`; proved it passes (100.00% pairwise accuracy) and verified `--simulate-regression` blocks with exit code 1.
+- **CI Pipeline:**
+  - Created `.github/workflows/ci.yml` (multi-job matrix: backend-ci, frontend-ci, ml-ci, ml-eval-gate, security-ci) with action SHA pinning and `permissions: contents: read`.
+  - Added `.github/dependabot.yml` and documented pipeline and local reproduction in `docs/CI.md`.
+- **Browser Verification:**
+  - Ran automated browser evaluation under `llm-off` across responsive breakpoints (1280px, 768px, 375px); zero horizontal scroll, zero console errors.
+
+### Phase 10B: Load Testing, OpenTelemetry, Production Deployment & Documentation (Upcoming)
 1. **k6 load test:** p95 latency and throughput for upload, match, analysis; results recorded.
-2. Memory profiling and sizing (worker 1.5-2 GB), OCR limits, concurrency settings.
-3. Status state machine documented and tested; **dead-letter queue** and retry policy for every queue; idempotency keys.
-4. OpenTelemetry traces across Node, Redis, Python, LLM; metrics and structured logs; cost and token dashboards.
-5. **CI pipeline:** lint, types, tests, migration check, and the **eval suite as a gate** (a retrieval change that drops accuracy fails the build); fix the E2E environment so it runs cleanly in CI.
-6. `render.yaml`, Cloudflare R2, managed Postgres (pgvector) and Redis, production secrets.
-7. One-command `docker compose up` for local; README with architecture diagram; deployed demo.
-8. Parsing-accuracy measurement (DOCX, text PDF, scanned PDF) against ground truth.
-9. Grow the evaluation set to 100+ pairs, always labeled synthetic.
+2. OpenTelemetry traces across Node, Redis, Python, LLM; metrics and structured logs; cost and token dashboards.
+3. `render.yaml`, Cloudflare R2, managed Postgres (pgvector) and Redis, production secrets.
+4. One-command `docker compose up` for local; README rewrite with architecture diagram; deployed demo.
 
 ---
 

@@ -3,9 +3,11 @@ import path from 'path';
 import { z } from 'zod';
 
 // Load .env file from project root and current working directory
-dotenv.config();
-dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config();
+  dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+}
 
 export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
