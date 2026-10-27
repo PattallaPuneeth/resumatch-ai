@@ -73,10 +73,57 @@ Side effect: BullMQ's stalled-job checker re-ran the embed job that held the loo
 (duplicate `embed-<resumeId>` processing). That is harmless because embedding is idempotent, but it
 is wasted work.
 
-**Proposed fix (Phase 10B-3, needs approval).** (1) Load both models once at worker startup, before
-the BullMQ workers start. (2) Run CPU-bound steps (parse/OCR, embedding, reranking) in
-`asyncio.to_thread` so the event loop stays responsive. Then re-run the same scenarios and report
-before and after.
+**Fix (Phase 10B-3, commit `dc2f3f1`).** (1) `warm_models()` loads both models at worker startup,
+before the BullMQ workers start. (2) S3 I/O, parse/OCR, embedding, retrieval, reranking and their DB
+writes run in `asyncio.to_thread`. Regression test `ml/tests/test_worker_event_loop.py`: the loop
+must keep ticking while a handler does blocking inference (0 ticks on the old worker).
+
+## Finding 2: concurrent OCR in threads hangs (regression from the Finding 1 fix)
+
+Moving parsing into threads let both parse slots run PyMuPDF/Tesseract at the same time. In the
+[first after-fix ingestion run](../loadtest/results/20261027T185605Z_ingestion_afterfix.txt) two OCR
+jobs started together and took **4 min 51 s and 12 min 43 s** (a lone OCR job takes ~7 s); the parse
+queue processed nothing else meanwhile, so only 11 of 139 uploads reached PARSED. PyMuPDF doesn't
+support concurrent use from several threads, and Tesseract's OpenMP threads competed with PyTorch's
+on 4 vCPUs.
+
+**Fix.** `ml/worker.py` serializes `parse_document` behind a thread lock (still off the event loop).
+Regression test: three concurrent parse jobs never run `parse_document` at the same time, and the
+loop keeps ticking.
+
+## Finding 3: baked models hidden by a tmpfs, re-downloaded on every start
+
+`docker-compose.yml` mounts a tmpfs at `/home/appuser/.cache` for `ml` and `ml-worker`, which is
+where the image baked the Hugging Face models. Each container start therefore re-downloaded
+88 MB of weights from the internet into RAM. (Found by the parallel ML analysis session.)
+
+**Fix.** `ml/Dockerfile` bakes the models into `/opt/hf` (`HF_HOME`) and sets `HF_HUB_OFFLINE=1`.
+
+| Worker startup | Before | After |
+|---|---|---|
+| Model preload | 61.3 s (mostly downloading) | **0.2 s** (from disk) |
+| Model bytes in tmpfs (RAM) | 88 MB | 0 |
+| Idle worker memory, models loaded | ~830 MiB | 461 MiB |
+| Works offline | no | yes |
+| ML test suite time | ~85 s | ~21 s |
+
+## After the fixes
+
+| Scenario | Baseline | After all fixes | Notes |
+|---|---|---|---|
+| smoke, **cold** worker | match never ran (stuck in queue) | [17/17 checks](../loadtest/results/20261027T193341Z_smoke_cachefix.txt); match 0.53 s, analysis 1.55 s (real mock-LLM call) | the original bug |
+| [analysis](../loadtest/results/20261027T190959Z_analysis_afterfix.txt), 1/s for 3 min | p95 52.3 s (and mostly LLM cache hits) | p95 **14.3 s**, median 1.05 s, 181/181 stored, every one a real mock-LLM call; all thresholds pass | |
+| [ingestion](../loadtest/results/20261027T192541Z_ingestion_afterfix2.txt), ramp to 2/s | 49 of 141 PARSED (35%); text p95 79 s, OCR p95 69 s | **70 of 144 PARSED (49%)**; text p95 77 s, OCR p95 67 s | now a throughput ceiling, see below |
+| match, 1/2/4 per s | 382 of 533 scored (72%); p95 81 s | _re-run pending_ | the after-fix run overlapped the Finding 2 OCR hang (one parse slot blocked for the whole run), so it isn't a fair comparison |
+| mixed, ramp to 6/s | uploads 46% PARSED, match 61% scored | _re-run pending_ | same contamination; reads stayed fast (resume list p95 36 ms) |
+
+0 failed HTTP requests and 0 real provider calls in every run.
+
+**What's left is capacity, not stalls.** With the stalls gone, the worker processes match jobs back
+to back at about 1 per second on this 4-vCPU VM, and parsing is serialized, so OCR (about 6 to 7 s
+per scan) caps this upload mix at roughly 1 upload per second per worker process. Higher throughput
+needs more worker processes or replicas (each with its own PyMuPDF), not code fixes. That's a sizing
+input for deployment.
 
 ## ML memory (SPEC §7.4)
 

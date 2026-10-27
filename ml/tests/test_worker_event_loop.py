@@ -8,6 +8,7 @@ directly on it, every other worker's Redis wait stalled (docs/PERFORMANCE.md, Fi
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from types import SimpleNamespace
 from typing import Any, cast
@@ -61,6 +62,53 @@ async def test_embedding_inference_does_not_block_event_loop(
     assert result["status"] == "EMBEDDED"
     # A free loop ticks ~BLOCK_SECONDS / TICK_SECONDS (12) times; a blocked loop ticks ~0.
     assert ticks >= 6, f"event loop only ticked {ticks} times during blocking inference"
+
+
+@pytest.mark.asyncio
+async def test_parse_jobs_never_run_parse_document_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PyMuPDF isn't thread-safe; concurrent OCR jobs hung for minutes under load."""
+    active = 0
+    peak = 0
+    lock = threading.Lock()
+
+    def tracking_parse(*args: Any, **kwargs: Any) -> Any:
+        nonlocal active, peak
+        with lock:
+            active += 1
+            peak = max(peak, active)
+        time.sleep(0.2)
+        with lock:
+            active -= 1
+        return SimpleNamespace(extraction_method="OCR", ats_score=80.0, page_count=1)
+
+    async def no_enqueue(resume_id: str) -> None:
+        return None
+
+    monkeypatch.setattr(worker, "get_resume_status", lambda rid: ("UPLOADED", None))
+    monkeypatch.setattr(worker, "update_resume_status", lambda rid, status: True)
+    monkeypatch.setattr(worker, "download_file", lambda key, path, bucket=None: None)
+    monkeypatch.setattr(worker, "parse_document", tracking_parse)
+    monkeypatch.setattr(worker, "save_parsed_resume", lambda rid, result: True)
+    monkeypatch.setattr(worker, "enqueue_embed_job", no_enqueue)
+
+    jobs = [
+        cast(
+            Job,
+            SimpleNamespace(
+                id=f"t-parse-{i}", data={"resumeId": f"r{i}", "storageKey": f"k{i}.pdf"}
+            ),
+        )
+        for i in range(3)
+    ]
+    results, ticks = await _count_ticks_while(
+        asyncio.gather(*(worker.process_parse_document(j) for j in jobs))
+    )
+
+    assert [r["status"] for r in results] == ["PARSED"] * 3
+    assert peak == 1, f"parse_document ran {peak} times concurrently"
+    assert ticks >= 6, "event loop was blocked while parses ran"
 
 
 def test_warm_models_loads_both_models(monkeypatch: pytest.MonkeyPatch) -> None:

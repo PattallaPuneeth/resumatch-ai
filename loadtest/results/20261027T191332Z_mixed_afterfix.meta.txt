@@ -1,0 +1,5 @@
+scenario=mixed label=afterfix started=20261027T191332Z
+commit=dc2f3f1 dirty=13
+docker=cpus=4 mem_bytes=6214496256 server=29.6.1
+k6_args=
+k6_exit=99 provider_hits=0

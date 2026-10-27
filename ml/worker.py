@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import signal
+import threading
 import time
 from types import FrameType
 from typing import Any, Literal
@@ -71,6 +72,15 @@ logger = logging.getLogger("resumatch-ml-worker")
 # model inference, synchronous DB calls) runs via asyncio.to_thread so the loop keeps serving
 # every worker's Redis waits and lock renewals. Blocking it stalled job pickup for tens of
 # seconds (docs/PERFORMANCE.md, Finding 1).
+#
+# Parsing is serialized: PyMuPDF does not support concurrent use from several threads, and two
+# OCR jobs at once hung for 5 to 13 minutes in load tests instead of ~7 s.
+_PARSE_LOCK = threading.Lock()
+
+
+def _parse_document_serialized(*args: Any, **kwargs: Any) -> Any:
+    with _PARSE_LOCK:
+        return parse_document(*args, **kwargs)
 
 _parse_worker: Worker | None = None
 _embed_worker: Worker | None = None
@@ -180,7 +190,7 @@ async def process_parse_document(job: Job, token: str | None = None) -> dict[str
 
         # 4. Parse document
         result = await asyncio.to_thread(
-            parse_document, temp_file, mime_type, status_callback=on_status_change
+            _parse_document_serialized, temp_file, mime_type, status_callback=on_status_change
         )
 
         # 5. Persist results and transition to PARSED
