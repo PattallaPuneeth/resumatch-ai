@@ -1,4 +1,12 @@
-.PHONY: dev test lint migrate seed clean build-all docker-up docker-down
+.PHONY: bootstrap health dev test lint migrate seed clean build-all docker-up docker-down
+
+# One-time setup: .env with generated secrets (LLM-off). Then `make docker-up`.
+bootstrap:
+	bash scripts/bootstrap.sh
+
+# Container state and health for every compose service
+health:
+	bash scripts/health.sh
 
 dev:
 	docker compose up -d postgres redis minio minio-setup
@@ -13,7 +21,7 @@ test:
 	@echo "==> Running Backend Tests..."
 	cd backend && npm test
 	@echo "==> Running ML Tests..."
-	python -m pytest ml/tests
+	python -m pytest ml/tests -m "not live and not integration"
 	@echo "==> Running Frontend Tests..."
 	cd frontend && npm test
 
