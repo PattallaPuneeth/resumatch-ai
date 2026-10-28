@@ -10,14 +10,17 @@ import { withTraceContext } from '../telemetry.js';
 // ---------------------------------------------------------------------------
 // Validation Schemas
 // ---------------------------------------------------------------------------
+// Skill lists are capped so one request cannot store or send unbounded arrays to the worker
+const skillListSchema = z.array(z.string().trim().min(1).max(80)).max(50);
+
 export const createJobBodySchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   company: z.string().min(1, 'Company is required').max(200, 'Company too long'),
   rawDescription: z.string().min(20, 'Job description must be at least 20 characters'),
   location: z.string().max(200).optional(),
   jobType: z.string().max(50).optional(),
-  requiredSkills: z.array(z.string()).optional(),
-  preferredSkills: z.array(z.string()).optional(),
+  requiredSkills: skillListSchema.optional(),
+  preferredSkills: skillListSchema.optional(),
   experienceLevel: z.string().max(50).optional(),
 });
 

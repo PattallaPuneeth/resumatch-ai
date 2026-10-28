@@ -3,6 +3,7 @@
 import React from 'react';
 import { MatchResult, MatchExplanation } from '@/lib/apiClient';
 import { BarChart3, CheckCircle2, XCircle, AlertCircle, HelpCircle } from 'lucide-react';
+import { MatchPassages } from './MatchPassages';
 
 interface MatchVisualizerProps {
   matchResult: MatchResult | null;
@@ -179,7 +180,7 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
               {skillGap.missing.map((skill) => (
                 <span
                   key={skill}
-                  className="text-xs font-mono px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200"
+                  className="stagger-item text-xs font-mono px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200"
                 >
                   {skill}
                 </span>
@@ -204,7 +205,35 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
               {skillGap.matched.map((skill) => (
                 <span
                   key={skill}
-                  className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200"
+                  className="stagger-item text-xs font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Preferred Skills (count at reduced weight in coverage) */}
+        {((skillGap.preferred_matched?.length ?? 0) > 0 ||
+          (skillGap.preferred_missing?.length ?? 0) > 0) && (
+          <div className="space-y-1.5 pt-1" data-testid="preferred-skills">
+            <div className="text-xs font-medium text-slate-700">
+              Preferred Skills (nice to have, weigh less than required):
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(skillGap.preferred_matched ?? []).map((skill) => (
+                <span
+                  key={`pm-${skill}`}
+                  className="stagger-item text-xs font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200"
+                >
+                  ✓ {skill}
+                </span>
+              ))}
+              {(skillGap.preferred_missing ?? []).map((skill) => (
+                <span
+                  key={`px-${skill}`}
+                  className="stagger-item text-xs font-mono px-2 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200"
                 >
                   {skill}
                 </span>
@@ -224,7 +253,7 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
               {skillGap.partial.map((skill) => (
                 <span
                   key={skill}
-                  className="text-xs font-mono px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200"
+                  className="stagger-item text-xs font-mono px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200"
                 >
                   {skill}
                 </span>
@@ -232,6 +261,22 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
             </div>
           </div>
         )}
+      </div>
+
+      {/* Match Inspector: the passages the reranker scored highest, matched terms highlighted */}
+      <div className="border-t border-border pt-4 space-y-3">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          Match Inspector
+        </h4>
+        <MatchPassages
+          chunks={matchResult.explanation?.topMatchingChunks ?? []}
+          highlight={[
+            ...(skillGap.matched ?? []),
+            ...(skillGap.partial ?? []),
+            ...(skillGap.preferred_matched ?? []),
+          ]}
+          totalEvaluated={matchResult.explanation?.totalChunksEvaluated}
+        />
       </div>
     </div>
   );

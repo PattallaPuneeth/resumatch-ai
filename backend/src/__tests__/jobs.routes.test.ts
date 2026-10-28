@@ -148,6 +148,30 @@ describe('Phase 3B: Job & Matching Routes', () => {
       expect(body.error).toBe('Unprocessable Entity');
     });
 
+    it('returns 422 when skill lists exceed their caps', async () => {
+      const token = await getAuthToken(app);
+      const base = {
+        title: 'Senior Backend Engineer',
+        company: 'Acme Corp',
+        rawDescription: 'Looking for a Senior Backend Engineer with TypeScript, Node.js, and Postgres experience.',
+      };
+      const tooMany = Array.from({ length: 51 }, (_, i) => `skill-${i}`);
+      for (const payload of [
+        { ...base, requiredSkills: tooMany },
+        { ...base, preferredSkills: ['x'.repeat(81)] },
+        { ...base, requiredSkills: ['   '] },
+      ]) {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/v1/jobs',
+          headers: { authorization: token },
+          payload,
+        });
+        expect(res.statusCode).toBe(422);
+      }
+      expect(mockJobCreate).not.toHaveBeenCalled();
+    });
+
     it('returns 201, persists job, and enqueues embedding task', async () => {
       const token = await getAuthToken(app, 'a0000000-0000-0000-0000-000000000001');
 

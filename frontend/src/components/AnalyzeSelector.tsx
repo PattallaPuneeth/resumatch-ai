@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Layers,
 } from 'lucide-react';
+import { SkillChipsInput, addSkills } from './SkillChipsInput';
 
 export interface JDInputData {
   title: string;
@@ -20,6 +21,8 @@ export interface JDInputData {
   rawDescription: string;
   location?: string;
   jobType?: string;
+  requiredSkills?: string[];
+  preferredSkills?: string[];
 }
 
 export interface MatchHistoryItem {
@@ -65,6 +68,8 @@ export function AnalyzeSelector({
   const [rawDescription, setRawDescription] = useState('');
   const [location, setLocation] = useState('');
   const [jobType, setJobType] = useState('');
+  const [requiredSkills, setRequiredSkills] = useState<string[]>([]);
+  const [preferredSkills, setPreferredSkills] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const selectedResume = resumes.find((r) => r.id === selectedResumeId);
@@ -114,7 +119,20 @@ export function AnalyzeSelector({
       rawDescription: cleanDesc,
       location: location.trim() || undefined,
       jobType: jobType.trim() || undefined,
+      // Empty lists are left out: the ML worker then reads required vs preferred from the text.
+      requiredSkills: requiredSkills.length > 0 ? requiredSkills : undefined,
+      preferredSkills: preferredSkills.length > 0 ? preferredSkills : undefined,
     });
+  };
+
+  const moveToPreferred = (skill: string) => {
+    setRequiredSkills((cur) => cur.filter((s) => s !== skill));
+    setPreferredSkills((cur) => addSkills(cur, [skill]));
+  };
+
+  const moveToRequired = (skill: string) => {
+    setPreferredSkills((cur) => cur.filter((s) => s !== skill));
+    setRequiredSkills((cur) => addSkills(cur, [skill]));
   };
 
   const handleResetJD = () => {
@@ -123,6 +141,8 @@ export function AnalyzeSelector({
     setRawDescription('');
     setLocation('');
     setJobType('');
+    setRequiredSkills([]);
+    setPreferredSkills([]);
     setValidationError(null);
   };
 
@@ -423,6 +443,33 @@ export function AnalyzeSelector({
                 onChange={(e) => setRawDescription(e.target.value)}
                 className="w-full text-xs px-3 py-2 border border-slate-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-mono leading-relaxed"
               />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground">
+                Optional. Required skills drive the skill-coverage score; preferred skills count
+                half as much. Leave both empty to have them read from the description.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <SkillChipsInput
+                  id="jd-required-skills"
+                  label="Required Skills (Optional)"
+                  skills={requiredSkills}
+                  onChange={setRequiredSkills}
+                  onMove={moveToPreferred}
+                  moveLabel="Move to preferred"
+                  tone="required"
+                />
+                <SkillChipsInput
+                  id="jd-preferred-skills"
+                  label="Preferred Skills (Optional)"
+                  skills={preferredSkills}
+                  onChange={setPreferredSkills}
+                  onMove={moveToRequired}
+                  moveLabel="Move to required"
+                  tone="preferred"
+                />
+              </div>
             </div>
 
             {validationError && (

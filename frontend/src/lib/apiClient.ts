@@ -239,6 +239,8 @@ export interface MatchExplanation {
     matched: string[];
     missing: string[];
     partial: string[];
+    preferred_matched?: string[];
+    preferred_missing?: string[];
     coverage_ratio?: number;
   };
   scoringBreakdown?: MatchScoringBreakdown;
