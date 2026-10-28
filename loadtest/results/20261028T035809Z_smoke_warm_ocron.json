@@ -1,0 +1,265 @@
+{
+    "metrics": {
+        "http_req_duration": {
+            "avg": 9.81578057894737,
+            "min": 3.335762,
+            "med": 6.018876000000001,
+            "max": 61.6956,
+            "p(90)": 14.128900500000002,
+            "p(95)": 39.8413932
+        },
+        "vus": {
+            "value": 1,
+            "min": 0,
+            "max": 1
+        },
+        "http_req_sending": {
+            "med": 0.052757,
+            "max": 0.40352,
+            "p(90)": 0.1091143000000001,
+            "p(95)": 0.12985014999999997,
+            "avg": 0.0656066052631579,
+            "min": 0.012925
+        },
+        "http_req_waiting": {
+            "avg": 9.544804131578946,
+            "min": 3.200518,
+            "med": 5.7989485,
+            "max": 61.385667,
+            "p(90)": 13.811292200000002,
+            "p(95)": 39.5584413
+        },
+        "match_e2e": {
+            "max": 523,
+            "p(90)": 523,
+            "p(95)": 523,
+            "avg": 523,
+            "min": 523,
+            "med": 523
+        },
+        "http_req_receiving": {
+            "avg": 0.20536984210526313,
+            "min": 0.079164,
+            "med": 0.151808,
+            "max": 1.665441,
+            "p(90)": 0.2872699000000001,
+            "p(95)": 0.32118369999999996
+        },
+        "data_received": {
+            "rate": 4227.024813542277,
+            "count": 48680
+        },
+        "ingestion_e2e": {
+            "max": 8687,
+            "p(90)": 8687,
+            "p(95)": 8687,
+            "avg": 8687,
+            "min": 8687,
+            "med": 8687
+        },
+        "checks": {
+            "passes": 17,
+            "fails": 0,
+            "thresholds": {
+                "rate==1.0": false
+            },
+            "value": 1
+        },
+        "data_sent": {
+            "count": 55897,
+            "rate": 4853.69774039796
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 38,
+            "thresholds": {
+                "rate==0": false
+            },
+            "value": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "med": 6.018876000000001,
+            "max": 61.6956,
+            "p(90)": 14.128900500000002,
+            "p(95)": 39.8413932,
+            "avg": 9.81578057894737,
+            "min": 3.335762
+        },
+        "iteration_duration": {
+            "avg": 10303.651226,
+            "min": 10303.651226,
+            "med": 10303.651226,
+            "max": 10303.651226,
+            "p(90)": 10303.651226,
+            "p(95)": 10303.651226
+        },
+        "http_req_connecting": {
+            "p(95)": 0.35552385,
+            "avg": 0.039666,
+            "min": 0,
+            "med": 0,
+            "max": 0.446724,
+            "p(90)": 0.0985527000000014
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "vus_max": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "iterations": {
+            "count": 1,
+            "rate": 0.0868328844195209
+        },
+        "http_req_blocked": {
+            "max": 4.8824,
+            "p(90)": 0.16525530000000174,
+            "p(95)": 0.566888699999999,
+            "avg": 0.19224394736842101,
+            "min": 0.003837,
+            "med": 0.009552999999999999
+        },
+        "http_reqs": {
+            "count": 38,
+            "rate": 3.2996496079417943
+        },
+        "analysis_e2e": {
+            "med": 526,
+            "max": 1041,
+            "p(90)": 938,
+            "p(95)": 989.5,
+            "avg": 526,
+            "min": 11
+        }
+    },
+    "setup_data": {
+        "users": [
+            {
+                "issuedAt": 1793159891584,
+                "password": "Lt#2cd9ec0ad4f5!9aZ",
+                "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyODg5YzZjYi04NTkyLTRkNmYtODk4YS1mZTVjMzYzNTZiNTgiLCJzaWQiOiJmNmZjOTFhNS1kYjc2LTQwYmQtOTA4MS04NjIxMGU5YjYxZDkiLCJ1c2VybmFtZSI6Imx0XzI2MGYyNl8wIiwiaWF0IjoxNzkzMTU5ODkxLCJleHAiOjE3OTMxNjA3OTF9.ljV8SAHjtZOHhOCVmMTVgUGJ7Kgn6FM2AA3rH5TuACs",
+                "username": "lt_260f26_0"
+            }
+        ]
+    },
+    "root_group": {
+        "checks": {
+            "upload-url 201/200": {
+                "name": "upload-url 201/200",
+                "path": "::upload-url 201/200",
+                "id": "6f2b3b2a874227f96a68ca5ac2f44f41",
+                "passes": 1,
+                "fails": 0
+            },
+            "s3 PUT 200": {
+                "name": "s3 PUT 200",
+                "path": "::s3 PUT 200",
+                "id": "1d77bdd5ae006fbf51c22c632c40ad89",
+                "passes": 1,
+                "fails": 0
+            },
+            "complete 200/202": {
+                "name": "complete 200/202",
+                "path": "::complete 200/202",
+                "id": "c26c7e3995bb17e7f07bbac01d1d89b2",
+                "passes": 1,
+                "fails": 0
+            },
+            "resume reached PARSED": {
+                "name": "resume reached PARSED",
+                "path": "::resume reached PARSED",
+                "id": "8ed4530fbe6b558b3b40b3a83ed7076c",
+                "passes": 1,
+                "fails": 0
+            },
+            "job create 201/200": {
+                "passes": 1,
+                "fails": 0,
+                "name": "job create 201/200",
+                "path": "::job create 201/200",
+                "id": "d923b3a9ece059aaa33b34f6b05d2798"
+            },
+            "match trigger 202/200": {
+                "passes": 1,
+                "fails": 0,
+                "name": "match trigger 202/200",
+                "path": "::match trigger 202/200",
+                "id": "79b9d245533407dac815e81108f01cf5"
+            },
+            "match scored": {
+                "name": "match scored",
+                "path": "::match scored",
+                "id": "c7028074650c984d7ab56fe254f42761",
+                "passes": 1,
+                "fails": 0
+            },
+            "analysis trigger 202/200": {
+                "name": "analysis trigger 202/200",
+                "path": "::analysis trigger 202/200",
+                "id": "c5e44bcc31f9725a8bd7d38181144cee",
+                "passes": 2,
+                "fails": 0
+            },
+            "analysis stored": {
+                "fails": 0,
+                "name": "analysis stored",
+                "path": "::analysis stored",
+                "id": "8857d0be017b85c19432f167fc4b9df0",
+                "passes": 2
+            },
+            "analysis llmStatus SUCCESS (mock LLM)": {
+                "name": "analysis llmStatus SUCCESS (mock LLM)",
+                "path": "::analysis llmStatus SUCCESS (mock LLM)",
+                "id": "8ca23e23be2302a0db6f948e42965795",
+                "passes": 1,
+                "fails": 0
+            },
+            "replay has X-Idempotency-Replay: true": {
+                "name": "replay has X-Idempotency-Replay: true",
+                "path": "::replay has X-Idempotency-Replay: true",
+                "id": "3233f5e6fbc7bef0eca8b2087a469962",
+                "passes": 1,
+                "fails": 0
+            },
+            "analyses meter grew exactly once": {
+                "name": "analyses meter grew exactly once",
+                "path": "::analyses meter grew exactly once",
+                "id": "bebed4ea38d4126f073e591af929d8c1",
+                "passes": 1,
+                "fails": 0
+            },
+            "resume list 200": {
+                "name": "resume list 200",
+                "path": "::resume list 200",
+                "id": "91cab7f73a5649bbcbc3f54915e95d34",
+                "passes": 1,
+                "fails": 0
+            },
+            "usage 200": {
+                "passes": 1,
+                "fails": 0,
+                "name": "usage 200",
+                "path": "::usage 200",
+                "id": "f97f0bc2b2ab3715631d5b9be0fdbd51"
+            },
+            "match history 200": {
+                "passes": 1,
+                "fails": 0,
+                "name": "match history 200",
+                "path": "::match history 200",
+                "id": "e2e0f9fb775aca965d3ecf5640ec9945"
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

@@ -38,6 +38,27 @@ Open (documented in observability/README.md and ML_FAILURE_ANALYSIS.md §6):
 - Required vs preferred skills at job creation (top ML improvement)
 - Human-labeled eval set
 
+## Round 2: 4-sprint plan (2026-10-28, from ~07:20 IST)
+User rule: keep a change only if it measurably helps. **The user asked for no commits or pushes**,
+so all of this is uncommitted in the working tree.
+- [x] 1A rerank cap 20 → 8: **rejected**. Real resumes have a median of 3 chunks (1 of 908 has > 8). The eval
+      runner now reads `TOP_K_CANDIDATES` like the worker.
+- [x] 1B required/preferred (weight 0.5) + "or" groups + finance aliases: **kept**. Kaggle test band
+      0.758 → 0.802, handwritten 0.938 held. JD form gets skill chips; backend caps skill arrays (50 × 80).
+- [x] 2B int8 cross-encoder: **rejected**. 2× faster, but Kaggle band −2.4 pts and extended pairwise −0.6.
+- [x] 3A LLM token/cost metrics + `observability/dashboards/llm-usage.json`: all 7 queries checked on a
+      live otel-lgtm, exemplars present, PII canary test added.
+- [x] 3B Match Inspector: top passages with highlighted skills, preferred-skill pills.
+- [x] 2A OCR worker: **opt-in only** (`--profile ocr-worker`, `OCR_QUEUE_ENABLED=true`). Ingestion text p95
+      60.6 s → 0.8 s, but mixed-load match p95 doubled (CPU contention on 4 vCPU). Analysis §8.4.
+- [x] UI redesign (user request): dark AI-tech theme (default, light toggle), Inter, Framer Motion
+      11.18.2, new landing page (animated demo card, measured-metrics strip, pipeline flow), glass
+      navbar with animated active pill, page transitions, gauge arc sweep (numerals stay exact, Rule
+      S7). Landing claims corrected (reranker is ms-marco-MiniLM, no virus-scan claim). 140/140
+      frontend tests, axe audits, tsc, eslint and `next build` pass.
+- [x] 4A `ml/eval/mine_hard_pairs.py` + `ml/eval/labeling/hard_pairs_to_label.csv` (50 pairs for the
+      user to label), regenerated on the final scoring.
+
 ## In progress / next (older list)
 - [ ] Final official eval (`python -m ml.eval.run`) on ci / handwritten / extended / kaggle test+tune.
       Outputs in the scratchpad `final/`. Then write `docs/eval/ML_FAILURE_ANALYSIS.md` with before/after.

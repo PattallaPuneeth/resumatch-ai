@@ -28,6 +28,8 @@ After the fixes, measured with the project's own harness (`python -m ml.eval.run
 
 "Band acc" is the share of pairs whose score lands in the labeled band (strong ≥ 75, medium 45–75, weak < 45, `ml/eval/metrics.py`).
 
+**Round 2 (2026-10-28, §8):** coverage now reads required vs preferred skills and "X or Y" alternatives, and the skill map gained finance phrasings. This raised Kaggle held-out band accuracy **0.758 → 0.802** (pairwise 0.995 → 0.996) with handwritten, extended and CI unchanged. Two speed ideas were measured and rejected.
+
 ---
 
 ## 2. Datasets and how far to trust them
@@ -126,7 +128,7 @@ The CI gate (`python -m ml.eval.gate`) passes: pairwise 100%, strong mean 88.7 (
 - **Evidence:** the catalog matched case-insensitively, so "ready to **go**" meant Go and "**R**&D" meant R (also Swift, Shell, REST, Express).
 - **Fix:** those names need their exact casing, and `&` ends a match.
 
-### 4.6 Score compression on non-tech roles *(open)*
+### 4.6 Score compression on non-tech roles *(partly fixed in round 2, §8)*
 - 52 of 252 Kaggle test strong pairs score 45–75. Their cross-encoder scores are high, but in the worst examples coverage is 0.14–0.44, because the JD's extracted skill list includes preferred skills and "or" alternatives ("financial statements *or* general ledger" becomes two requirements).
 - **Tried and rejected:** dropping "Preferred skills" sections from extracted requirements. Kaggle tune band accuracy rose 0.783 → 0.817, but handwritten band accuracy fell 0.938 → 0.781, because the reranker query changed too. With only the coverage list changed, handwritten fell to 0.906 and tune rose to 0.801. The Kaggle labels are themselves built from required groups only, so they favour this change by construction. Not shipped.
 - **Tried and rejected:** grid-fitting the blend weights and sigmoid on the tune split (Kaggle tune + extended). Kaggle test band accuracy went 0.770 → 0.873, but handwritten went 0.844 → 0.781 and pairwise slipped. Current weights (0.65 / 0.25 / 0.10, shift −3.5, temperature 2.8) and the 75/45 bands are kept.
@@ -168,7 +170,7 @@ Extended has 6 medium pairs scored as weak, all "adjacent role" labels (product 
 
 | # | Change | Expected impact | Cost | How to measure |
 | :---: | :--- | :--- | :--- | :--- |
-| 1 | **Separate required vs preferred skills at job creation** (structured fields in the JD form, or the existing LLM analysis output stored as `requiredSkills`; scores stay ML) | Fixes the non-tech score compression in 4.6 without the reranker side effect | Small to medium (form field + backend) | Kaggle test band acc (now 0.758) and handwritten band acc (must stay ≥ 0.938) |
+| 1 | ~~Separate required vs preferred skills~~ **Done in round 2 (§8):** Kaggle test band 0.758 → 0.802. What's left of 4.6 is mostly resumes that never mention GAAP, tax or budgeting at all (label noise or genuinely missing) | | | |
 | 2 | **Domain-aware calibration** (per-field shift, or isotonic calibration of the blend) fitted on a real labeled set | Band accuracy on non-tech roles | Small code; needs item 5 | Held-out band accuracy per field |
 | 3 | **Stronger reranker within 2 GB** | See section 7 | Model swap + memory re-measure | Same harness, same splits |
 | 4 | **Seniority and platform signal** (years-of-experience and level extraction as a separate feature) | Fixes cases like 4.7 (web developer → Android scored medium) | Medium | Handwritten pairs with seniority reasons |
@@ -197,7 +199,68 @@ Not tried: `bge-reranker-base` (278M parameters, about 1.1 GB in fp32). It would
 
 ---
 
-## 8. Reproduce
+## 8. Round 2: sprint trials (2026-10-28)
+
+Each change was kept only if it beat the baseline on the same harness and splits. Choices were made on the **tune** split and handwritten; the **test** split was only used for reporting. All runs used `python -m ml.eval.run` in the `project-cbp-ml` image.
+
+### 8.1 Kept: required vs preferred skills, "or" alternatives, finance aliases
+
+| Step (cumulative) | Handwritten pair / band | Extended pair / band | Kaggle tune band | Kaggle test pair / band |
+| :--- | :---: | :---: | :---: | :---: |
+| Baseline (round 1) | 0.982 / 0.938 | 0.927 / 0.940 | 0.782 | 0.995 / 0.758 |
+| Preferred skills at weight 0.5 | 0.982 / 0.938 | 0.927 / 0.940 | 0.785 | 0.995 / 0.766 |
+| + "X or Y" counted as one requirement | 0.982 / 0.938 | 0.927 / 0.940 | 0.814 | 0.996 / 0.786 |
+| **+ finance aliases (kept)** | **0.982 / 0.938** | **0.927 / 0.940** | **0.825** | **0.996 / 0.802** |
+
+- **Preferred weight sweep.** w = 1.0 reproduces the baseline exactly (a sanity check). w = 0.75 / 0.5 / 0.25 / 0.0 gave tune band 0.780 / 0.785 / 0.796 / 0.801 and handwritten band 0.938 / 0.938 / 0.906 / 0.906. **0.5 is the lowest weight that keeps handwritten**, set as `PREFERRED_SKILL_WEIGHT` in `ml/config.py`.
+- **Where the compression came from.** On Kaggle test, misbanded strong pairs averaged CE 77 but coverage 0.38, mostly Accountant (19) and Financial Analyst (20). Two causes:
+  - "excel *or* financial modeling" was scored as two requirements.
+  - Resumes said "GL recs", "month-end" or "budget prep", which the map didn't know.
+- **Alias source.** The aliases were mined from tune-split misbands only, then checked against the handwritten and extended JDs for collisions (none). Generic words such as "budgets" and "reporting" were left out: an earlier round removed them because they match benefits text in tech JDs.
+- **Code.** `split_required_preferred`, `resolve_skill_requirements` and `extract_alternative_groups` live in `ml/pipelines/matching/skill_gap.py`. The worker and the eval runner both call them, and stored `requiredSkills`/`preferredSkills` from the JD form still take precedence. Regression tests are in `ml/tests/test_ml_failure_regressions.py`.
+- **Caveat.** Kaggle labels come from required-skill groups, so they favour this change by construction (§2). Handwritten, the realistic set, stayed exactly level, which is the main evidence it isn't just fitting the labeler.
+
+### 8.2 Rejected: rerank fewer passages (`TOP_K_CANDIDATES` 20 → 8)
+
+The cross-encoder only ever sees one resume's chunks, and resumes are short:
+
+| Data | Median chunks | p90 | Max | Resumes with > 8 chunks |
+| :--- | :---: | :---: | :---: | :---: |
+| 908 resumes in the local DB | 3 | 4 | 10 | 1 |
+| Eval sets | 5.75 (handwritten mean), 1.39 (Kaggle), 1.0 (extended) | | 6 | 0 |
+
+A cap of 8 changes the reranked set for 1 resume in 908, so it can't deliver a latency drop. The default of 20 is kept, and the eval runner now reads the same `TOP_K_CANDIDATES` setting as the worker.
+
+### 8.3 Rejected: int8 dynamic quantization of the cross-encoder
+
+`torch.quantization.quantize_dynamic` on the Linear layers (no new dependencies). It used 2 torch threads, same container and data:
+
+| Set | fp32 rerank p50 / p95 | int8 rerank p50 / p95 | fp32 pair / band | int8 pair / band |
+| :--- | :---: | :---: | :---: | :---: |
+| Handwritten | 531 / 604 ms | 260 / 364 ms | 0.982 / 0.938 | 0.982 / 0.938 |
+| Kaggle test | 97 / 222 ms | 46 / 117 ms | 0.996 / 0.802 | 0.995 / **0.778** |
+| Extended | 39 / 70 ms | 18 / 28 ms | 0.927 / 0.940 | **0.921** / 0.940 |
+
+It is 2.0–2.2× faster, but Kaggle band drops 2.4 points and extended pairwise 0.6, both beyond the 0.5-point gate. Peak RSS was 621 vs 600 MB. Not adopted. An ONNX export would need new dependencies (onnxruntime, optimum) that the image doesn't have, and the accuracy question would be the same.
+
+### 8.4 Opt-in only: a separate OCR worker (`ml-ocr-worker`)
+
+Parsing is serialized per process (PyMuPDF isn't thread-safe), so a 6–7 s scan blocks every text PDF queued behind it. With `OCR_QUEUE_ENABLED=true` and `docker compose --profile ocr-worker`, the parse worker hands scans to `resume-ocr-queue`. A second process, `ml-ocr-worker`, serves that queue one job at a time with a 1 GB limit and loads no transformer models.
+
+k6 on one 4-vCPU laptop. Each scenario ran after a smoke warm-up, with queues drained between runs. Raw files are in `loadtest/results/20261028T0*`:
+
+| Scenario | OCR inline (default) | OCR worker on |
+| :--- | :---: | :---: |
+| Ingestion: text PDF p50 / p95 | 1.1 s / 60.6 s | **0.6 s / 0.8 s** |
+| Ingestion: OCR p50 / p95 | 5.7 s / 62.7 s | 25.6 s / 63.3 s |
+| Ingestion: iterations / timeouts / dropped | 160 / 45 / 55 | **250 / 26 / 0** |
+| Mixed, 2 runs each: match p50 | 23.2 s, 22.6 s | **9.3 s, 9.7 s** |
+| Mixed, 2 runs each: match p95 | **31.1 s, 45.5 s** | 78.4 s, 75.0 s |
+| Mixed: iterations | 972, 974 | 933, 937 |
+
+The OCR worker removes the head-of-line blocking for text PDFs and halves median match latency. Under mixed load, though, the slowest matches get roughly twice as slow: two processes now compete for 4 vCPUs, the oversubscription noted in `docs/PERFORMANCE.md`. Since the gate was "text PDFs faster and matching no worse", it stays **off by default**. It is worth enabling on a host with more cores, and that's a sizing input for deployment. Code: `served_queues`, `process_ocr_document` and `enqueue_ocr_job` in `ml/worker.py`, plus `allow_ocr` in `parse_document`. Tests are in `ml/tests/test_worker_event_loop.py` and `ml/tests/test_parser.py`.
+
+## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.
 

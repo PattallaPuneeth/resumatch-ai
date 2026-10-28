@@ -1,0 +1,5 @@
+scenario=smoke label=warm_ocron started=20261028T035809Z
+commit=e83919f dirty=47
+docker=cpus=4 mem_bytes=6214496256 server=29.6.1
+k6_args=
+k6_exit=0 provider_hits=0

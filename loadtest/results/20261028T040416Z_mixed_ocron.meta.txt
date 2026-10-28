@@ -1,0 +1,5 @@
+scenario=mixed label=ocron started=20261028T040416Z
+commit=e83919f dirty=55
+docker=cpus=4 mem_bytes=6214496256 server=29.6.1
+k6_args=
+k6_exit=99 provider_hits=0
