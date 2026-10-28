@@ -111,7 +111,17 @@ export interface ResumeSummary {
   originalFilename: string;
   mimeType: string;
   sizeBytes: number;
-  status: 'UPLOAD_PENDING' | 'PROCESSING' | 'PARSED' | 'FAILED';
+  // Mirrors the backend ResumeStatus enum (backend/db/schema.prisma); PROCESSING is kept for
+  // older clients and tests
+  status:
+    | 'UPLOAD_PENDING'
+    | 'UPLOADED'
+    | 'EXTRACTING'
+    | 'NEEDS_OCR'
+    | 'OCR_PROCESSING'
+    | 'PROCESSING'
+    | 'PARSED'
+    | 'FAILED';
   extractionMethod?: string | null;
   errorCode?: string | null;
   errorMessage?: string | null;
@@ -347,6 +357,29 @@ export interface StructuredAnalysisData {
   matched_skills: string[];
   missing_skills: string[];
   partial_skills: string[];
+}
+
+/**
+ * The backend stores and returns the analysis in camelCase (verdictBand, matchScore,
+ * prioritizedImprovements, ...), while the components read snake_case. Accept both, so a
+ * result is shown correctly whichever form it was saved in.
+ */
+export function normalizeAnalysisData(raw: unknown): StructuredAnalysisData {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const pick = <T,>(camel: string, snake: string, fallback: T): T =>
+    (r[camel] ?? r[snake] ?? fallback) as T;
+  return {
+    summary: pick('summary', 'summary', ''),
+    strengths: pick('strengths', 'strengths', []),
+    gaps: pick('gaps', 'gaps', []),
+    prioritized_improvements: pick('prioritizedImprovements', 'prioritized_improvements', []),
+    match_score: pick('matchScore', 'match_score', undefined as unknown as number),
+    ats_score: pick('atsScore', 'ats_score', null),
+    verdict_band: pick('verdictBand', 'verdict_band', undefined as unknown as 'medium'),
+    matched_skills: pick('matchedSkills', 'matched_skills', []),
+    missing_skills: pick('missingSkills', 'missing_skills', []),
+    partial_skills: pick('partialSkills', 'partial_skills', []),
+  };
 }
 
 export interface AnalysisResult {
@@ -814,7 +847,9 @@ export const apiClient = {
       }),
 
     getAnalysis: (jobId: string, resumeId: string) =>
-      apiClientRequest<AnalysisResult>(`/v1/jobs/${jobId}/analysis/${resumeId}`),
+      apiClientRequest<AnalysisResult>(`/v1/jobs/${jobId}/analysis/${resumeId}`).then(
+        (analysis) => ({ ...analysis, result: normalizeAnalysisData(analysis.result) })
+      ),
   },
 
   rewriter: {

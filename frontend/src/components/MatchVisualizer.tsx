@@ -48,14 +48,14 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
         <div className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" aria-hidden="true" />
           <h3 className="font-bold text-base text-foreground">
-            Match Visualizer & Component Breakdown
+            How your score is built
           </h3>
         </div>
         <span
           data-testid="visualizer-final-score"
           className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-800 border border-slate-200"
         >
-          Final Blend: <span className="font-mono text-primary font-bold">{finalScoreRaw}</span>
+          Match score: <span className="font-mono text-primary font-bold">{finalScoreRaw}</span>
         </span>
       </div>
 
@@ -65,19 +65,20 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
         <div className="space-y-1.5" data-testid="score-bar-bm25">
           <div className="flex justify-between items-center text-xs">
             <span className="font-medium text-foreground flex items-center gap-1.5">
-              <span>Lexical Keyword Overlap (BM25)</span>
+              <span>Shared keywords</span>
             </span>
             <span className="font-mono font-semibold text-slate-700">
               {bm25Raw !== undefined && bm25Raw !== null ? String(bm25Raw) : 'N/A'}
             </span>
           </div>
+          <p className="text-[11px] text-muted-foreground">Words and skills that appear in both (0 to 1).</p>
           <div
             className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200"
             role="progressbar"
             aria-valuenow={clampPercent(bm25Raw)}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Lexical Keyword Overlap"
+            aria-label="Shared keywords"
           >
             <div
               className="bg-primary h-2.5 rounded-full transition-all duration-300"
@@ -90,19 +91,20 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
         <div className="space-y-1.5" data-testid="score-bar-vector">
           <div className="flex justify-between items-center text-xs">
             <span className="font-medium text-foreground flex items-center gap-1.5">
-              <span>Semantic Embedding Similarity (Cosine)</span>
+              <span>Similar meaning</span>
             </span>
             <span className="font-mono font-semibold text-slate-700">
               {vectorRaw !== undefined && vectorRaw !== null ? String(vectorRaw) : 'N/A'}
             </span>
           </div>
+          <p className="text-[11px] text-muted-foreground">How close your best passage is to the job in meaning, even with different words (0 to 1).</p>
           <div
             className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200"
             role="progressbar"
             aria-valuenow={clampPercent(vectorRaw)}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Semantic Embedding Similarity"
+            aria-label="Similar meaning"
           >
             <div
               className="bg-emerald-600 h-2.5 rounded-full transition-all duration-300"
@@ -115,19 +117,20 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
         <div className="space-y-1.5" data-testid="score-bar-cross-encoder">
           <div className="flex justify-between items-center text-xs">
             <span className="font-medium text-foreground flex items-center gap-1.5">
-              <span>Cross-Encoder Joint Attention</span>
+              <span>Fit to the job&apos;s requirements</span>
             </span>
             <span className="font-mono font-semibold text-slate-700">
               {crossEncoderRaw !== undefined && crossEncoderRaw !== null ? String(crossEncoderRaw) : 'N/A'}
             </span>
           </div>
+          <p className="text-[11px] text-muted-foreground">A model reads your resume passages next to the job&apos;s requirements (0 to 100). This counts most.</p>
           <div
             className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200"
             role="progressbar"
             aria-valuenow={clampPercent(crossEncoderRaw)}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Cross-Encoder Joint Attention"
+            aria-label="Fit to the job requirements"
           >
             <div
               className="bg-teal-600 h-2.5 rounded-full transition-all duration-300"
@@ -141,19 +144,20 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
           <div className="space-y-1.5" data-testid="score-bar-skill-coverage">
             <div className="flex justify-between items-center text-xs">
               <span className="font-medium text-foreground flex items-center gap-1.5">
-                <span>Taxonomy Skill Coverage</span>
+                <span>Required skills found</span>
               </span>
               <span className="font-mono font-semibold text-slate-700">
                 {String(skillCoverageRaw)}
               </span>
             </div>
+          <p className="text-[11px] text-muted-foreground">Share of the job&apos;s required skills found in your resume (0 to 1).</p>
             <div
               className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200"
               role="progressbar"
               aria-valuenow={clampPercent(skillCoverageRaw)}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Taxonomy Skill Coverage"
+              aria-label="Required skills found"
             >
               <div
                 className="bg-emerald-700 h-2.5 rounded-full transition-all duration-300"

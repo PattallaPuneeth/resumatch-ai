@@ -84,8 +84,8 @@ export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
               AI explanation unavailable, showing deterministic results
             </h4>
             <p className="text-muted-foreground">
-              The AI generative explanation layer is running in deterministic fail-open mode. All ATS score metrics,
-              remediation hazards, character span content findings, and role embeddings below are 100% complete and verified.
+              The written AI summary is not available right now. Your ATS score, formatting checks, content
+              findings and role suggestions below are complete.
             </p>
           </div>
         </aside>

@@ -17,7 +17,7 @@ const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2';
 
 export function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -77,7 +77,10 @@ export function Navbar() {
 
         {/* Desktop actions */}
         <div className="hidden sm:flex items-center gap-2">
-          {isAuthenticated ? (
+          {/* While the session check runs, show nothing rather than a misleading "Log in" */}
+          {isLoading ? (
+            <span aria-hidden="true" className="inline-block h-11 w-40" />
+          ) : isAuthenticated ? (
             <>
               <span className="hidden md:inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-foreground border border-border">
                 {user?.username}
@@ -128,7 +131,10 @@ export function Navbar() {
 
       {mobileMenuOpen && (
         <div id="mobile-menu" className="sm:hidden border-b border-border bg-white px-4 pt-2 pb-6 space-y-3 mobile-menu-enter shadow-sm">
-          {isAuthenticated ? (
+          {/* While the session check runs, show nothing rather than a misleading "Log in" */}
+          {isLoading ? (
+            <span aria-hidden="true" className="inline-block h-11 w-40" />
+          ) : isAuthenticated ? (
             <nav className="flex flex-col space-y-1" aria-label="Mobile Navigation">
               <div className="px-3 py-2 text-xs text-muted-foreground bg-secondary rounded-md mb-2">
                 Signed in as <span className="font-semibold text-foreground">{user?.username}</span>

@@ -37,7 +37,7 @@ describe('BulletEditor Component', () => {
       />
     );
 
-    expect(screen.getByText('Fact-Grounded STAR Bullet Rewriter')).toBeDefined();
+    expect(screen.getByText('Improve a Resume Bullet')).toBeDefined();
     expect(screen.getByText(/3 \/ 10 used/)).toBeDefined();
     expect(screen.getByRole('button', { name: /Rewrite Bullet/i })).toBeDefined();
   });
@@ -76,10 +76,10 @@ describe('BulletEditor Component', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText(/Verified STAR Rewrite Options/i)).toBeDefined();
+      expect(screen.getByText(/Suggested Rewrites/i)).toBeDefined();
     });
 
-    expect(screen.getByText(/100% Fact-Grounded/i)).toBeDefined();
+    expect(screen.getByText(/Uses only facts from your resume/i)).toBeDefined();
     expect(screen.getByText(/Grounded Evidence in Source Resume/i)).toBeDefined();
     expect(screen.getAllByText(/handling 50k requests per second/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/chars 10–45/i)).toBeDefined();
@@ -195,7 +195,7 @@ describe('BulletEditor Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Rewrite Bullet/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/100% Fact-Grounded/i)).toBeDefined();
+      expect(screen.getByText(/Uses only facts from your resume/i)).toBeDefined();
     });
 
     // Verify raw tags are not executed or inserted as HTML elements
@@ -298,7 +298,7 @@ describe('BulletEditor Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Rewrite Bullet/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/100% Fact-Grounded/i)).toBeDefined();
+      expect(screen.getByText(/Uses only facts from your resume/i)).toBeDefined();
     });
 
     // Zero script tags executed or present in DOM

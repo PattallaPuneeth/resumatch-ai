@@ -48,6 +48,7 @@ function AnalyzePageContent() {
 
   // Client-tracked per-resume match history (stored by resumeId)
   const [resumeMatchHistory, setResumeMatchHistory] = useState<Record<string, MatchHistoryItem[]>>({});
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   // Cancellation ref for leave-safe polling
   const isCancelledRef = useRef(false);
@@ -166,7 +167,7 @@ function AnalyzePageContent() {
     if (!selectedResumeId) return;
 
     setIsSubmitting(true);
-    setProgressStep('Running ATS formatting audit & ML role analysis...');
+    setProgressStep('Checking your resume...');
     setErrorMessage(null);
     setModeAResults(null);
 
@@ -202,7 +203,7 @@ function AnalyzePageContent() {
 
     try {
       // 1. Create Job record
-      setProgressStep('Step 1/3: Creating job description record...');
+      setProgressStep('Step 1/3: Saving the job post...');
       const createdJob = await apiClient.jobs.create(jdData);
       if (isCancelledRef.current) return;
 
@@ -210,7 +211,7 @@ function AnalyzePageContent() {
       setCurrentJobId(jobId);
 
       // 2. Enqueue Match Scoring
-      setProgressStep('Step 2/3: Enqueueing hybrid retrieval & cross-encoder matching...');
+      setProgressStep('Step 2/3: Comparing your resume with the job...');
       await apiClient.jobs.match(jobId, selectedResumeId);
       if (isCancelledRef.current) return;
 
@@ -246,7 +247,7 @@ function AnalyzePageContent() {
       setModeBMatch(matchResult);
 
       // 4. Enqueue Structured Analysis (consumes analyses meter)
-      setProgressStep('Step 3/3: Enqueueing structured skill analysis...');
+      setProgressStep('Step 3/3: Writing up your skills and gaps...');
       await apiClient.jobs.createAnalysis(jobId, selectedResumeId);
       if (isCancelledRef.current) return;
 
@@ -298,6 +299,8 @@ function AnalyzePageContent() {
           [selectedResumeId]: [historyItem, ...filtered],
         };
       });
+      // The saved match history (server side) now includes this job; reload it
+      setHistoryRefreshKey((k) => k + 1);
 
       // 7. Refetch usage
       await refetchUsage();
@@ -321,7 +324,7 @@ function AnalyzePageContent() {
     const jobId = typeof jobIdOrItem === 'string' ? jobIdOrItem : jobIdOrItem.jobId;
 
     setIsSubmitting(true);
-    setProgressStep('Loading match evaluation results...');
+    setProgressStep('Loading your match results...');
     setErrorMessage(null);
     setCurrentJobId(jobId);
     setSelectedMode('B');
@@ -387,6 +390,7 @@ function AnalyzePageContent() {
           <MatchHistoryList
             resumeId={selectedResumeId}
             activeJobId={currentJobId}
+            refreshKey={historyRefreshKey}
             onSelectMatch={handleSelectHistoryMatch}
             onAddJobClick={() => {
               setSelectedMode('B');

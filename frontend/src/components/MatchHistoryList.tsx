@@ -8,6 +8,8 @@ interface MatchHistoryListProps {
   activeJobId?: string | null;
   onSelectMatch: (jobId: string) => void;
   onAddJobClick?: () => void;
+  /** Bump after a new match finishes so the list reloads without a page refresh */
+  refreshKey?: number;
 }
 
 export function MatchHistoryList({
@@ -15,6 +17,7 @@ export function MatchHistoryList({
   activeJobId,
   onSelectMatch,
   onAddJobClick,
+  refreshKey = 0,
 }: MatchHistoryListProps) {
   const [matches, setMatches] = useState<ResumeMatchHistoryItem[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -23,9 +26,10 @@ export function MatchHistoryList({
   const [error, setError] = useState<string | null>(null);
 
   const fetchMatches = useCallback(
-    async (offset = 0, isLoadMore = false) => {
-      if (!isLoadMore) setIsLoading(true);
-      else setIsLoadingMore(true);
+    async (offset = 0, isLoadMore = false, quiet = false) => {
+      // A quiet reload keeps the current list on screen instead of flashing the skeleton
+      if (isLoadMore) setIsLoadingMore(true);
+      else if (!quiet) setIsLoading(true);
       setError(null);
 
       try {
@@ -57,6 +61,10 @@ export function MatchHistoryList({
   useEffect(() => {
     fetchMatches(0, false);
   }, [fetchMatches]);
+
+  useEffect(() => {
+    if (refreshKey > 0) fetchMatches(0, false, true);
+  }, [refreshKey, fetchMatches]);
 
   if (isLoading) {
     return (
@@ -158,7 +166,7 @@ export function MatchHistoryList({
                     )}
                     {item.analysis?.llmStatus === 'UNAVAILABLE' && (
                       <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
-                        Deterministic
+                        Score only
                       </span>
                     )}
                   </div>
@@ -166,7 +174,7 @@ export function MatchHistoryList({
                   <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                     <span>Evaluated {formattedDate}</span>
                     {item.subScores?.crossEncoderScore !== undefined && item.subScores.crossEncoderScore !== null && (
-                      <span>Reranker: {item.subScores.crossEncoderScore}</span>
+                      <span>Requirement fit: {item.subScores.crossEncoderScore}</span>
                     )}
                   </div>
                 </div>

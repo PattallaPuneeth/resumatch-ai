@@ -101,6 +101,36 @@ describe('MatchHistoryList Component', () => {
     });
   });
 
+  it('reloads when refreshKey changes, so a new match appears without a page reload', async () => {
+    const match = {
+      id: 'm-2',
+      resumeId,
+      jobId: 'job-202',
+      job: { id: 'job-202', title: 'Senior Backend Engineer', company: 'Halcyon Ledger', location: '' },
+      matchScore: 97.1,
+      subScores: { bm25Score: 0.7, vectorScore: 0.8, rrfScore: 0.03, crossEncoderScore: 98.2 },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      analysis: { status: 'COMPLETED', llmStatus: 'SUCCESS', score: 97.1 },
+    };
+    vi.mocked(apiClient.resumes.getMatches)
+      .mockResolvedValueOnce({ matches: [], total: 0, limit: 10, offset: 0 })
+      .mockResolvedValueOnce({ matches: [match], total: 1, limit: 10, offset: 0 });
+
+    const { rerender } = render(
+      <MatchHistoryList resumeId={resumeId} onSelectMatch={vi.fn()} refreshKey={0} />
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/No job descriptions have been matched/i)).toBeDefined();
+    });
+
+    rerender(<MatchHistoryList resumeId={resumeId} onSelectMatch={vi.fn()} refreshKey={1} />);
+    await waitFor(() => {
+      expect(screen.getByText('Senior Backend Engineer')).toBeDefined();
+    });
+    expect(apiClient.resumes.getMatches).toHaveBeenCalledTimes(2);
+  });
+
   it('renders error state and handles retry click', async () => {
     vi.mocked(apiClient.resumes.getMatches).mockRejectedValueOnce(
       new ApiProblemError(500, {

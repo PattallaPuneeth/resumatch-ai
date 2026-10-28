@@ -41,9 +41,8 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
 
   // Determine if any resume is still processing and adjust bounded backoff polling
   useEffect(() => {
-    const hasActiveJobs = resumes.some(
-      (r) => r.status === 'PROCESSING' || r.status === 'UPLOAD_PENDING'
-    );
+    // Anything not finished (uploaded, extracting, OCR, ...) is still being worked on
+    const hasActiveJobs = resumes.some((r) => r.status !== 'PARSED' && r.status !== 'FAILED');
 
     if (hasActiveJobs) {
       setPollInterval((prev) => {
@@ -116,6 +115,10 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
             Uploading
           </span>
         );
+      case 'UPLOADED':
+      case 'EXTRACTING':
+      case 'NEEDS_OCR':
+      case 'OCR_PROCESSING':
       case 'PROCESSING':
         return (
           <span
@@ -229,12 +232,12 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border text-muted-foreground font-medium">
-                <th className="py-2.5 px-3">Document</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3">ATS Score</th>
-                <th className="py-2.5 px-3">Size</th>
-                <th className="py-2.5 px-3">Uploaded</th>
-                <th className="py-2.5 px-3 text-right">Actions</th>
+                <th className="py-2.5 px-2 sm:px-3">Document</th>
+                <th className="py-2.5 px-2 sm:px-3">Status</th>
+                <th className="py-2.5 px-3 hidden sm:table-cell">ATS Score</th>
+                <th className="py-2.5 px-3 hidden sm:table-cell">Size</th>
+                <th className="py-2.5 px-3 hidden sm:table-cell">Uploaded</th>
+                <th className="py-2.5 px-2 sm:px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -243,8 +246,8 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
 
                 return (
                   <tr key={resume.id} data-testid={`resume-row-${resume.id}`} className="hover:bg-slate-50/80 transition-colors stagger-item">
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-2 max-w-xs">
+                    <td className="py-3 px-2 sm:px-3">
+                      <div className="flex items-center gap-2 max-w-[7rem] sm:max-w-xs">
                         <FileText className="h-4 w-4 text-primary shrink-0" />
                         <span className="font-semibold text-foreground truncate block" title={resume.originalFilename}>
                           {resume.originalFilename}
@@ -252,11 +255,16 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
                       </div>
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-2 sm:px-3">
                       {getStatusBadge(resume.status)}
+                      {resume.status === 'PARSED' && score !== null && score !== undefined && (
+                        <span className="sm:hidden block mt-1 text-[11px] font-semibold text-emerald-800">
+                          ATS {score} / 100
+                        </span>
+                      )}
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-3 hidden sm:table-cell">
                       {resume.status === 'PARSED' ? (
                         score !== null && score !== undefined ? (
                           <span
@@ -274,24 +282,26 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
                       )}
                     </td>
 
-                    <td className="py-3 px-3 text-muted-foreground">
+                    {/* Size and date are hidden on phones so the actions stay on screen */}
+                    <td className="py-3 px-3 text-muted-foreground hidden sm:table-cell">
                       {formatBytes(resume.sizeBytes)}
                     </td>
 
-                    <td className="py-3 px-3 text-muted-foreground">
+                    <td className="py-3 px-3 text-muted-foreground hidden sm:table-cell">
                       {formatDate(resume.createdAt)}
                     </td>
 
-                    <td className="py-3 px-3 text-right">
+                    <td className="py-3 px-2 sm:px-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {resume.status === 'PARSED' && (
                           <Link
                             href={`/analyze?resumeId=${resume.id}`}
                             data-testid={`analyze-resume-link-${resume.id}`}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded text-primary hover:text-white bg-emerald-50 hover:bg-primary border border-emerald-200 hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            aria-label={`Analyze ${resume.originalFilename}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-2 sm:py-1 rounded text-primary hover:text-white bg-emerald-50 hover:bg-primary border border-emerald-200 hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                           >
-                            <Sparkles className="h-3 w-3" />
-                            <span>Analyze</span>
+                            <Sparkles className="h-4 w-4 sm:h-3 sm:w-3" aria-hidden="true" />
+                            <span className="hidden sm:inline">Analyze</span>
                           </Link>
                         )}
                         <button
@@ -299,7 +309,7 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
                           onClick={() => setDeleteCandidate(resume)}
                           aria-label={`Delete resume ${resume.originalFilename}`}
                           data-testid={`delete-resume-${resume.id}`}
-                          className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                          className="p-2.5 sm:p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

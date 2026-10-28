@@ -15,6 +15,7 @@ import {
   MatchResult,
   JobSuggestionsResponse,
   UserUsageResponse,
+  normalizeAnalysisData,
 } from '@/lib/apiClient';
 
 describe('Phase 8B: Analyze Flow & Results Components', () => {
@@ -335,6 +336,40 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
       expect(atsScoreEl.textContent).toContain('85');
 
       expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Strong Match');
+    });
+
+    it('shows the verdict from the real camelCase API payload, not a default', () => {
+      // Shape returned by GET /v1/jobs/:id/analysis/:resumeId (captured from the live backend)
+      const apiResult = {
+        summary: 'Candidate shows relevant experience for the role.',
+        strengths: [],
+        gaps: [],
+        prioritizedImprovements: [{ priority: 1, action: 'Add a Kafka project.' }],
+        matchScore: 97.12,
+        atsScore: 70,
+        verdictBand: 'strong',
+        matchedSkills: ['docker', 'postgresql'],
+        missingSkills: [],
+        partialSkills: [],
+      };
+      render(
+        <ModeBResults
+          analysis={{ ...mockAnalysisResult, score: 97.12, result: normalizeAnalysisData(apiResult) }}
+          matchResult={mockMatchResult}
+        />
+      );
+
+      expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Strong Match');
+      expect(screen.getByTestId('mode-b-ats-score').textContent).toContain('70');
+      expect(screen.getByTestId('improvement-item-0').textContent).toContain('Add a Kafka project.');
+    });
+
+    it('works out the verdict from the score when a result has none', () => {
+      const result = normalizeAnalysisData({ matchScore: 30 });
+      render(
+        <ModeBResults analysis={{ ...mockAnalysisResult, score: 30, result }} matchResult={mockMatchResult} />
+      );
+      expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Low Match');
     });
 
     it('renders MatchVisualizer with exact sub-scores and missing keywords', () => {

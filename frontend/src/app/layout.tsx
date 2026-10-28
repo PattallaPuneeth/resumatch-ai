@@ -34,8 +34,8 @@ export default function RootLayout({
           </main>
           <footer className="border-t border-border bg-secondary py-8 text-center text-xs text-muted-foreground">
             <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-              <span>ResuMatch AI • Production AI Resume & Job Matching Platform</span>
-              <span>Fastify • PostgreSQL pgvector(384) • FastAPI • Next.js</span>
+              <span>ResuMatch · See how your resume reads to an applicant tracking system</span>
+              <span>Your files stay private to your account</span>
             </div>
           </footer>
         </Providers>

@@ -27,7 +27,10 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
   const result = analysis.result || {};
   const matchScore = result.match_score ?? analysis.score;
   const atsScore = result.ats_score;
-  const verdictBand = result.verdict_band || 'medium';
+  // Same bands as the backend; only used when a saved result carries no verdict of its own
+  const verdictBand =
+    result.verdict_band ||
+    (typeof matchScore !== 'number' ? 'medium' : matchScore >= 75 ? 'strong' : matchScore >= 45 ? 'medium' : 'weak');
 
   // Map verdict band for display badge
   const verdictConfig = {
@@ -129,10 +132,10 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
           <span>How to read your match analysis:</span>
         </div>
         <p className="leading-relaxed">
-          The match score is derived deterministically using a multi-stage hybrid retrieval pipeline combining
-          <strong> BM25 keyword frequency</strong>, <strong>semantic embedding vectors</strong>, and
-          <strong> cross-encoder deep joint attention</strong>. Numbers represent raw mathematical alignment, never
-          rounded or inflated.
+          The score combines three checks: <strong>shared keywords</strong>, <strong>similar meaning</strong>, and
+          a model that reads your resume <strong>next to the job&apos;s requirements</strong>, which counts most. 75 or
+          more is a strong match, 45 to 74 a moderate one, and below 45 a low one. Scores are shown exactly as
+          calculated.
         </p>
       </aside>
 
@@ -152,8 +155,8 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
               AI explanation unavailable, showing deterministic results
             </h4>
             <p className="mt-0.5 text-muted-foreground">
-              Deterministic scoring and skill extraction completed successfully. Generative AI commentary is currently
-              offline in fail-open mode.
+              Your match score and skill results are complete. The written AI summary is not available right
+              now.
             </p>
           </div>
         </aside>

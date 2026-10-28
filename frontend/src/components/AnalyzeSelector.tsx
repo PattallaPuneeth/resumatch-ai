@@ -249,8 +249,8 @@ export function AnalyzeSelector({
                 <span className="font-bold text-sm text-foreground">Mode A: Resume Only</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                Deterministic ATS score audit, formatting hazards, character span content findings, and
-                ML-ranked role suggestions.
+                How an applicant tracking system reads your resume: formatting problems, weak spots
+                in the content, and roles that fit your experience.
               </p>
             </button>
 
@@ -277,8 +277,8 @@ export function AnalyzeSelector({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                Hybrid keyword (BM25) & deep cross-encoder matching, skill gap analysis, and tailored
-                relevance scoring.
+                Compare your resume with a job post: a match score, the skills you have and the ones
+                you are missing, and the parts of your resume that matched.
               </p>
             </button>
           </div>

@@ -117,10 +117,10 @@ export function BulletEditor({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-2">
         <div>
           <h2 id="bullet-editor-heading" className="text-xl font-bold text-slate-900">
-            Fact-Grounded STAR Bullet Rewriter
+            Improve a Resume Bullet
           </h2>
           <p className="text-sm text-slate-600 mt-1">
-            Strengthen experience bullets with verified metrics and active verbs grounded strictly in your resume facts.
+            Get stronger versions of one bullet point, written only from facts already in your resume.
           </p>
         </div>
 
@@ -292,10 +292,10 @@ export function BulletEditor({
         <div className="mt-8 pt-6 border-t border-slate-200 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-slate-900">
-              Verified STAR Rewrite Options ({result.options.length})
+              Suggested Rewrites ({result.options.length})
             </h3>
             <span className="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded font-semibold">
-              100% Fact-Grounded
+              Uses only facts from your resume
             </span>
           </div>
 

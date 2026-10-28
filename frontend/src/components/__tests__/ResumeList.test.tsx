@@ -33,6 +33,33 @@ describe('ResumeList Component (src/components/ResumeList.tsx)', () => {
     expect(screen.getByText('No resumes uploaded yet')).toBeDefined();
   });
 
+  it('keeps refreshing a resume in the backend UPLOADED state until it is parsed', async () => {
+    const base = {
+      id: 'r-up',
+      originalFilename: 'fresh.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 1300,
+      createdAt: '2026-10-29T10:00:00Z',
+      updatedAt: '2026-10-29T10:00:00Z',
+    };
+    const list = vi
+      .spyOn(apiClient.resumes, 'list')
+      .mockResolvedValueOnce({ resumes: [{ ...base, status: 'UPLOADED' }] })
+      .mockResolvedValue({ resumes: [{ ...base, status: 'PARSED' }] });
+    vi.spyOn(apiClient.resumes, 'get').mockResolvedValue({
+      ...base,
+      status: 'PARSED',
+      parsedResume: { id: 'pr', rawText: 't', atsScore: 70, createdAt: '', updatedAt: '' },
+    } as ResumeDetailsResponse);
+
+    renderWithClient(<ResumeList />);
+
+    await waitFor(() => expect(screen.getByTestId('badge-processing')).toBeDefined());
+    // No click on Refresh: the list polls by itself while the resume is unfinished
+    await waitFor(() => expect(screen.getByTestId('badge-parsed')).toBeDefined(), { timeout: 5000 });
+    expect(list.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('renders status badges for UPLOAD_PENDING, PROCESSING, PARSED, FAILED', async () => {
     const mockResumes: ResumeSummary[] = [
       {
@@ -108,8 +135,8 @@ describe('ResumeList Component (src/components/ResumeList.tsx)', () => {
 
     // Verify ATS score is shown for parsed resume
     await waitFor(() => {
-      expect(screen.getByTestId('ats-score-r-3')).toBeDefined();
-      expect(screen.getByText(/88 \/ 100/)).toBeDefined();
+      // The score is rendered twice (its own column on larger screens, under the badge on phones)
+      expect(screen.getByTestId('ats-score-r-3').textContent).toMatch(/88 \/ 100/);
     });
   });
 
