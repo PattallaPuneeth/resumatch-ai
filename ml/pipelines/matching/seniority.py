@@ -15,9 +15,11 @@ from typing import Any
 _MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 _MONTH_RE = "jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec"
 # "�" covers dashes lost to bad text encoding in real exports ("2010�Present")
+# Also: "(2025–)" an open-ended current role, and "(2022–25)" a two-digit end year
 _DATE_RANGE = re.compile(
     rf"(?:(?P<m1>{_MONTH_RE})[a-z]*\.?\s+)?(?P<y1>(?:19|20)\d\d)\s*(?:-|–|—|�|to)\s*"
-    rf"(?:(?:(?P<m2>{_MONTH_RE})[a-z]*\.?\s+)?(?P<y2>(?:19|20)\d\d)|(?P<now>present|current|now|date))",
+    rf"(?:(?:(?P<m2>{_MONTH_RE})[a-z]*\.?\s+)?(?P<y2>(?:19|20)\d\d)|(?P<y2short>\d\d)(?!\d)"
+    rf"|(?P<now>present|current|now|date)|(?P<open>(?=\))))",
     re.IGNORECASE,
 )
 _STATED_YEARS = re.compile(
@@ -27,10 +29,11 @@ _REQUIRED_YEARS = re.compile(
     r"(\d{1,2})\s*(?:\+|or more|plus)?\s*(?:(?:-|–|to)\s*\d{1,2}\s*)?\+?\s*(?:years?|yrs?)\b",
     re.IGNORECASE,
 )
-# Dates right after these words are schooling, not work experience
+# Dates right after these words are schooling, not work. Only degree words count: people also
+# work at universities and colleges ("Lecturer, East Delta Univ. (2025-)").
 _EDUCATION_CONTEXT = re.compile(
-    r"universit|college|school|bachelor|master|\bb\.?s\b|\bm\.?s\b|degree|gpa|education|"
-    r"certificat|b\.?tech|diploma",
+    r"bachelor|master|\bb\.?s\b|\bm\.?s\b|\bb\.?sc\b|\bm\.?sc\b|\bph\.?d\b|b\.?tech|degree|gpa|"
+    r"education|certificat|diploma|thesis",
     re.IGNORECASE,
 )
 _WORK_CONTEXT = re.compile(r"experience|employment|work history|career", re.IGNORECASE)
@@ -64,7 +67,12 @@ def experience_years(resume_text: str, today: date | None = None) -> float:
         if _is_education_date(resume_text[max(0, m.start() - 120) : m.start()]):
             continue
         start = int(m["y1"]) + (_month(m["m1"]) - 1) / 12
-        end = now if m["now"] else int(m["y2"]) + (_month(m["m2"]) - 1) / 12
+        if m["now"] or m["open"] is not None:
+            end = now
+        elif m["y2short"]:
+            end = int(m["y1"][:2] + m["y2short"]) + 0.5
+        else:
+            end = int(m["y2"]) + (_month(m["m2"]) - 1) / 12
         if 0 <= end - start <= 45:
             periods.append((start, min(end, now)))
 

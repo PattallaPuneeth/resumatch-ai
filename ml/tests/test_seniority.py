@@ -71,3 +71,17 @@ def test_fit_statuses() -> None:
     veteran = "Engineer (2010 - Present)"
     fit = seniority_fit("Senior Engineer", "5+ years", veteran)
     assert fit["status"] == "meets" and fit["jobLevel"] == "senior" and fit["requiredYears"] == 5
+
+
+def test_open_ended_and_two_digit_years() -> None:
+    # Found with the human labels: "(2025–)" is a current role, "(2022–25)" a two-digit end year
+    text = "EXPERIENCE: Graduate RA, Missouri S&T (2025–); SWE-II, Kona Software Lab (2022–25)."
+    assert experience_years(text, TODAY) == pytest.approx(4.3, abs=0.1)
+
+
+def test_university_jobs_count_but_degrees_do_not() -> None:
+    text = (
+        "EDUCATION: B.Sc in CSE (CGPA 3.75), Chittagong Univ. (2019–24); PhD, MIT (2018–2023). "
+        "EXPERIENCE: Lecturer, East Delta Univ. (2025–)"
+    )
+    assert experience_years(text, TODAY) == pytest.approx(1.3, abs=0.1)
