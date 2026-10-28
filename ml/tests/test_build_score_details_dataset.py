@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from ml.eval.build_score_details_dataset import clean_title, gpt_label, scrub_strict, split_by_jd
+from ml.eval.build_score_details_dataset import (
+    clean_title,
+    gpt_label,
+    redact_personal,
+    scrub_strict,
+    split_by_jd,
+)
 
 
 def test_gpt_label_needs_all_requirements_for_strong() -> None:
@@ -35,3 +41,23 @@ def test_split_by_jd_keeps_each_jd_in_one_split() -> None:
         splits.setdefault(p["jd_id"], set()).add(p["split"])
     assert all(len(s) == 1 for s in splits.values())
     assert {"test", "tune"} == {s for v in splits.values() for s in v}
+
+
+def test_redact_personal_removes_name_and_personal_fields() -> None:
+    text = ("S a r a M a l i k | Sales Lead\nDate of Birth: 14-Mar-1990 Gender :Male\n"
+            "Marital Status: Married | Religion: Islam\nMalik led a team of 5 at Acme.")
+    out = redact_personal(text, ["Sara Malik"])
+    for leaked in ("S a r a", "Malik", "1990", "Male", "Married", "Islam"):
+        assert leaked not in out
+    assert "Sales Lead" in out and "led a team of 5 at Acme." in out
+
+
+def test_redact_personal_keeps_ordinary_words() -> None:
+    text = "Sold passport scanners; studied the gender gap in sales"
+    assert redact_personal(text, []) == text
+
+
+def test_redact_personal_handles_run_together_text() -> None:
+    out = redact_personal("SARAMALIK PROJECT LEAD | Religion. :Islam", ["Sara Malik"])
+    assert "SARA" not in out and "MALIK" not in out and "Islam" not in out
+    assert "PROJECT LEAD" in out

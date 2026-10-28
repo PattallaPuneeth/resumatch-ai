@@ -504,6 +504,25 @@ The rank correlation with GPT-4o's raw micro score is 0.55 overall, and 0.52 wit
 
 It is not a gold standard: GPT-4o's labels are noisy and the JDs are synthetic.
 
+### 8.14 Label bias and name bias: blind labels, redaction, and a name-swap test
+
+**Labeler bias.** The user audited all 50 of Claude's draft labels from section 8.13 and changed none. In the `real_fit` batch, the same kind of audit changed 8 of 60. A clean audit may be accurate, but a pre-filled label also anchors the reviewer. Both labelers here are LLMs (Claude drafted, GPT-4o scored), so they may share blind spots such as rewarding keyword-heavy or polished resumes, and their agreement (0.872) can overstate quality. Three steps reduce this:
+1. **Blind labels.** 30 new pairs (10 per GPT-4o band, 12 JDs, resumes not seen before) go to the user with **no label filled in**: `labeling/score_details_blind30_LABEL_FIRST.xlsx`. Claude labeled the same 30 blind beforehand, and Claude's and GPT-4o's labels are kept in a hidden file. Comparing the three gives Claude's true error rate, GPT-4o's agreement with a person, and how much the audit format anchored the earlier results.
+2. **Personal details hidden.** The `score_details` builder now replaces the candidate's name (taken from the dataset's own name fields, including letter-spaced and run-together forms such as "SARAMALIK") and personal fields (date of birth, gender, marital status, nationality, religion, ID numbers). This applies to labelers and to the model. 195 of 199 resumes had a name removed. Unlabeled details, such as a bare birth date, can remain.
+3. **Data issue found.** One "valid" pair's resume is actually a job description (the "Team Lead, 10 to 15 years…" text). GPT-4o scored it as a candidate.
+
+**Model bias: name-swap test** (`ml/eval/name_swap.py`). 40 `score_details` test pairs were each scored 10 times. Only the name changed: 5 origins (Pakistani, Indian, Chinese, Arab, Western) × 2 genders.
+
+| Measure | Result |
+| :--- | :---: |
+| Mean score by gender (female / male) | 45.96 / 45.98 |
+| Mean score by origin (lowest / highest) | 45.90 Pakistani / 46.07 Chinese |
+| Mean per-pair spread across the 10 names | 0.32 points |
+| Largest per-pair spread | 2.9 points |
+| Pairs whose band changes with the name | 1 of 40 (a pair sitting at a band threshold) |
+
+**The pipeline shows no systematic name bias.** Group means differ by at most 0.17 points. The small per-pair spread comes from the name changing the resume's tokens and chunk boundaries, not from a group pattern. The test is cheap to rerun after any model change, and should be.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.

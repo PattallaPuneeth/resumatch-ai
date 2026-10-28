@@ -17,8 +17,11 @@ Selection and hygiene:
   - split by JD: every JD is either `test` or `tune`. The 26 JDs share most of their resumes,
     so the same person can appear in both splits (with a different JD); keeping people apart
     would leave almost no tune data
-  - emails, phone numbers and URLs scrubbed, including spaced-out forms ("name. 42@example. com");
-    names stay in the resume text, so the output goes to a gitignored folder like real_fit.
+  - emails, phone numbers and URLs scrubbed, including spaced-out forms ("name. 42@example. com")
+  - the candidate's name (taken from the dataset's own extracted name fields) and personal
+    fields (date of birth, gender, marital status, nationality, religion, ID numbers) are
+    replaced, so neither a labeler nor the model sees them. Names in other places (references,
+    company names) can remain, so the output still goes to a gitignored folder like real_fit.
     Only the manifest (ids, labels, scores) is committed
   - the JD's markdown heading becomes a "Job Title:" first line, as a user would type it
 
@@ -52,6 +55,46 @@ _LOOSE_PHONE = re.compile(r"\+?\d[\d\s\-()]{8,}\d")
 
 def scrub_strict(text: str) -> str:
     return _LOOSE_PHONE.sub("[phone]", _LOOSE_EMAIL.sub("[email]", scrub(text)))
+
+
+# Personal fields that say nothing about fit but can bias a labeler or a model. A field counts
+# only as "label: value" (or label, two spaces, value) or before a known value, so ordinary
+# phrases such as "the gender gap" or "passport scanners" stay.
+_FIELD_SEP = (
+    r"(?:\s*\.?\s*[:#\-]\s*|\s{2,}|\s+(?=(?:male|female|married|single|unmarried|"
+    r"pakistani|pakistan|indian|islam|muslim|christian|hindu|sikh)\b))"
+)
+_PERSONAL_FIELD = re.compile(
+    r"\b(?:date\s+of\s+birth|d\.?\s?o\.?\s?b\.?|birth\s*day|marital\s+status|nationality|"
+    r"religion|gender|sex|age|father'?s?\s+name|cnic|domicile|passport(?:\s+no\.?)?)"
+    + _FIELD_SEP + r"[^\n|]{0,30}",
+    re.I,
+)
+
+
+def _name_pattern(token: str) -> str:
+    """
+    A name token, also letter-spaced ('S a r a'). Resumes often run words together
+    ('SARAMALIKKHAN'), so long tokens match anywhere, 4-5 letter ones at a word start
+    (not 'omer' inside 'customer') and 3-letter ones only as a whole word.
+    """
+    body = r"\s{0,2}".join(re.escape(ch) for ch in token)
+    if len(token) >= 6:
+        return body
+    return rf"\b{body}" if len(token) >= 4 else rf"\b{body}\b"
+
+
+def redact_personal(text: str, names: list[str]) -> str:
+    """
+    Removes the candidate's name (every token of 3+ letters, also letter-spaced) and personal
+    fields such as date of birth, gender, marital status, nationality and religion. Names come
+    from the dataset's own extracted fields, so no guessing is needed.
+    """
+    tokens = {t for n in names for t in re.findall(r"[A-Za-z]{3,}", n or "")}
+    for _ in range(2):  # a second pass catches a token that touched an earlier one ('SARAMALIK')
+        for t in sorted(tokens, key=len, reverse=True):
+            text = re.sub(_name_pattern(t), "[name]", text, flags=re.I)
+    return _PERSONAL_FIELD.sub("[personal]", text)
 
 
 def short_hash(text: str) -> str:
@@ -110,7 +153,10 @@ def read_pairs(src: Path) -> list[dict[str, Any]]:
         p = pairs.setdefault(key, {
             "resume_id": key[0], "jd_id": key[1], "resume": resume, "jd": jd, "group": group,
             "micros": [], "macros": [], "req_n": len(reqs), "met_runs": [], "unmet": set(),
+            "names": set(),
         })
+        p["names"].update(n for n in ((out.get("personal_info") or {}).get("name"),
+                                      (d.get("details") or {}).get("name")) if n)
         agg = scores.get("aggregated_scores") or {}
         p["micros"].append(float(micro))
         p["macros"].append(float(agg.get("macro_scores") or 0.0))
@@ -145,7 +191,8 @@ def build(src: Path, out: Path) -> dict[str, object]:
         job_file, resume_file = f"job_{p['jd_id']}.txt", f"resume_{p['resume_id']}.txt"
         (out / "jobs" / job_file).write_text(
             with_title(scrub_strict(p["jd"]), job_title(p["jd"])), encoding="utf-8")
-        (out / "resumes" / resume_file).write_text(scrub_strict(p["resume"]), encoding="utf-8")
+        resume_text = redact_personal(scrub_strict(p["resume"]), sorted(p["names"]))
+        (out / "resumes" / resume_file).write_text(resume_text, encoding="utf-8")
         label = gpt_label(p["micro"], p["req_met"], p["req_n"])
         rows.append({
             "resume": resume_file, "job": job_file, "expected": label,
