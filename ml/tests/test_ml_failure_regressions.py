@@ -217,3 +217,20 @@ def test_preferred_skill_weight_one_equals_flat_list(monkeypatch: pytest.MonkeyP
     req_only = sg.analyze_skill_gap(["python", "docker"], ["python"], preferred_skills=["kafka"])
     assert req_only["coverage_ratio"] == 0.5
     assert req_only["preferred_missing"] == ["kafka"]
+
+
+# --- Gap: research, banking, teaching and retail phrasings the skill map missed --------------
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Co-authored manuscripts; reviewer for Information Fusion", {"academic writing", "literature review"}),
+        ("Data mining and SPSS for survey studies", {"data analysis"}),
+        ("Balanced the cash drawer; processed loan payments", {"cash handling", "loans/credit"}),
+        ("Built calm classroom environments; ran formative assessment", {"classroom management", "student assessment"}),
+        ("Designed seasonal store displays", {"merchandising"}),
+    ],
+)
+def test_taxonomy_reads_non_tech_resume_phrasings(text: str, expected: set[str]) -> None:
+    assert expected <= set(extract_skills_from_text(text))

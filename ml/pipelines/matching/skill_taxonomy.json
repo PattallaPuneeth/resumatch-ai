@@ -328,7 +328,11 @@
     "data analysis",
     "data analytics",
     "analytics",
-    "exploratory data analysis"
+    "exploratory data analysis",
+    "data mining",
+    "spss",
+    "stata",
+    "quantitative analysis"
   ],
   "data visualization": [
     "data visualization",
@@ -488,7 +492,8 @@
     "cashier",
     "cash register",
     "point of sale",
-    "teller"
+    "teller",
+    "cash drawer"
   ],
   "account management": [
     "account opening",
@@ -503,7 +508,9 @@
     "credit analysis",
     "mortgage",
     "mortgages",
-    "underwriting"
+    "underwriting",
+    "loan",
+    "credit applications"
   ],
   "kyc/aml": [
     "kyc",
@@ -535,7 +542,10 @@
   ],
   "merchandising": [
     "merchandising",
-    "visual merchandising"
+    "visual merchandising",
+    "store displays",
+    "visual displays",
+    "product displays"
   ],
   "inventory management": [
     "inventory",
@@ -569,7 +579,10 @@
   ],
   "classroom management": [
     "classroom management",
-    "behavior management"
+    "behavior management",
+    "classroom environment",
+    "classroom environments",
+    "classroom culture"
   ],
   "curriculum development": [
     "curriculum development",
@@ -580,7 +593,10 @@
   "student assessment": [
     "student assessment",
     "grading",
-    "student evaluation"
+    "student evaluation",
+    "student assessments",
+    "formative assessment",
+    "summative assessment"
   ],
   "parent communication": [
     "parent communication",
@@ -595,7 +611,10 @@
   "teaching certification": [
     "teaching certification",
     "teaching credential",
-    "teaching license"
+    "teaching license",
+    "certified teacher",
+    "teacher certification",
+    "state certification"
   ],
   "tutoring/mentoring": [
     "tutoring",
@@ -615,7 +634,11 @@
   ],
   "literature review": [
     "literature review",
-    "literature reviews"
+    "literature reviews",
+    "peer review",
+    "systematic review",
+    "literature survey",
+    "reviewer for"
   ],
   "publications": [
     "publications",
@@ -626,7 +649,11 @@
     "academic writing",
     "scientific writing",
     "technical writing",
-    "grant writing"
+    "grant writing",
+    "manuscripts",
+    "manuscript",
+    "co-authored",
+    "research papers"
   ],
   "requirements gathering": [
     "requirements gathering",

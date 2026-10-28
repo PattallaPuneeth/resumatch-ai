@@ -270,6 +270,21 @@ Every match explanation now carries `seniority: {requiredYears, resumeYears, job
 
 **Not added to the score.** Over all 761 eval pairs, a conservative penalty (JD asks for 4+ years or a senior title, and the resume shows under half of it) fires on exactly **1 pair**: the fresher against the senior backend JD, already labeled weak and already scored weak (28.6). The Kaggle JDs ask for 0–1 years, and their labels ignore seniority. So no metric can move, and there's no evidence a penalty helps. Revisit with the human labels in `ml/eval/labeling/`.
 
+### 8.6 Kept: research, banking, teaching and retail phrasings
+
+27 aliases were added, mined from misbanded strong pairs in the **tune** split only. Examples:
+- "co-authored", "manuscripts" → academic writing;
+- "reviewer for", "peer review" → literature review;
+- "data mining", "SPSS" → data analysis;
+- "cash drawer" → cash handling;
+- "classroom environments" → classroom management;
+- "store displays" → merchandising.
+
+None of them appears in the handwritten or extended JDs. Kaggle tune band accuracy went
+0.825 → 0.828 and test 0.802 → **0.806**, one pair each; tune pairwise 0.989 → 0.990.
+Handwritten and extended are unchanged. A small, clean gain. Most research-assistant misses are
+resumes that never mention writing or literature work, which aliases can't fix.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.
