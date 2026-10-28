@@ -73,7 +73,7 @@ export default function AccountPage() {
       <div>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">Account Settings</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-          Manage your account profile, plan allocation, and security settings.
+          Your profile, plan and security settings.
         </p>
       </div>
 

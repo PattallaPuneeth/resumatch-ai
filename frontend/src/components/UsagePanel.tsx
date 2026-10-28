@@ -207,30 +207,32 @@ export function UsagePanel({ className }: UsagePanelProps) {
                     </span>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div
-                    role="progressbar"
-                    aria-valuenow={isUnlimited ? 0 : percent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${meta.label} usage progress`}
-                    className="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200"
-                  >
+                  {/* Progress bar; unlimited meters have nothing to fill, so they say so instead */}
+                  {isUnlimited ? (
+                    <p className="text-[11px] text-muted-foreground">No limit on your plan</p>
+                  ) : (
                     <div
-                      className={`h-full transition-all duration-300 ${
-                        isUnlimited
-                          ? 'bg-emerald-500 w-1/4'
-                          : state.blocked
-                          ? 'bg-destructive'
-                          : state.activeThreshold === 90
-                          ? 'bg-orange-600'
-                          : state.activeThreshold === 70
-                          ? 'bg-amber-500'
-                          : 'bg-primary'
-                      }`}
-                      style={{ width: isUnlimited ? '15%' : `${Math.min(100, Math.max(0, percent))}%` }}
-                    />
-                  </div>
+                      role="progressbar"
+                      aria-valuenow={percent}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${meta.label} usage progress`}
+                      className="w-full h-2 rounded-full bg-muted overflow-hidden"
+                    >
+                      <div
+                        className={`h-full transition-all duration-500 motion-reduce:transition-none ${
+                          state.blocked
+                            ? 'bg-destructive'
+                            : state.activeThreshold === 90
+                            ? 'bg-orange-600'
+                            : state.activeThreshold === 70
+                            ? 'bg-amber-500'
+                            : 'bg-primary'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Reset Information */}

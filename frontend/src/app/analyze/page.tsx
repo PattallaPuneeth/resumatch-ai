@@ -11,7 +11,6 @@ import {
   AnalysisResult,
   MatchResult,
 } from '@/lib/apiClient';
-import { Navbar } from '@/components/Navbar';
 import { UsagePanel } from '@/components/UsagePanel';
 import { AnalyzeSelector, JDInputData, MatchHistoryItem } from '@/components/AnalyzeSelector';
 import { ModeAResults } from '@/components/ModeAResults';
@@ -20,7 +19,6 @@ import { JobSuggestionsList } from '@/components/JobSuggestionsList';
 import { BulletEditor } from '@/components/BulletEditor';
 import { MatchHistoryList } from '@/components/MatchHistoryList';
 import {
-  Sparkles,
   RefreshCw,
   AlertCircle,
   Clock,
@@ -349,21 +347,17 @@ function AnalyzePageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 sm:px-6 py-8 max-w-5xl space-y-8">
+    <div className="flex-1 flex flex-col bg-secondary">
+      <div className="flex-1 container mx-auto px-4 sm:px-6 py-8 max-w-5xl space-y-8">
         {/* Page Header */}
         <header className="space-y-1">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
-              Analyze Resume & Target Matching
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
+              Analyze a resume
             </h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Evaluate ATS readiness, run deterministic hybrid matching against target job descriptions,
-            and explore intelligent job suggestions.
+            Check how an ATS reads it, match it against a job post, or find roles that fit.
           </p>
         </header>
 
@@ -483,7 +477,7 @@ function AnalyzePageContent() {
             onUsageChange={refetchUsage}
           />
         )}
-      </main>
+      </div>
     </div>
   );
 }
@@ -492,7 +486,7 @@ export default function AnalyzePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="flex-1 flex items-center justify-center p-4">
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <RefreshCw className="h-4 w-4 animate-spin text-primary" />
             <span>Loading analyze workspace...</span>

@@ -91,7 +91,7 @@ export default function DashboardPage() {
             Welcome back, <span className="text-primary">{user?.username}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1">
-            Manage your resumes, track object storage consumption, and evaluate ATS compatibility.
+            Upload resumes, see how they read to an ATS, and keep an eye on your monthly usage.
           </p>
         </div>
       </div>
