@@ -100,3 +100,6 @@ htmlcov/
 
 # Load-test data that must never be committed (e.g. scraped job postings without a license)
 loadtest/local/
+
+# Third-party eval texts with unclear licenses (rebuilt by ml/eval/build_real_fit_dataset.py)
+ml/eval/datasets_local/

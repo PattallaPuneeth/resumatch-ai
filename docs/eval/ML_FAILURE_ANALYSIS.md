@@ -382,6 +382,33 @@ Handwritten gets worse on both measures, so it stops at the accuracy stage. Its 
 
 **Coverage misses (the 63–75 group)** come from the same phrasing gaps as section 8.6. Mining more aliases from 32 tune rows would overfit, so this waits for more human labels.
 
+### 8.10 First measurement on real, long job postings (`real_fit`)
+
+`real_fit` covers 60 real postings (250–947 words, median 476, the same as the real pool's
+~480) × 5 resumes each, with labels from the source dataset (Good / Potential / No Fit). Today's
+pipeline, unchanged:
+
+| Set | Pairwise | Band | Mean score strong / medium / weak | P@1 per job | NDCG@3 |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| real_fit tune (175) | 61.0% | 34.3% | 37.7 / 34.3 / 27.9 | 0.39 | 0.700 |
+| real_fit test (125) | **49.8%** | 41.6% | 28.8 / 33.5 / 28.3 | 0.40 | 0.637 |
+| handwritten (for contrast) | 98.2% | 93.8% | 88.7 / 58.7 / 23.6 | 1.00 | 0.996 |
+
+On real, long postings the model barely separates the source labels: test pairwise is about
+chance, and every band's mean sits around 28–38. This is consistent with the real-JD load test,
+where a real posting scored 18.6 (`docs/PERFORMANCE.md`, Finding 4).
+
+Two explanations, which this data can't separate yet:
+1. **The model is weak on long, noisy real JDs.** Benefits, company history and EEO text dilute
+   BM25, the vector score and the rerank query, and skill extraction pulls in incidental terms.
+2. **The source labels are noisy.** A spot check found debatable strong/medium calls (a
+   front-end developer labeled strong and a Java web developer labeled medium for the same
+   Heroku role), and the source does not document how labels were made.
+
+**Next:** have a person re-label a stratified sample of about 40 `real_fit` pairs, which shows
+how far the source labels can be trusted. Then use `real_fit tune` to work on long-JD handling,
+judged on `real_fit test`, human_hard and handwritten together.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.
