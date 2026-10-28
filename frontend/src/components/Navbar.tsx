@@ -3,8 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/authContext';
 import { LayoutDashboard, User, LogOut, LogIn, UserPlus, Sparkles, Menu, X } from 'lucide-react';
+
+const NAV_LINKS = [
+  { href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { href: '/analyze', label: 'Analyze', Icon: Sparkles },
+  { href: '/account', label: 'Account', Icon: User },
+];
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2';
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -21,96 +31,87 @@ export function Navbar() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-white/90 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2.5 font-bold text-lg text-foreground tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md px-1 min-h-[44px] min-w-[44px]"
+            className={`flex items-center gap-2 rounded-md px-1 min-h-[44px] ${focusRing}`}
           >
-            <div className="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-base shadow-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
               R
-            </div>
-            <span>ResuMatch <span className="text-primary font-semibold">AI</span></span>
+            </span>
+            <span className="font-display text-lg font-semibold tracking-tight text-foreground">
+              ResuMatch
+              <span className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-highlight-strong align-baseline" aria-hidden="true" />
+            </span>
           </Link>
 
           {isAuthenticated && (
-            <nav className="hidden sm:flex items-center gap-1 text-sm font-medium" aria-label="Main Navigation">
-              <Link
-                href="/dashboard"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] ${
-                  isActive('/dashboard')
-                    ? 'bg-accent text-accent-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-slate-100'
-                }`}
-              >
-                <LayoutDashboard className="h-4 w-4 text-primary" />
-                Dashboard
-              </Link>
-              <Link
-                href="/analyze"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] ${
-                  isActive('/analyze')
-                    ? 'bg-accent text-accent-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-slate-100'
-                }`}
-              >
-                <Sparkles className="h-4 w-4 text-primary" />
-                Analyze
-              </Link>
-              <Link
-                href="/account"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] ${
-                  isActive('/account')
-                    ? 'bg-accent text-accent-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-slate-100'
-                }`}
-              >
-                <User className="h-4 w-4 text-primary" />
-                Account
-              </Link>
+            <nav className="hidden sm:flex items-center gap-1 text-sm" aria-label="Main Navigation">
+              {NAV_LINKS.map(({ href, label, Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={isActive(href) ? 'page' : undefined}
+                  className={`relative flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-md transition-colors ${focusRing} ${
+                    isActive(href) ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {label}
+                  {isActive(href) && (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-primary"
+                      transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </Link>
+              ))}
             </nav>
           )}
         </div>
 
-        {/* Desktop Actions */}
-        <div className="hidden sm:flex items-center gap-3">
+        {/* Desktop actions */}
+        <div className="hidden sm:flex items-center gap-2">
           {isAuthenticated ? (
-            <div className="flex items-center gap-3">
-              <span className="hidden md:inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
+            <>
+              <span className="hidden md:inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-foreground border border-border">
                 {user?.username}
               </span>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 text-xs sm:text-sm font-medium px-3 py-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive min-h-[44px]"
+                className={`flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-red-50 transition-colors min-h-[44px] ${focusRing}`}
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4" aria-hidden="true" />
                 <span>Log out</span>
               </button>
-            </div>
+            </>
           ) : (
-            <div className="flex items-center gap-2">
+            <>
               <Link
                 href="/login"
-                className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-md text-foreground hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px]"
+                className={`flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-md text-foreground hover:bg-secondary transition-colors min-h-[44px] ${focusRing}`}
               >
-                <LogIn className="h-4 w-4" />
+                <LogIn className="h-4 w-4" aria-hidden="true" />
                 Log in
               </Link>
               <Link
                 href="/signup"
-                className="flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 min-h-[44px]"
+                className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-hover transition-colors min-h-[44px] ${focusRing}`}
               >
-                <UserPlus className="h-4 w-4" />
+                <UserPlus className="h-4 w-4" aria-hidden="true" />
                 Sign up
               </Link>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile menu button */}
         <div className="flex sm:hidden items-center">
           <button
             type="button"
@@ -118,60 +119,40 @@ export function Navbar() {
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-menu"
             aria-label="Toggle navigation menu"
-            className="p-2.5 rounded-lg text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className={`p-2.5 rounded-lg text-foreground hover:bg-secondary min-h-[44px] min-w-[44px] flex items-center justify-center ${focusRing}`}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </div>
 
-      {/* Accessible Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div
-          id="mobile-menu"
-          className="sm:hidden border-b border-border bg-white px-4 pt-2 pb-6 space-y-3 mobile-menu-enter shadow-lg"
-        >
+        <div id="mobile-menu" className="sm:hidden border-b border-border bg-white px-4 pt-2 pb-6 space-y-3 mobile-menu-enter shadow-sm">
           {isAuthenticated ? (
             <nav className="flex flex-col space-y-1" aria-label="Mobile Navigation">
-              <div className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 rounded-md mb-2">
-                Signed in as <span className="font-bold text-slate-900">{user?.username}</span>
+              <div className="px-3 py-2 text-xs text-muted-foreground bg-secondary rounded-md mb-2">
+                Signed in as <span className="font-semibold text-foreground">{user?.username}</span>
               </div>
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-3 rounded-lg text-sm font-medium min-h-[44px] ${
-                  isActive('/dashboard') ? 'bg-accent text-accent-foreground font-semibold' : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <LayoutDashboard className="h-5 w-5 text-primary" />
-                Dashboard
-              </Link>
-              <Link
-                href="/analyze"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-3 rounded-lg text-sm font-medium min-h-[44px] ${
-                  isActive('/analyze') ? 'bg-accent text-accent-foreground font-semibold' : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <Sparkles className="h-5 w-5 text-primary" />
-                Analyze
-              </Link>
-              <Link
-                href="/account"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-3 rounded-lg text-sm font-medium min-h-[44px] ${
-                  isActive('/account') ? 'bg-accent text-accent-foreground font-semibold' : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <User className="h-5 w-5 text-primary" />
-                Account
-              </Link>
+              {NAV_LINKS.map(({ href, label, Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={isActive(href) ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-lg text-sm min-h-[44px] ${
+                    isActive(href) ? 'bg-accent text-accent-foreground font-semibold' : 'text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  {label}
+                </Link>
+              ))}
               <button
                 type="button"
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-3 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-red-50 text-left min-h-[44px]"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-5 w-5" aria-hidden="true" />
                 Log out
               </button>
             </nav>
@@ -180,17 +161,17 @@ export function Navbar() {
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold border border-slate-300 text-slate-800 hover:bg-slate-50 min-h-[44px]"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold border border-border text-foreground hover:bg-secondary min-h-[44px]"
               >
-                <LogIn className="h-5 w-5" />
+                <LogIn className="h-5 w-5" aria-hidden="true" />
                 Log in
               </Link>
               <Link
                 href="/signup"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm min-h-[44px]"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary-hover min-h-[44px]"
               >
-                <UserPlus className="h-5 w-5" />
+                <UserPlus className="h-5 w-5" aria-hidden="true" />
                 Sign up
               </Link>
             </div>

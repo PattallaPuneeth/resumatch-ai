@@ -357,7 +357,7 @@ function AnalyzePageContent() {
         <header className="space-y-1">
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
               Analyze Resume & Target Matching
             </h1>
           </div>

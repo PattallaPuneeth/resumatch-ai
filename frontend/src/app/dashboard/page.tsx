@@ -87,7 +87,7 @@ export default function DashboardPage() {
       {/* Welcome Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-slate-950">
             Welcome back, <span className="text-primary">{user?.username}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1">

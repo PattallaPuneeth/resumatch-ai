@@ -4,6 +4,7 @@ import React from 'react';
 import { MatchResult, MatchExplanation } from '@/lib/apiClient';
 import { BarChart3, CheckCircle2, XCircle, AlertCircle, HelpCircle } from 'lucide-react';
 import { MatchPassages } from './MatchPassages';
+import { SeniorityFit } from './SeniorityFit';
 
 interface MatchVisualizerProps {
   matchResult: MatchResult | null;
@@ -262,6 +263,8 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
           </div>
         )}
       </div>
+
+      <SeniorityFit seniority={matchResult.explanation?.seniority} />
 
       {/* Match Inspector: the passages the reranker scored highest, matched terms highlighted */}
       <div className="border-t border-border pt-4 space-y-3">

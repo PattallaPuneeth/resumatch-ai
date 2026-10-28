@@ -51,11 +51,15 @@ so all of this is uncommitted in the working tree.
 - [x] 3B Match Inspector: top passages with highlighted skills, preferred-skill pills.
 - [x] 2A OCR worker: **opt-in only** (`--profile ocr-worker`, `OCR_QUEUE_ENABLED=true`). Ingestion text p95
       60.6 s → 0.8 s, but mixed-load match p95 doubled (CPU contention on 4 vCPU). Analysis §8.4.
-- [x] UI redesign (user request): dark AI-tech theme (default, light toggle), Inter, Framer Motion
-      11.18.2, new landing page (animated demo card, measured-metrics strip, pipeline flow), glass
-      navbar with animated active pill, page transitions, gauge arc sweep (numerals stay exact, Rule
-      S7). Landing claims corrected (reranker is ms-marco-MiniLM, no virus-scan claim). 140/140
-      frontend tests, axe audits, tsc, eslint and `next build` pass.
+- [x] UI redesign. A first dark "AI-tech" version was rejected by the user as looking AI-made, and
+      was replaced with a light design:
+      - white with warm off-white sections, green-700 primary, soft orange highlights;
+      - Fraunces display headings over Inter body text;
+      - quiet Framer Motion 11.18.2 reveals, a timeline line that draws in, and the gauge arc
+        sweeping in (numerals stay exact, Rule S7).
+      Landing claims were corrected (the reranker is ms-marco-MiniLM; no virus-scan claim).
+- [x] Seniority signal: shown in match explanations, not scored. A penalty would change 1 of 761
+      eval pairs (analysis section 8.5).
 - [x] 4A `ml/eval/mine_hard_pairs.py` + `ml/eval/labeling/hard_pairs_to_label.csv` (50 pairs for the
       user to label), regenerated on the final scoring.
 

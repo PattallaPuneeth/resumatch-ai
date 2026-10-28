@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { MatchVisualizer } from '../MatchVisualizer';
 import { MatchPassages, highlightTerms } from '../MatchPassages';
+import { SeniorityFit } from '../SeniorityFit';
 import type { MatchResult } from '@/lib/apiClient';
 
 const baseMatch: MatchResult = {
@@ -83,5 +84,27 @@ describe('Match Inspector', () => {
   it('handles a match with no passages', () => {
     render(<MatchPassages chunks={[]} highlight={['python']} />);
     expect(screen.getByTestId('match-passages-empty')).toBeTruthy();
+  });
+});
+
+describe('SeniorityFit', () => {
+  it('states years asked vs shown, and that it does not change the score', () => {
+    render(
+      <SeniorityFit
+        seniority={{ requiredYears: 5, resumeYears: 0.2, jobLevel: 'senior', status: 'below' }}
+      />
+    );
+    const panel = screen.getByTestId('seniority-fit');
+    expect(panel.textContent).toContain('Job asks for 5+ years (senior role)');
+    expect(panel.textContent).toContain('under a year');
+    expect(panel.textContent).toContain('Well short of the experience asked for');
+    expect(panel.textContent).toContain('does not change the match score');
+  });
+
+  it('renders nothing when the job gives no years', () => {
+    const { container } = render(
+      <SeniorityFit seniority={{ requiredYears: null, resumeYears: 4, jobLevel: null, status: 'unknown' }} />
+    );
+    expect(container.firstChild).toBeNull();
   });
 });

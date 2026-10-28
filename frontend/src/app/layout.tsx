@@ -1,7 +1,12 @@
 import type { Metadata } from 'next';
+import { Fraunces, Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Navbar } from '@/components/Navbar';
+
+// Self-hosted at build time by next/font: no request to Google from the browser
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
+const fraunces = Fraunces({ subsets: ['latin'], display: 'swap', variable: '--font-display' });
 
 export const metadata: Metadata = {
   title: 'ResuMatch AI - ATS Resume Analysis & Matching',
@@ -14,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="min-h-screen bg-background text-foreground flex flex-col font-sans">
         <a
           href="#main-content"
@@ -27,7 +32,7 @@ export default function RootLayout({
           <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col focus:outline-none">
             {children}
           </main>
-          <footer className="border-t border-border bg-slate-50 py-6 text-center text-xs text-muted-foreground">
+          <footer className="border-t border-border bg-secondary py-8 text-center text-xs text-muted-foreground">
             <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
               <span>ResuMatch AI • Production AI Resume & Job Matching Platform</span>
               <span>Fastify • PostgreSQL pgvector(384) • FastAPI • Next.js</span>

@@ -27,13 +27,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none min-h-[44px] min-w-[44px]';
+      'inline-flex items-center justify-center font-medium rounded-md transition-all duration-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none min-h-[44px] min-w-[44px] motion-reduce:transition-none motion-reduce:active:scale-100';
 
     const variants = {
       primary:
-        'bg-primary hover:bg-primary-hover text-white shadow-sm focus-visible:ring-primary',
+        'bg-primary hover:bg-primary-hover text-white font-semibold shadow-sm focus-visible:ring-primary',
       secondary:
-        'bg-white hover:bg-slate-50 text-slate-900 border border-border shadow-xs focus-visible:ring-primary',
+        'bg-white hover:bg-secondary text-foreground border border-input focus-visible:ring-primary',
       ghost:
         'bg-transparent hover:bg-slate-100 text-slate-700 hover:text-slate-900 focus-visible:ring-primary',
       danger:

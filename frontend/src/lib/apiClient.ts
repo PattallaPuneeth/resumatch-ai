@@ -251,6 +251,13 @@ export interface MatchExplanation {
     snippet: string;
   }>;
   totalChunksEvaluated?: number;
+  /** Explanation only; not part of the score. */
+  seniority?: {
+    requiredYears: number | null;
+    resumeYears: number;
+    jobLevel: 'senior' | 'junior' | null;
+    status: 'meets' | 'close' | 'below' | 'unknown';
+  };
 }
 
 export interface MatchResult {

@@ -71,7 +71,7 @@ export default function AccountPage() {
   return (
     <div className="container mx-auto px-4 sm:px-6 py-8 max-w-5xl space-y-8" data-testid="account-page">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Account Settings</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">Account Settings</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
           Manage your account profile, plan allocation, and security settings.
         </p>

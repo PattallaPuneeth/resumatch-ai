@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { tokens } from '@/lib/designTokens';
 
 interface ScoreGaugeProps {
@@ -11,6 +12,8 @@ interface ScoreGaugeProps {
   size?: 'sm' | 'md' | 'lg';
   statusBand?: string;
   className?: string;
+  /** Element for the label; use 'p' where an h4 would break the page's heading order. */
+  labelAs?: 'h4' | 'p';
 }
 
 export function ScoreGauge({
@@ -21,8 +24,10 @@ export function ScoreGauge({
   size = 'md',
   statusBand,
   className = '',
+  labelAs: LabelTag = 'h4',
 }: ScoreGaugeProps) {
   // Clamp score strictly between 0 and maxScore for visual arc representation
+  const reduceMotion = useReducedMotion();
   const clampedScore = Math.max(0, Math.min(score, maxScore));
   const percentage = (clampedScore / maxScore) * 100;
 
@@ -70,8 +75,8 @@ export function ScoreGauge({
             stroke="hsl(var(--muted))"
             strokeWidth={config.strokeWidth}
           />
-          {/* Animated score arc (Non-numeric visual animation only) */}
-          <circle
+          {/* Animated score arc (non-numeric visual animation only; the numeral never tweens) */}
+          <motion.circle
             cx={config.dimension / 2}
             cy={config.dimension / 2}
             r={config.radius}
@@ -79,9 +84,11 @@ export function ScoreGauge({
             stroke={strokeColor}
             strokeWidth={config.strokeWidth}
             strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
+            initial={{ strokeDashoffset: reduceMotion ? strokeDashoffset : circumference }}
+            animate={{ strokeDashoffset }}
+            transition={{ duration: reduceMotion ? 0 : 1.1, ease: [0.16, 1, 0.3, 1] }}
             strokeLinecap="round"
-            className="transition-all duration-700 ease-out motion-reduce:transition-none"
+            className="motion-reduce:transition-none"
           />
         </svg>
 
@@ -98,7 +105,7 @@ export function ScoreGauge({
       </div>
 
       <div className="mt-3">
-        <h4 className={`font-semibold text-slate-900 ${config.labelSize}`}>{label}</h4>
+        <LabelTag className={`font-semibold text-slate-900 ${config.labelSize}`}>{label}</LabelTag>
         {statusBand && (
           <p className="text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5 mt-1 inline-block">
             {statusBand}

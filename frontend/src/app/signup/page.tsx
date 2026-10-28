@@ -84,7 +84,7 @@ function SignupForm() {
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xl mx-auto mb-2">
               <CheckCircle className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">Save Your Recovery Codes</h1>
+            <h1 className="font-display text-xl font-semibold text-foreground">Save Your Recovery Codes</h1>
             <p className="text-xs text-muted-foreground">
               These 10 one-time recovery codes are your only way to regain access if you forget your password. Each code can only be used once. Store them securely.
             </p>
@@ -130,7 +130,7 @@ function SignupForm() {
           <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg mx-auto mb-2 shadow-sm">
             R
           </div>
-          <h1 className="text-xl font-bold text-foreground">Create an Account</h1>
+          <h1 className="font-display text-xl font-semibold text-foreground">Create an Account</h1>
           <p className="text-xs text-muted-foreground">
             Get started with AI-powered resume analysis, ATS verification, and usage limits.
           </p>
