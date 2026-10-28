@@ -409,6 +409,31 @@ Two explanations, which this data can't separate yet:
 how far the source labels can be trusted. Then use `real_fit tune` to work on long-JD handling,
 judged on `real_fit test`, human_hard and handwritten together.
 
+### 8.11 Human check of the real_fit labels: the source labels are unreliable
+
+The user labeled 40 `real_fit` pairs, stratified by field and source label, with the source label hidden. The result: 24 weak, 9 medium, 7 strong, each with a reason. They were imported to `ml/eval/datasets_local/real_fit_human/`, and the manifest is `ml/eval/datasets/real_fit_human_manifest.csv`.
+
+**Human vs source labels:** 17/40 exact agreement (42%); 15 one band apart; 8 opposite (strong ↔ weak). Cohen's kappa is **0.14**, only slight agreement. Of the 13 pairs the source calls strong, the human calls 7 weak. The notes are almost all seniority or domain mismatches the source ignores, for example "Engineering manager vs junior software engineer" or "5+ yr Azure database engineer vs entry-level bootcamp Python dev". **The 300 source labels in `real_fit` should not be used to judge the model.** The real postings themselves are still useful.
+
+**Model vs human labels on these 40 long-JD pairs** (scores from section 8.10, pipeline unchanged): pairwise ordering **0.785**, against 0.644 with the source labels on the same pairs. Band accuracy is 0.600. The earlier 49.8% mostly measured label noise. The real problem is **score compression on long JDs**:
+
+| Human label | n | Model score median (range) |
+| :--- | :---: | :---: |
+| strong | 7 | 46.1 (32.8–72.1) |
+| medium | 9 | 31.8 (28.9–55.6) |
+| weak | 24 | 26.6 (7.8–72.7) |
+
+The order is mostly right, but strong candidates score about 46 instead of 75+.
+
+**Seniority, re-checked on real JDs:**
+- None of the 7 human-strong pairs is short on experience ("below").
+- 6 of the 33 medium or weak pairs are.
+- A score penalty for "below", chosen on the 28 tune pairs (×0.6), hurts the 12 held-out pairs (pairwise 0.861 → 0.833, band 0.750 → 0.667) and handwritten (band 0.938 → 0.906).
+- A gentle ×0.9 changes nothing on held-out or handwritten. But choosing it after seeing those sets would break the split, and only 6 pairs carry the signal.
+- **Seniority stays explanation-only.** The real-JD labels lean toward it mattering, so it should be revisited with more labels.
+
+**Next:** score compression on long JDs is the main real-world issue. Fixing it, for example by stripping benefits, company and EEO boilerplate before matching, or by calibrating by JD length, needs more human-labeled strong pairs on real postings than the 7 here. A good next sheet is about 60 more `real_fit` pairs, stratified toward pairs the model scores 40–75.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.

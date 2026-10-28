@@ -27,6 +27,8 @@ VALID_LABELS = ("strong", "medium", "weak")
 SOURCE_DIRS = {
     "kaggle_domain": Path("ml/eval/datasets/kaggle_domain"),
     "extended": Path("test-data/extended_dataset"),
+    # Third-party texts (see build_real_fit_dataset.py): import into a gitignored --out folder
+    "real_fit": Path("ml/eval/datasets_local/real_fit"),
 }
 _XLSX_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 
@@ -121,7 +123,8 @@ def write_dataset(rows: list[dict[str, str]], out: Path) -> dict[str, int]:
             src = SOURCE_DIRS[dataset]
             _copy_unique(src / "resumes" / resume, out / "resumes" / resume)
             _copy_unique(src / "jobs" / job, out / "jobs" / job)
-            held_out = "test" if dataset == "kaggle_domain" and split == "test" else "tune"
+            # Pairs from a source's held-out split stay held out here too
+            held_out = "test" if split == "test" else "tune"
             counts[held_out] += 1
             w.writerow([resume, job, r["human_label"], (r.get("notes") or "").strip(), held_out,
                         dataset, (r.get("auto_label") or "").strip()])
