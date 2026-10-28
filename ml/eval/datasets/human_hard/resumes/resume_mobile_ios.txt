@@ -1,0 +1,4 @@
+NAME: Candidate for Senior iOS Engineer (Swift)
+SKILLS: Swift, SwiftUI, Combine, CoreData, iOS SDK, XCTest
+SUMMARY: iOS Engineer with 7 years shipping App Store applications using Swift, SwiftUI, and Combine.
+EXPERIENCE: 6+ years professional experience delivering production results.

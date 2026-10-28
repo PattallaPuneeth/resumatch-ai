@@ -54,7 +54,7 @@ Rules of thumb:
 - Use `notes` for a short reason, especially when you disagree with `auto_label` or the pair
   is unusable (e.g. a broken resume text). Write `skip` in `notes` to exclude a row.
 
-## Import (planned)
+## Import (done)
 
 A later importer will read this CSV and refit the thresholds on it. It will:
 
@@ -67,3 +67,7 @@ A later importer will read this CSV and refit the thresholds on it. It will:
    Kaggle result.
 
 Keep the column names and order as they are so the importer can rely on them.
+
+The labeled sheet was imported with `python -m ml.eval.import_human_labels` (it reads .xlsx or
+.csv) into `ml/eval/datasets/human_hard/`. Results are in `docs/eval/ML_FAILURE_ANALYSIS.md`
+section 8.8.

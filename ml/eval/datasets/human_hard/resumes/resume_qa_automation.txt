@@ -1,0 +1,4 @@
+NAME: Candidate for Lead SDET / QA Automation Engineer
+SKILLS: Playwright, Cypress, TypeScript, CI/CD, Load Testing, k6
+SUMMARY: Lead SDET with 8 years building end-to-end testing frameworks using Playwright, TypeScript, and k6.
+EXPERIENCE: 6+ years professional experience delivering production results.

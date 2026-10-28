@@ -1,0 +1,4 @@
+NAME: Candidate for Staff Data Engineer (Spark / Snowflake)
+SKILLS: Apache Spark, Snowflake, dbt, Python, Airflow, SQL
+SUMMARY: Staff Data Engineer with 7 years orchestrating terabyte-scale data lakes with Spark, dbt, Snowflake, and Airflow.
+EXPERIENCE: 6+ years professional experience delivering production results.

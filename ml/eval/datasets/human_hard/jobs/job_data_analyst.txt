@@ -1,0 +1,2 @@
+Data Analyst
+Job title: Data Analyst (SYNTHETIC EXAMPLE - not a real vacancy). Required skills: sql; excel; data analysis; data visualization or tableau/power bi; statistics. Preferred skills: python; pandas/numpy; documentation/reporting; stakeholder management; database design. Responsibilities: Query and clean business data, build dashboards and recurring reports, run statistical analyses and present insights to stakeholders. Education/experience: Bachelor's degree in Statistics, Mathematics, Engineering, Business or related field; 0-3 years of analytics experience.

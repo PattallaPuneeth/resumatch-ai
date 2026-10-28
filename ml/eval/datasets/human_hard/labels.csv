@@ -1,0 +1,51 @@
+resume,job,expected,reason,split,source,auto_label
+R0118.txt,job_accountant.txt,strong,"Accountant, B.S. Accounting, recon/AR match",test,kaggle_domain,weak
+R0254.txt,job_banking_operations_officer.txt,medium,"Finance/AR/loan recs, but not branch banking ops",tune,kaggle_domain,strong
+R0073.txt,job_retail_sales_associate_apparel.txt,weak,"Accounting role, little retail/sales",tune,kaggle_domain,strong
+R0250.txt,job_data_analyst.txt,medium,Accountant with SQL/Excel/data analysis,test,kaggle_domain,strong
+R0284.txt,job_accountant.txt,strong,"Accountant, GL/close/recs/budgeting",tune,kaggle_domain,strong
+R0224.txt,job_financial_analyst.txt,strong,"Variance, budgeting, close, SAP, Excel",test,kaggle_domain,strong
+R0132.txt,job_financial_analyst.txt,medium,"AR/AP/recs accountant, no forecasting/modeling",tune,kaggle_domain,weak
+R0107.txt,job_banking_operations_officer.txt,weak,"Higher-ed admin, only budgeting/customer service overlap",tune,kaggle_domain,strong
+R0182.txt,job_retail_sales_associate_apparel.txt,strong,"Apparel team lead, merchandising, register",tune,kaggle_domain,strong
+R0264.txt,job_accountant.txt,weak,"HR/store manager, not accounting",test,kaggle_domain,weak
+R0145.txt,job_banking_operations_officer.txt,weak,"Apparel cashier, invoice processing; no banking",tune,kaggle_domain,strong
+R0078.txt,job_accountant.txt,weak,"IT audit/compliance, not banking",test,kaggle_domain,weak
+R0205.txt,job_data_analyst.txt,strong,"SQL, SAS, BI tools, advanced Excel",test,kaggle_domain,strong
+R0188.txt,job_retail_sales_associate_apparel.txt,medium,"Apparel industry but product dev/sourcing, not retail floor",tune,kaggle_domain,weak
+R0239.txt,job_data_analyst.txt,medium,Account manager; SQL/SPSS only side skills,tune,kaggle_domain,strong
+R0277.txt,job_retail_sales_associate_apparel.txt,weak,QA tester; retail POS only domain context,tune,kaggle_domain,strong
+R0083.txt,job_banking_operations_officer.txt,strong,"Teller/vault/cash controls, banking degree",test,kaggle_domain,strong
+R0293.txt,job_banking_operations_officer.txt,medium,"Banking, but senior commercial RM not operations",test,kaggle_domain,weak
+R0206.txt,job_accountant.txt,medium,"Mortgage underwriter, not accounting duties",test,kaggle_domain,weak
+R0255.txt,job_banking_operations_officer.txt,strong,"Teller, vault, account opening, cash handling",test,kaggle_domain,strong
+R0286.txt,job_banking_operations_officer.txt,medium,"Mortgage/credit/financial analysis, sales-leaning",tune,kaggle_domain,strong
+resume_backend_go.txt,job_backend_java.txt,medium,"Go backend vs Java backend: related, different language",tune,extended,medium
+resume_qa_automation.txt,job_frontend_vue.txt,weak,SDET/QA vs Vue frontend; only TypeScript overlap,tune,extended,medium
+resume_mobile_ios.txt,job_frontend_vue.txt,weak,iOS vs Vue frontend,tune,extended,medium
+resume_data_engineer.txt,job_backend_go.txt,weak,Data engineering vs Go backend,tune,extended,medium
+resume_security_eng.txt,job_backend_go.txt,weak,AppSec vs Go backend,tune,extended,medium
+resume_product_mgr.txt,job_backend_go.txt,weak,Product manager vs Go engineer,tune,extended,medium
+resume_backend_go.txt,job_mobile_ios.txt,weak,Go backend vs iOS role,tune,extended,weak
+resume_mobile_ios.txt,job_backend_go.txt,weak,iOS vs Go backend role,tune,extended,weak
+R0297.txt,job_financial_analyst.txt,strong,"Finance manager, budgeting, GAAP, Excel",test,kaggle_domain,strong
+R0152.txt,job_accountant.txt,strong,"AP/AR, GL, recs, fixed assets, audit prep",test,kaggle_domain,strong
+R0200.txt,job_accountant.txt,strong,"CPA, GL, recs, AP/AR, audit liaison",tune,kaggle_domain,strong
+R0258.txt,job_financial_analyst.txt,strong,"FP&A, budgeting/forecasting, KPIs",test,kaggle_domain,strong
+R0162.txt,job_financial_analyst.txt,strong,"Variance analysis, modeling, budgeting, Excel",test,kaggle_domain,strong
+R0298.txt,job_financial_analyst.txt,strong,"Finance leadership, variance, budgeting, P&L",tune,kaggle_domain,strong
+R0245.txt,job_banking_operations_officer.txt,strong,"Loan packaging, cash handling, deposits, lender relations",test,kaggle_domain,strong
+R0049.txt,job_research_assistant.txt,strong,"PhD, graduate RA, publications, ML/Python",tune,kaggle_domain,strong
+R0025.txt,job_machine_learning_engineer.txt,medium,"ML/Python/TF, PhD RA; limited production ML",tune,kaggle_domain,strong
+R0005.txt,job_machine_learning_engineer.txt,strong,"NLP/ML, PyTorch/TF, 40+ papers",tune,kaggle_domain,strong
+R0051.txt,job_machine_learning_engineer.txt,strong,"ML/NLP models, TF/PyTorch, publications",test,kaggle_domain,strong
+R0024.txt,job_java_backend_developer.txt,strong,"Java, Spring Boot, REST, PostgreSQL, 3 yrs SWE",tune,kaggle_domain,strong
+R0001.txt,job_research_assistant.txt,strong,"CS research, publications, NLP, mentoring",tune,kaggle_domain,strong
+R0001.txt,job_machine_learning_engineer.txt,strong,"Same candidate: ML/DL, PyTorch/TF, NLP",tune,kaggle_domain,strong
+R0232.txt,job_banking_operations_officer.txt,medium,"Cash handling, customer service, invoicing; no banking",test,kaggle_domain,strong
+R0071.txt,job_school_teacher.txt,strong,"Certified science teacher, M.Ed, classroom mgmt",tune,kaggle_domain,strong
+R0067.txt,job_school_teacher.txt,strong,"M.Ed, teacher, IEP, lesson planning, family comms",tune,kaggle_domain,strong
+R0153.txt,job_banking_operations_officer.txt,medium,"Retail cash handling/customer service, no banking",test,kaggle_domain,strong
+R0100.txt,job_school_teacher.txt,medium,"Social work core, some teaching skills",tune,kaggle_domain,strong
+R0209.txt,job_school_teacher.txt,strong,"27 yrs certified HS teacher, IEP, curriculum",tune,kaggle_domain,strong
+R0295.txt,job_school_teacher.txt,medium,"Curriculum/instructional design, little classroom role",tune,kaggle_domain,strong

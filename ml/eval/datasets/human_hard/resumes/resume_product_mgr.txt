@@ -1,0 +1,4 @@
+NAME: Candidate for Technical Product Manager (Developer Platforms)
+SKILLS: Product Strategy, API Design, Agile, User Research, Metrics, Roadmapping
+SUMMARY: Technical PM with 6 years leading developer platform initiatives, public APIs, and developer experience metrics.
+EXPERIENCE: 6+ years professional experience delivering production results.

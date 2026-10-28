@@ -1,0 +1,4 @@
+NAME: Candidate for Senior Go Systems Engineer
+SKILLS: Go, gRPC, PostgreSQL, Docker, Kubernetes, Distributed Systems
+SUMMARY: Senior Systems Engineer with 6 years building high-throughput services in Go, gRPC, and PostgreSQL.
+EXPERIENCE: 6+ years professional experience delivering production results.

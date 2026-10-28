@@ -308,6 +308,34 @@ about 0.7/s on this 4-vCPU host, and more capacity means more cores or more work
 The setting stays available with default 0 (torch decides) for tuning on other hosts. With the
 OCR worker the trade-off from section 8.4 repeats (better median, worse tail), so it stays opt-in.
 
+### 8.8 Human labels on the 50 hardest pairs (step 7)
+
+The user hand-labeled the 50 pairs from `ml/eval/labeling/` (23 strong, 14 medium, 13 weak, with a reason for each). `python -m ml.eval.import_human_labels` turned them into `ml/eval/datasets/human_hard/`. Of those pairs, 18 come from the Kaggle held-out split (`split=test`) and 32 from elsewhere (`split=tune`). The pairs were chosen as the hardest by construction (near the 45/75 edges or where the auto label and the model disagreed), so they are a stress test, not a random sample.
+
+**The old auto labels were wrong on 23 of 50 hard pairs.** For example, R0118, a working accountant, was labeled weak; the human label is strong.
+
+**Model vs human, with today's 45/75 bands:** 44% band agreement on these pairs (pairwise ordering 75.8%). The main failure is strong resumes scoring too low:
+- the median human-strong score is 72.2;
+- 14 of the 23 human-strong pairs land in medium and 7 in weak.
+
+**Band refit: rejected.** A grid search on the 32 tune rows chose 45/72:
+
+| Cut-offs | Human tune | Human held-out (18) | Handwritten (long JDs) | Kaggle test (auto labels) |
+| :--- | :---: | :---: | :---: | :---: |
+| 45/75 (kept) | 0.500 | 0.333 | **0.938** | 0.806 |
+| 45/72 (fitted) | 0.625 | 0.556 | 0.906 | 0.849 |
+
+The fitted bands improve agreement with the human labels, but they drop one handwritten pair, and the rule was that handwritten must not get worse. The labeled pairs also use short JDs (29–75 words, median 66) against 255–296 words for handwritten and longer for real postings. A 72 cut-off fitted on short JDs would mis-band real ones (see the real-JD load test in `docs/PERFORMANCE.md`, Finding 4). The misses are mostly resumes far below any cut-off (as low as 27.9), not near the line.
+
+**Seniority: stays explanation-only, now with evidence.**
+- The model scores 24 pairs below the human band; in none of them does the resume show less experience than asked.
+- It scores 4 pairs above; in 1 of them the resume is short on experience.
+- So a seniority penalty could fix at most 1 of 28 disagreements.
+
+**Bug found by this check, fixed:** the seniority parser read some resumes as 0 years. It missed open-ended roles "(2025–)" and two-digit end years "(2022–25)", and it treated any date near a university name as schooling, which skipped "Lecturer, East Delta Univ. (2025–)". Only degree words (B.Sc, PhD, GPA, thesis, ...) now mark a date as education. R0024 now reads 4.3 years (the human note says "3 yrs SWE" plus a current RA role). Regression tests are in `ml/tests/test_seniority.py`.
+
+**Next:** strong resumes that score in the 27–43 range (ML engineer, Java backend, research assistant) are the largest remaining error. Their JDs are short and their resumes long, which suggests checking how coverage and the cross-encoder handle long resumes against short JDs. Any fix must be judged on the human `test` rows and handwritten together.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.

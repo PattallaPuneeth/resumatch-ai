@@ -1,0 +1,4 @@
+NAME: Candidate for Application Security Engineer
+SKILLS: AppSec, Threat Modeling, SAST/DAST, OAuth2, Cryptography, Penetration Testing
+SUMMARY: Application Security Engineer with expertise in STRIDE threat modeling, ASVS verification, and secure API design.
+EXPERIENCE: 6+ years professional experience delivering production results.

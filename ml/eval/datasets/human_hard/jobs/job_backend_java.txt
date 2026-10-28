@@ -1,0 +1,3 @@
+TITLE: Java Spring Boot Architect
+REQUIRED SKILLS: Java, Spring Boot, Kafka, PostgreSQL, Microservices, AWS
+DESCRIPTION: Looking for Java Spring Boot Architect to lead enterprise event-driven microservices architecture using Kafka.

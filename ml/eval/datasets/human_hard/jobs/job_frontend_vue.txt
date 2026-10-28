@@ -1,0 +1,3 @@
+TITLE: Senior Vue.js / Nuxt Developer
+REQUIRED SKILLS: Vue.js, Nuxt.js, TypeScript, Tailwind CSS, Pinia, Vite
+DESCRIPTION: Hiring Senior Vue.js Developer experienced with Vue 3, Nuxt.js, TypeScript, and modern frontend state management.
