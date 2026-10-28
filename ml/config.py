@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     # Queues this worker process serves: "all", or a comma list of parse, ocr, embed, match,
     # analysis. The default keeps one process serving everything.
     worker_queues: str = Field(default="all", alias="WORKER_QUEUES")
+    # Intra-op threads per torch inference call; 0 keeps torch's default. Several inference
+    # calls can run at once in one worker, so a cap avoids oversubscribing the CPUs.
+    torch_num_threads: int = Field(default=0, ge=0, le=64, alias="TORCH_NUM_THREADS")
     ocr_max_pages: int = Field(default=5, alias="OCR_MAX_PAGES")
     ocr_min_chars: int = Field(default=200, alias="OCR_MIN_CHARS")
     ocr_alphanumeric_threshold: float = Field(default=0.50, alias="OCR_ALPHANUMERIC_THRESHOLD")

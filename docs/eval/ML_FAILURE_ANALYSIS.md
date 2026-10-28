@@ -285,6 +285,29 @@ None of them appears in the handwritten or extended JDs. Kaggle tune band accura
 Handwritten and extended are unchanged. A small, clean gain. Most research-assistant misses are
 resumes that never mention writing or literature work, which aliases can't fix.
 
+### 8.7 Rejected: capping torch threads (`TORCH_NUM_THREADS`)
+
+The idea being tested: several inference calls share 4 vCPUs, each using torch's default of
+2 intra-op threads, so capping at 1 might raise throughput. All runs used one image in one
+sitting, each with a smoke warm-up and nothing else on the stack. Matches/s is counted from
+"Successfully persisted Match" lines in the worker log during the 4/s step. Files:
+`loadtest/results/20261028T06*_thr_*`.
+
+| Match scenario | Default (2 threads) | 1 thread | 1 thread + OCR worker |
+| :--- | :---: | :---: | :---: |
+| Matches/s in the 4/s step | 0.69 | 0.71 | 0.73 |
+| Matches persisted, whole run | **507** | 438 | 449 |
+| Completed iterations / timeouts | **631 / 172** | 586 / 209 | 590 / 208 |
+| match_e2e p50 / p95 | **6.6 / 60.1 s** | 9.2 / 74.4 s | 10.3 / 73.5 s |
+| Mixed: match_e2e p50 / p95 | 26.1 / **41.3 s** | 31.8 / 47.8 s | **11.3** / 78.1 s |
+| Idle single match (smoke) | 0.5 s | 0.5 s | 0.5 s |
+
+A cap of 1 doesn't raise throughput (0.69 vs 0.71/s is within noise) and makes latency and
+timeouts worse, so oversubscription isn't what limits matching here. Matching is CPU-bound at
+about 0.7/s on this 4-vCPU host, and more capacity means more cores or more worker replicas.
+The setting stays available with default 0 (torch decides) for tuning on other hosts. With the
+OCR worker the trade-off from section 8.4 repeats (better median, worse tail), so it stays opt-in.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.

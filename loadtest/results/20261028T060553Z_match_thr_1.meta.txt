@@ -1,0 +1,5 @@
+scenario=match label=thr_1 started=20261028T060553Z
+commit=79efa00 dirty=34
+docker=cpus=4 mem_bytes=6214496256 server=29.6.1
+k6_args=
+k6_exit=99 provider_hits=0

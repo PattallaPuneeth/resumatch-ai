@@ -790,6 +790,12 @@ def warm_models() -> None:
     Lazy loading on the first job blocked the event loop ~30 s per model.
     """
     started = time.monotonic()
+    if settings.torch_num_threads:
+        import torch
+
+        # Must run before the first inference to take effect
+        torch.set_num_threads(settings.torch_num_threads)
+        logger.info("torch intra-op threads capped at %d", settings.torch_num_threads)
     get_embedder()
     get_cross_encoder()
     logger.info("ML models preloaded in %.1fs", time.monotonic() - started)

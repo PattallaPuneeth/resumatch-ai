@@ -123,6 +123,20 @@ def test_warm_models_loads_both_models(monkeypatch: pytest.MonkeyPatch) -> None:
     assert loaded == ["embedder", "cross_encoder"]
 
 
+def test_warm_models_caps_torch_threads_before_loading(monkeypatch: pytest.MonkeyPatch) -> None:
+    import torch
+
+    order: list[str] = []
+    monkeypatch.setattr(settings, "torch_num_threads", 2)
+    monkeypatch.setattr(torch, "set_num_threads", lambda n: order.append(f"threads={n}"))
+    monkeypatch.setattr(worker, "get_embedder", lambda: order.append("embedder"))
+    monkeypatch.setattr(worker, "get_cross_encoder", lambda: order.append("cross_encoder"))
+
+    worker.warm_models()
+
+    assert order == ["threads=2", "embedder", "cross_encoder"]
+
+
 def _parse_job_mocks(monkeypatch: pytest.MonkeyPatch, status: str) -> dict[str, list[Any]]:
     calls: dict[str, list[Any]] = {"status": [], "ocr_enqueued": [], "embed": [], "parse": []}
 

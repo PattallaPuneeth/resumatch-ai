@@ -1,0 +1,5 @@
+scenario=mixed label=thr_1_ocr started=20261028T062938Z
+commit=79efa00 dirty=50
+docker=cpus=4 mem_bytes=6214496256 server=29.6.1
+k6_args=
+k6_exit=99 provider_hits=0

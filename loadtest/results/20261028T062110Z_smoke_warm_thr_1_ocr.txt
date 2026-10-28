@@ -1,0 +1,56 @@
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1.0' rate=100.00%
+
+    http_req_failed
+    ✓ 'rate==0' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......................: 17      5.056275/s
+    checks_succeeded...................: 100.00% 17 out of 17
+    checks_failed......................: 0.00%   0 out of 17
+
+    ✓ upload-url 201/200
+    ✓ s3 PUT 200
+    ✓ complete 200/202
+    ✓ resume reached PARSED
+    ✓ job create 201/200
+    ✓ match trigger 202/200
+    ✓ match scored
+    ✓ analysis trigger 202/200
+    ✓ analysis stored
+    ✓ analysis llmStatus SUCCESS (mock LLM)
+    ✓ replay has X-Idempotency-Replay: true
+    ✓ analyses meter grew exactly once
+    ✓ resume list 200
+    ✓ usage 200
+    ✓ match history 200
+
+    CUSTOM
+    analysis_e2e............................................................: avg=526ms   min=12ms   med=526ms  max=1.04s   p(90)=937.2ms p(95)=988.59ms
+    ingestion_e2e...........................................................: avg=558ms   min=558ms  med=558ms  max=558ms   p(90)=558ms   p(95)=558ms   
+    match_e2e...............................................................: avg=524ms   min=524ms  med=524ms  max=524ms   p(90)=524ms   p(95)=524ms   
+
+    HTTP
+    http_req_duration.......................................................: avg=11.07ms min=2.84ms med=6.45ms max=44.36ms p(90)=20.09ms p(95)=39.79ms 
+      { expected_response:true }............................................: avg=11.07ms min=2.84ms med=6.45ms max=44.36ms p(90)=20.09ms p(95)=39.79ms 
+    http_req_failed.........................................................: 0.00% 0 out of 22
+    http_reqs...............................................................: 22    6.543414/s
+
+    EXECUTION
+    iteration_duration......................................................: avg=2.16s   min=2.16s  med=2.16s  max=2.16s   p(90)=2.16s   p(95)=2.16s   
+    iterations..............................................................: 1     0.297428/s
+    vus.....................................................................: 1     min=0       max=1
+    vus_max.................................................................: 1     min=1       max=1
+
+    NETWORK
+    data_received...........................................................: 34 kB 10 kB/s
+    data_sent...............................................................: 49 kB 15 kB/s
+
+
+

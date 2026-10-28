@@ -1,0 +1,67 @@
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✗ 'rate>0.99' rate=96.42%
+
+    http_req_duration{name:resume_list}
+    ✓ 'p(95)<500' p(95)=42.87ms
+
+    http_req_duration{name:usage}
+    ✓ 'p(95)<500' p(95)=50.59ms
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......................: 3809   9.832475/s
+    checks_succeeded...................: 96.42% 3673 out of 3809
+    checks_failed......................: 3.57%  136 out of 3809
+
+    ✓ upload-url 201/200
+    ✓ s3 PUT 200
+    ✓ complete 200/202
+    ✗ resume reached PARSED
+      ↳  91% — ✓ 242 / ✗ 23
+    ✓ resume list 200
+    ✓ usage 200
+    ✓ match history 200
+    ✓ job create 201/200
+    ✓ match trigger 202/200
+    ✗ match scored
+      ↳  57% — ✓ 151 / ✗ 113
+    ✓ analysis trigger 202/200
+    ✓ analysis stored
+
+    CUSTOM
+    analysis_e2e............................................................: avg=2.18s    min=1.03s   med=1.55s   max=13.23s   p(90)=3.07s   p(95)=7.16s   
+    ingestion_e2e...........................................................: avg=908.83ms min=545ms   med=645.5ms max=6.65s    p(90)=1.34s   p(95)=1.63s   
+    match_e2e...............................................................: avg=22.26s   min=517ms   med=11.3s   max=1m29s    p(90)=1m3s    p(95)=1m18s   
+    pipeline_timeouts.......................................................: 136   0.351068/s
+
+    HTTP
+    http_req_duration.......................................................: avg=32.34ms  min=2.03ms  med=20.3ms  max=503.61ms p(90)=74.92ms p(95)=106.15ms
+      { expected_response:true }............................................: avg=32.34ms  min=2.03ms  med=20.3ms  max=503.61ms p(90)=74.92ms p(95)=106.15ms
+      { name:resume_list }..................................................: avg=12.95ms  min=2.46ms  med=6.86ms  max=116.42ms p(90)=29.81ms p(95)=42.87ms 
+      { name:usage }........................................................: avg=16.03ms  min=2.7ms   med=8.2ms   max=174.7ms  p(90)=34.57ms p(95)=50.59ms 
+    http_req_failed.........................................................: 0.00% 0 out of 44799
+    http_reqs...............................................................: 44799 115.643224/s
+
+    EXECUTION
+    dropped_iterations......................................................: 98    0.252975/s
+    iteration_duration......................................................: avg=17.1s    min=10.52ms med=83.3ms  max=1m32s    p(90)=1m30s   p(95)=1m31s   
+    iterations..............................................................: 933   2.408427/s
+    vus.....................................................................: 0     min=0          max=151
+    vus_max.................................................................: 178   min=80         max=178
+
+    NETWORK
+    data_received...........................................................: 38 MB 97 kB/s
+    data_sent...............................................................: 39 MB 100 kB/s
+
+
+
+time="2026-10-28T06:36:08Z" level=error msg="thresholds on metrics 'checks' have been crossed"
+

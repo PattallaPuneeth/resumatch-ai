@@ -243,6 +243,8 @@ services:
       # Set OCR_QUEUE_ENABLED=true together with `--profile ocr-worker` to move scanned-PDF OCR
       # to ml-ocr-worker. Off by default: this worker then runs OCR inline as before.
       OCR_QUEUE_ENABLED: ${OCR_QUEUE_ENABLED:-false}
+      # 0 = torch default; see ml/config.py torch_num_threads
+      TORCH_NUM_THREADS: ${TORCH_NUM_THREADS:-0}
       S3_REGION: us-east-1
       S3_BUCKET: ${MINIO_BUCKET_NAME:-resumes}
       S3_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
