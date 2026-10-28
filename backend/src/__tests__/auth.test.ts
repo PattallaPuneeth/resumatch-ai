@@ -950,6 +950,8 @@ describe('Phase 5: Accounts and Authentication Suite', () => {
       expect(refreshCookie).toContain('HttpOnly');
       expect(refreshCookie?.toLowerCase()).toContain('samesite=lax');
       expect(refreshCookie).toContain('Path=/v1/auth');
+      // Also scoped to the frontend proxy path, or browsers never send it to the refresh route
+      expect(cookies.some((c) => c.startsWith('refresh_token=') && c.includes('Path=/api/backend/v1/auth'))).toBe(true);
 
       const csrfCookie = cookies.find((c) => c.startsWith('csrf_token='));
       expect(csrfCookie).toBeDefined();

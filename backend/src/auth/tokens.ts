@@ -5,6 +5,15 @@ import { env } from '../config/env.js';
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes
 export const REFRESH_TOKEN_TTL_SECONDS = 14 * 24 * 60 * 60; // 14 days
 
+/**
+ * The refresh cookie is scoped to the auth routes only. The browser reaches them either directly
+ * (/v1/auth/...) or through the frontend's same-origin proxy (/api/backend/v1/auth/...), and a
+ * cookie path must match the URL the browser sees, so the cookie is set for both. With only the
+ * direct path, the browser never sent it to /api/backend/v1/auth/refresh and every session ended
+ * when the 15-minute access token expired.
+ */
+export const REFRESH_COOKIE_PATHS = ['/v1/auth', '/api/backend/v1/auth'] as const;
+
 export function sha256Hash(input: string): string {
   return crypto.createHash('sha256').update(input, 'utf8').digest('hex');
 }
@@ -69,13 +78,15 @@ export function setAuthCookies(
   }
 
   if (tokens.refreshToken) {
-    reply.setCookie('refresh_token', tokens.refreshToken, {
-      path: '/v1/auth',
-      httpOnly: true,
-      sameSite: 'lax',
-      secure,
-      maxAge: REFRESH_TOKEN_TTL_SECONDS,
-    });
+    for (const path of REFRESH_COOKIE_PATHS) {
+      reply.setCookie('refresh_token', tokens.refreshToken, {
+        path,
+        httpOnly: true,
+        sameSite: 'lax',
+        secure,
+        maxAge: REFRESH_TOKEN_TTL_SECONDS,
+      });
+    }
   }
 
   if (tokens.csrfToken) {
@@ -100,12 +111,14 @@ export function clearAuthCookies(reply: FastifyReply): void {
     secure,
   });
 
-  reply.clearCookie('refresh_token', {
-    path: '/v1/auth',
-    httpOnly: true,
-    sameSite: 'lax',
-    secure,
-  });
+  for (const path of REFRESH_COOKIE_PATHS) {
+    reply.clearCookie('refresh_token', {
+      path,
+      httpOnly: true,
+      sameSite: 'lax',
+      secure,
+    });
+  }
 
   reply.clearCookie('csrf_token', {
     path: '/',
