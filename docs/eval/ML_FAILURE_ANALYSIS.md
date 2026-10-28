@@ -336,6 +336,41 @@ The fitted bands improve agreement with the human labels, but they drop one hand
 
 **Next:** strong resumes that score in the 27–43 range (ML engineer, Java backend, research assistant) are the largest remaining error. Their JDs are short and their resumes long, which suggests checking how coverage and the cross-encoder handle long resumes against short JDs. Any fix must be judged on the human `test` rows and handwritten together.
 
+### 8.9 Why strong resumes score too low: two causes, query fixes rejected
+
+Breaking down the 23 human-strong pairs (section 8.8) shows two separate failures. The resumes are short (64–185 words), so "long resume vs short JD" was not the cause.
+
+- **Cross-encoder (8 pairs, final 28–48):** ML engineer, research assistant, Java backend, retail and data analyst resumes get raw logits of −6.3 to −3.6. The rerank query is `Title. Skills: <all extracted skills, alphabetical>`, mixing nice-to-haves (aws, azure, gcp, manual testing...) with requirements. The resume is one chunk that opens with EDUCATION.
+- **Coverage (14 pairs, final 63–75):** accountant, finance, banking and teacher resumes get high cross-encoder scores (79–91) but coverage of 0.14–0.64, which keeps them just under 75.
+
+**Query variants**, measured by cross-encoder-only pairwise ordering against the labels. The choice was made on human `tune` only:
+
+| Rerank query | Human tune | Human held-out | Handwritten |
+| :--- | :---: | :---: | :---: |
+| V0 today: title + all skills, alphabetical | 0.705 | 0.713 | 0.973 |
+| V1: title + required skills only | 0.855 | 0.851 | 0.949 |
+| V2/V4: title + JD text (without preferred / whole) | 0.375 / 0.339 | 0.874 / 0.839 | 0.892 |
+| V5: "Required: ... Nice to have: ..." | 0.785 | 0.851 | 0.979 |
+| V6: same skills, required first | 0.829 | 0.851 | 0.979 |
+
+**Full pipeline** (final score, band / pairwise):
+
+| Set | Today | V1 | V6 |
+| :--- | :---: | :---: | :---: |
+| Human tune (32) | 0.500 / 0.729 | 0.594 / 0.835 | 0.562 / 0.832 |
+| Human held-out (18) | 0.333 / 0.736 | 0.500 / 0.851 | 0.444 / 0.805 |
+| Handwritten (long JDs) | **0.938** / 0.982 | 0.812 / 0.967 | 0.875 / **0.985** |
+| Kaggle test (auto labels) | 0.806 / 0.996 | 0.794 / 0.998 | 0.798 / 0.997 |
+| Extended, CI gate | 0.940, pass | 0.940, pass | 0.940, pass |
+
+**Both rejected** under the agreed rule that neither the human held-out set nor handwritten may get worse.
+- **V1** drops handwritten band accuracy by four pairs. Medium "adjacent role" pairs match mainly on nice-to-have skills, and those leave the query (Python backend → ML/NLP engineer goes 59 → 39).
+- **V6** keeps exactly today's skills, just ordered required-first. It improves ordering everywhere, including handwritten (0.982 → 0.985), but two handwritten pairs change band. One moves 74.8 → 75.4, a knife-edge; the other is the same adjacent-role drop (59 → 43).
+
+The finding still stands: **the cross-encoder weighs early query terms more, and nice-to-haves in the query hurt strong resumes.** A future fix should keep the adjacent-role signal, for example by scoring required and nice-to-have skills as separate cross-encoder passes. That doubles rerank cost, which matters on a CPU-bound worker (section 8.7).
+
+**Coverage misses (the 63–75 group)** come from the same phrasing gaps as section 8.6. Mining more aliases from 32 tune rows would overfit, so this waits for more human labels.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.
