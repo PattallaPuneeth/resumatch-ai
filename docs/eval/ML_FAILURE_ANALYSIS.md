@@ -556,6 +556,40 @@ Removing names and personal fields changed some scores by up to 7 points, throug
 
 A learned score blend needs a few hundred blind labels. The next label rounds should be blind sheets.
 
+### 8.16 Baseline on all 180 human labels: two opposite failures
+
+The current pipeline was scored on every human-labeled pair (`human_hard` 50, `real_fit_human` 100, `score_details_human` 30), with no code change.
+
+| Set | n | Pairwise | Within-job (comparisons) | Band accuracy | Median weak / medium / strong |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **All** | 180 | **0.724** | **0.783** (138) | **0.489** | 46 / 58 / 72 |
+| human_hard | 50 | 0.758 | 0.818 (66) | 0.440 | 38 / 49 / 72 |
+| real_fit_human | 100 | 0.734 | 0.800 (55) | 0.520 | 48 / 66 / 69 |
+| score_details_human | 30 | 0.771 | 0.588 (17) | 0.467 | 58 / 52 / 73 |
+| All `test` | 65 | 0.789 | 0.804 (46) | 0.446 | 47 / 62 / 73 |
+| All `tune` | 115 | 0.668 | 0.677 (62) | 0.513 | 45 / 57 / 60 |
+
+Confusion between the human label (rows) and the model's band (columns):
+
+| Human label | Model: strong | Model: medium | Model: weak |
+| :--- | :---: | :---: | :---: |
+| strong (51) | 13 | **31** | 7 |
+| medium (57) | 6 | 42 | 9 |
+| weak (72) | 2 | **37** | 33 |
+
+**Ranking is fair, absolute bands are not.** Within a job the model orders candidates correctly 78% of the time. But the scores bunch in the middle band, so 31 strong and 37 weak pairs are called medium. By component, the cross-encoder orders the labels 0.718 pairwise, skill coverage 0.661 and the vector score 0.617. The blend (0.724) is only slightly better than the cross-encoder alone.
+
+**Two opposite failures, both from the cross-encoder:**
+1. **Weak scored high** (39 pairs; 31 in `real_fit_human`). Same field, wrong level, or a missed hard requirement: a junior ETL analyst for a senior BA role, an individual-contributor developer for an engineering-manager role, a BA without the required gaming domain or Chinese, an accounting graduate for a senior construction accountant role. The cross-encoder gives these 73–93 because the topic matches. Most (22) "meet" the JD's years, because total years count as relevant years.
+2. **Strong scored low** (38 pairs; 21 in `human_hard`). Short Kaggle-style JDs whose strong candidates (ML engineers, research assistants, a Java backend developer) get a cross-encoder score of only 27–49, which section 8.9 traced to the query and passage format.
+
+Because the two failures pull in opposite directions, **no single threshold change can fix the bands**. That is why the earlier refits (sections 8.8 and 8.9) failed. What can help is a signal for **role level and hard requirements** (senior / lead / manager vs junior / IC, "X is a must"), and later a learned blend that can weigh the cross-encoder differently for short and long JDs.
+
+**Next labels, chosen to measure exactly this** (blind, names hidden, 60 pairs):
+- about 20 same-field pairs where the level or a hard requirement differs (failure 1);
+- about 15 strong-looking candidates on short JDs (failure 2);
+- about 25 at random, so that bands can later be refit on an unbiased sample.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.
