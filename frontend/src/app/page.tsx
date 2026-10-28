@@ -11,7 +11,7 @@ import { PipelineFlow } from '@/components/landing/PipelineFlow';
 // tests (docs/PERFORMANCE.md), on synthetic or auto-labeled data on one machine.
 const METRICS = [
   { value: '99.6%', label: 'of resume pairs ranked in the right order', note: 'held-out set, 252 pairs' },
-  { value: '80.2%', label: 'of scores in the right strong / medium / weak band', note: 'same held-out set' },
+  { value: '80.6%', label: 'of scores in the right strong / medium / weak band', note: 'same held-out set' },
   { value: '98.2%', label: 'ranking accuracy on realistic, long job posts', note: 'handwritten set' },
   { value: '0', label: 'failed requests under load', note: 'of 180,791 in k6 tests' },
 ];
