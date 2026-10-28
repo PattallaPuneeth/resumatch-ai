@@ -369,6 +369,17 @@ Breaking down the 23 human-strong pairs (section 8.8) shows two separate failure
 
 The finding still stands: **the cross-encoder weighs early query terms more, and nice-to-haves in the query hurt strong resumes.** A future fix should keep the adjacent-role signal, for example by scoring required and nice-to-have skills as separate cross-encoder passes. That doubles rerank cost, which matters on a CPU-bound worker (section 8.7).
 
+**Two-pass cross-encoder: also rejected.** Each passage is scored with a required-only query and a required-first query, and the two logits are averaged. That combination was chosen on human `tune` from five, by cross-encoder-only ordering 0.847. Full pipeline (band / pairwise):
+
+| Set | Today | Two-pass |
+| :--- | :---: | :---: |
+| Human tune | 0.500 / 0.729 | 0.594 / 0.829 |
+| Human held-out | 0.333 / 0.736 | 0.500 / 0.828 |
+| Handwritten | **0.938 / 0.982** | 0.844 / 0.976 |
+| Kaggle test / extended / CI gate | 0.806 / 0.940 / pass | 0.794 / 0.940 / pass |
+
+Handwritten gets worse on both measures, so it stops at the accuracy stage. Its speed cost (two rerank passes per match) was never measured. All three query fixes help the short-JD human pairs and hurt the long-JD handwritten set. Until there are human labels on long, real postings, the current query stays.
+
 **Coverage misses (the 63–75 group)** come from the same phrasing gaps as section 8.6. Mining more aliases from 32 tune rows would overfit, so this waits for more human labels.
 
 ## 9. Reproduce
