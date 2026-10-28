@@ -18,6 +18,8 @@ from ml.pipelines.matching.skill_gap import (
     analyze_skill_gap,
     extract_skills_from_text,
     resolve_required_skills,
+    resolve_skill_requirements,
+    split_required_preferred,
 )
 
 REALISTIC_JD = """Job Title: Backend Engineer (Python)
@@ -162,3 +164,56 @@ def test_parser_skill_catalog_ignores_common_words() -> None:
 def test_parser_skill_catalog_still_finds_exact_case_skills() -> None:
     names = {s.name for s in extract_skills("Skills: Go, R, Swift, REST, Python", {})}
     assert {"Go", "R", "Swift", "REST", "Python"} <= names
+
+
+# --- Gap: preferred skills were scored as requirements (strong non-tech matches read medium) ---
+
+INLINE_JD = (
+    "Job title: Accountant. Required skills: general ledger; accounts payable/receivable; "
+    "month-end close. Preferred skills: payroll; excel. Responsibilities: maintain the general "
+    "ledger. Education/experience: CPA or equivalent is a plus."
+)
+
+
+def test_split_required_preferred_handles_heading_lines() -> None:
+    required, preferred = split_required_preferred("Backend Engineer", REALISTIC_JD)
+    assert {"python", "fastapi", "aws"} <= set(required)
+    assert {"terraform", "rabbitmq"} <= set(preferred)
+
+
+def test_split_required_preferred_handles_inline_headings_and_plus_sentences() -> None:
+    required, preferred = split_required_preferred("Accountant", INLINE_JD)
+    assert {"general ledger", "accounts payable/receivable", "month-end close"} <= set(required)
+    assert {"payroll", "excel", "cpa"} <= set(preferred)
+    assert not set(required) & set(preferred)
+
+
+def test_skill_mentioned_as_required_and_preferred_stays_required() -> None:
+    jd = "Required skills: Python. Preferred skills: Python and Docker."
+    required, preferred = split_required_preferred("", jd)
+    assert "python" in required and "python" not in preferred
+    assert "docker" in preferred
+
+
+def test_stored_required_skills_win_over_text_split() -> None:
+    req, pref = resolve_skill_requirements(["Kotlin"], ["Python", "kotlin"], "t", INLINE_JD)
+    assert req == ["Kotlin"] and pref == ["Python"]
+
+
+def test_preferred_only_jd_promotes_preferred_to_required() -> None:
+    req, pref = resolve_skill_requirements([], [], "", "Nice to have: Docker and Kafka.")
+    assert set(req) == {"docker", "kafka"} and pref == []
+
+
+def test_preferred_skill_weight_one_equals_flat_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ml.pipelines.matching.skill_gap as sg
+
+    monkeypatch.setattr(sg, "PREFERRED_SKILL_WEIGHT", 1.0)
+    split = sg.analyze_skill_gap(["python", "docker"], ["python"], preferred_skills=["kafka"])
+    flat = sg.analyze_skill_gap(["python", "docker", "kafka"], ["python"])
+    assert split["coverage_ratio"] == flat["coverage_ratio"]
+
+    monkeypatch.setattr(sg, "PREFERRED_SKILL_WEIGHT", 0.0)
+    req_only = sg.analyze_skill_gap(["python", "docker"], ["python"], preferred_skills=["kafka"])
+    assert req_only["coverage_ratio"] == 0.5
+    assert req_only["preferred_missing"] == ["kafka"]

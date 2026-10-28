@@ -17,6 +17,7 @@ import re
 from pathlib import Path
 from typing import Any, cast
 
+from ml.config import settings
 from ml.eval.ablation import run_ablation_analysis
 from ml.eval.calibration import run_calibration_study
 from ml.eval.dataset import EvaluationExample, load_and_validate_dataset
@@ -31,7 +32,12 @@ from ml.pipelines.matching.reranker import (
 )
 from ml.pipelines.matching.rrf import aggregate_resume_rrf, fuse_ranks
 from ml.pipelines.matching.scorer import compute_match_scores
-from ml.pipelines.matching.skill_gap import analyze_skill_gap, resolve_required_skills
+from ml.pipelines.matching.skill_gap import (
+    analyze_skill_gap,
+    extract_alternative_groups,
+    resolve_required_skills,
+    resolve_skill_requirements,
+)
 
 logger = logging.getLogger("resumatch-ml-eval-runner")
 
@@ -238,10 +244,20 @@ def process_eval_pair(
 
     # 6. Cross-Encoder Reranking
     job_rerank_query = build_bounded_rerank_query(job_title, job_skills, job_desc, max_tokens=180)
-    reranked = rerank_candidates(job_rerank_query, fused_chunks, top_n=20)
+    reranked = rerank_candidates(
+        job_rerank_query, fused_chunks, top_n=settings.top_k_candidates
+    )
 
     # 7. Skill-Gap Analysis
-    skill_gap = analyze_skill_gap(job_skills, resume_skills, resume_text=resume_text)
+    # Same split as the worker: coverage on required skills, preferred ones as a bonus
+    coverage_req, coverage_pref = resolve_skill_requirements([], [], job_title, job_desc)
+    skill_gap = analyze_skill_gap(
+        coverage_req,
+        resume_skills,
+        preferred_skills=coverage_pref,
+        resume_text=resume_text,
+        alternatives=extract_alternative_groups(job_desc),
+    )
 
     # 8. Score Aggregation
     scores = compute_match_scores(

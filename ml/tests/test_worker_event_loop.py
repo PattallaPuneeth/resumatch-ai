@@ -17,6 +17,8 @@ import pytest
 from bullmq import Job
 
 import ml.worker as worker
+from ml.config import settings
+from ml.pipelines.intake.exceptions import OcrDeferredError
 
 BLOCK_SECONDS = 0.6
 TICK_SECONDS = 0.05
@@ -119,3 +121,90 @@ def test_warm_models_loads_both_models(monkeypatch: pytest.MonkeyPatch) -> None:
     worker.warm_models()
 
     assert loaded == ["embedder", "cross_encoder"]
+
+
+def _parse_job_mocks(monkeypatch: pytest.MonkeyPatch, status: str) -> dict[str, list[Any]]:
+    calls: dict[str, list[Any]] = {"status": [], "ocr_enqueued": [], "embed": [], "parse": []}
+
+    def fake_parse(*args: Any, **kwargs: Any) -> Any:
+        calls["parse"].append(kwargs.get("allow_ocr", True))
+        if not kwargs.get("allow_ocr", True):
+            kwargs["status_callback"]("NEEDS_OCR")
+            raise OcrDeferredError("needs OCR")
+        return SimpleNamespace(extraction_method="OCR", ats_score=70.0, page_count=1)
+
+    async def fake_enqueue_ocr(data: dict[str, Any], resume_id: str) -> None:
+        calls["ocr_enqueued"].append(resume_id)
+
+    async def fake_enqueue_embed(resume_id: str) -> None:
+        calls["embed"].append(resume_id)
+
+    def fake_status(rid: str, s: str) -> bool:
+        calls["status"].append(s)
+        return True
+
+    monkeypatch.setattr(worker, "get_resume_status", lambda rid: (status, None))
+    monkeypatch.setattr(worker, "update_resume_status", fake_status)
+    monkeypatch.setattr(worker, "download_file", lambda key, path, bucket=None: None)
+    monkeypatch.setattr(worker, "parse_document", fake_parse)
+    monkeypatch.setattr(worker, "save_parsed_resume", lambda rid, result: True)
+    monkeypatch.setattr(worker, "enqueue_ocr_job", fake_enqueue_ocr)
+    monkeypatch.setattr(worker, "enqueue_embed_job", fake_enqueue_embed)
+    return calls
+
+
+@pytest.mark.asyncio
+async def test_parse_job_hands_scans_to_ocr_queue_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "ocr_queue_enabled", True)
+    calls = _parse_job_mocks(monkeypatch, "UPLOADED")
+    job = cast(Job, SimpleNamespace(id="p1", data={"resumeId": "r1", "storageKey": "k.pdf"}))
+
+    result = await worker.process_parse_document(job)
+
+    assert result["status"] == "NEEDS_OCR"
+    assert calls["parse"] == [False]
+    assert calls["ocr_enqueued"] == ["r1"] and calls["embed"] == []
+    assert calls["status"] == ["EXTRACTING", "NEEDS_OCR"]
+
+
+@pytest.mark.asyncio
+async def test_ocr_job_continues_from_needs_ocr_and_parses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = _parse_job_mocks(monkeypatch, "NEEDS_OCR")
+    job = cast(Job, SimpleNamespace(id="o1", data={"resumeId": "r1", "storageKey": "k.pdf"}))
+
+    result = await worker.process_ocr_document(job)
+
+    assert result["status"] == "PARSED"
+    assert calls["parse"] == [True]
+    assert "EXTRACTING" not in calls["status"]  # NEEDS_OCR -> EXTRACTING is not a legal move
+    assert calls["embed"] == ["r1"]
+
+
+@pytest.mark.asyncio
+async def test_parse_job_runs_ocr_inline_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "ocr_queue_enabled", False)
+    calls = _parse_job_mocks(monkeypatch, "UPLOADED")
+    job = cast(Job, SimpleNamespace(id="p2", data={"resumeId": "r2", "storageKey": "k.pdf"}))
+
+    result = await worker.process_parse_document(job)
+
+    assert result["status"] == "PARSED" and calls["ocr_enqueued"] == []
+
+
+def test_served_queues_parses_worker_roles() -> None:
+    assert worker.served_queues("all") == set(worker.ALL_QUEUES)
+    assert worker.served_queues(" OCR ") == {"ocr"}
+    assert "ocr" not in worker.served_queues("all", ocr_queue_enabled=True)
+    assert worker.served_queues("ocr", ocr_queue_enabled=True) == {"ocr"}
+    assert worker.served_queues("parse,embed,match,analysis") == {
+        "parse",
+        "embed",
+        "match",
+        "analysis",
+    }
+    with pytest.raises(ValueError):
+        worker.served_queues("parse,unknown")

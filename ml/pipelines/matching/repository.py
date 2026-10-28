@@ -45,7 +45,8 @@ def get_match_context(resume_id: str, job_id: str) -> dict[str, Any] | None:
                 # 2. Fetch job data
                 cur.execute(
                     """
-                    SELECT id, title, company, "rawDescription", "requiredSkills", status
+                    SELECT id, title, company, "rawDescription", "requiredSkills", status,
+                           "preferredSkills"
                     FROM jobs
                     WHERE id = %s;
                     """,
@@ -67,6 +68,7 @@ def get_match_context(resume_id: str, job_id: str) -> dict[str, Any] | None:
                     "job_description": j_row[3],
                     "job_required_skills": j_row[4],
                     "job_status": j_row[5],
+                    "job_preferred_skills": j_row[6],
                 }
     except Exception as e:
         logger.error(

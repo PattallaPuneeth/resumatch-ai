@@ -1,3 +1,7 @@
+class OcrDeferredError(Exception):
+    """The PDF needs OCR and this process hands OCR to resume-ocr-queue. Not a failure."""
+
+
 class DocumentParsingError(Exception):
     """Base exception for document parsing failures."""
 

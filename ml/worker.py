@@ -26,6 +26,7 @@ from ml.pipelines.embeddings.repository import (
 from ml.pipelines.intake.exceptions import (
     CorruptFileError,
     EncryptedPdfError,
+    OcrDeferredError,
     StorageObjectNotFoundError,
     TextTooShortAfterOcrError,
     TooManyPagesError,
@@ -59,7 +60,12 @@ from ml.pipelines.matching.reranker import (
 from ml.pipelines.matching.rrf import aggregate_resume_rrf, fuse_ranks
 from ml.pipelines.matching.scorer import compute_match_scores
 from ml.pipelines.matching.semantic import search_semantic
-from ml.pipelines.matching.skill_gap import analyze_skill_gap, resolve_required_skills
+from ml.pipelines.matching.skill_gap import (
+    analyze_skill_gap,
+    extract_alternative_groups,
+    resolve_required_skills,
+    resolve_skill_requirements,
+)
 from ml.storage.s3 import download_file
 from ml.utils.telemetry import init_telemetry, queue_carrier, stage_span
 
@@ -87,8 +93,51 @@ _parse_worker: Worker | None = None
 _embed_worker: Worker | None = None
 _match_worker: Worker | None = None
 _analysis_worker: Worker | None = None
+_ocr_worker: Worker | None = None
 _embedding_queue: Queue | None = None
+_ocr_queue: Queue | None = None
 _should_exit = False
+
+OCR_QUEUE_NAME = "resume-ocr-queue"
+ALL_QUEUES = ("parse", "ocr", "embed", "match", "analysis")
+
+
+def served_queues(spec: str, ocr_queue_enabled: bool = False) -> set[str]:
+    """
+    Parses WORKER_QUEUES ("all" or a comma list) into the set of queue roles to serve. With a
+    dedicated OCR worker (OCR_QUEUE_ENABLED), "all" leaves the OCR queue to that worker.
+    """
+    if spec.strip().lower() in ("", "all"):
+        return set(ALL_QUEUES) - ({"ocr"} if ocr_queue_enabled else set())
+    roles = {r.strip().lower() for r in spec.split(",") if r.strip()}
+    unknown = roles - set(ALL_QUEUES)
+    if unknown:
+        raise ValueError(f"Unknown WORKER_QUEUES roles: {sorted(unknown)}")
+    return roles
+
+
+def get_ocr_queue() -> Queue:
+    """Returns singleton Queue producer for resume-ocr-queue."""
+    global _ocr_queue
+    if _ocr_queue is None:
+        _ocr_queue = Queue(OCR_QUEUE_NAME, {"connection": settings.redis_url, "prefix": "bull"})
+    return _ocr_queue
+
+
+async def enqueue_ocr_job(job_data: dict[str, Any], resume_id: str) -> None:
+    """Hands a scanned PDF to the OCR worker, keeping the backend's trace context."""
+    await get_ocr_queue().add(
+        "OCR_DOCUMENT",
+        dict(job_data),
+        {
+            "jobId": f"ocr-{resume_id}",
+            "attempts": 3,
+            "backoff": {"type": "exponential", "delay": 2000},
+            "removeOnComplete": 100,
+            "removeOnFail": 500,
+        },
+    )
+    logger.info("Deferred OCR for resume %s to %s", resume_id, OCR_QUEUE_NAME)
 
 
 def get_embedding_queue() -> Queue:
@@ -132,11 +181,24 @@ async def enqueue_embed_job(resume_id: str) -> None:
 async def process_parse_document(job: Job, token: str | None = None) -> dict[str, Any]:
     """Traced entry point; the span joins the backend request that enqueued the job."""
     with stage_span("job", carrier=queue_carrier(job.data), queue="resume-parsing-queue"):
-        return await _process_parse_document(job, token)
+        return await _process_parse_document(
+            job, token, allow_ocr=not settings.ocr_queue_enabled
+        )
 
 
-async def _process_parse_document(job: Job, token: str | None = None) -> dict[str, Any]:
-    """Processes a PARSE_DOCUMENT job from resume-parsing-queue."""
+async def process_ocr_document(job: Job, token: str | None = None) -> dict[str, Any]:
+    """Traced entry point for scanned PDFs deferred from resume-parsing-queue."""
+    with stage_span("job", carrier=queue_carrier(job.data), queue=OCR_QUEUE_NAME):
+        return await _process_parse_document(job, token, allow_ocr=True)
+
+
+async def _process_parse_document(
+    job: Job, token: str | None = None, allow_ocr: bool = True
+) -> dict[str, Any]:
+    """
+    Processes a PARSE_DOCUMENT job from resume-parsing-queue, or its OCR continuation from
+    resume-ocr-queue. With allow_ocr=False a PDF that needs OCR is handed to the OCR queue.
+    """
     data = job.data
     resume_id = data.get("resumeId")
     storage_key = data.get("storageKey") or data.get("s3Key")
@@ -164,8 +226,10 @@ async def _process_parse_document(job: Job, token: str | None = None) -> dict[st
         )
         return {"status": "PARSED", "extractionMethod": curr_method or "TEXT_LAYER"}
 
-    # Update status to EXTRACTING
-    if not update_resume_status(resume_id, "EXTRACTING"):
+    # Update status to EXTRACTING (an OCR continuation is already past it)
+    if curr_status not in ("NEEDS_OCR", "OCR_PROCESSING") and not update_resume_status(
+        resume_id, "EXTRACTING"
+    ):
         logger.info(
             "Resume %s could not transition to EXTRACTING (current=%s). Aborting job %s.",
             resume_id,
@@ -196,9 +260,17 @@ async def _process_parse_document(job: Job, token: str | None = None) -> dict[st
             update_resume_status(resume_id, status)
 
         # 4. Parse document
-        result = await asyncio.to_thread(
-            _parse_document_serialized, temp_file, mime_type, status_callback=on_status_change
-        )
+        try:
+            result = await asyncio.to_thread(
+                _parse_document_serialized,
+                temp_file,
+                mime_type,
+                status_callback=on_status_change,
+                allow_ocr=allow_ocr,
+            )
+        except OcrDeferredError:
+            await enqueue_ocr_job(data, resume_id)
+            return {"status": "NEEDS_OCR", "resumeId": resume_id, "deferredTo": OCR_QUEUE_NAME}
 
         # 5. Persist results and transition to PARSED
         persisted = await asyncio.to_thread(save_parsed_resume, resume_id, result)
@@ -388,6 +460,7 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
     job_title = ctx.get("job_title", "")
     job_desc = ctx.get("job_description", "")
     job_req_skills = ctx.get("job_required_skills")
+    job_pref_skills = ctx.get("job_preferred_skills")
     resume_skills = ctx.get("resume_skills")
     resume_raw_text = ctx.get("resume_raw_text") or ""
 
@@ -398,9 +471,13 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
     # Build query text for lexical and semantic retrieval
     # The analyze UI sends only title + raw description, so requiredSkills is usually empty.
     # Fall back to taxonomy skills found in the JD instead of scoring with no requirements.
-    job_req_skills = resolve_required_skills(
-        job_req_skills if isinstance(job_req_skills, list) else [], job_title, job_desc
+    stored_req = job_req_skills if isinstance(job_req_skills, list) else []
+    stored_pref = job_pref_skills if isinstance(job_pref_skills, list) else []
+    # Coverage counts required skills; preferred ones only add a small bonus.
+    coverage_req, coverage_pref = resolve_skill_requirements(
+        stored_req, stored_pref, job_title, job_desc
     )
+    job_req_skills = resolve_required_skills(stored_req, job_title, job_desc)
     skills_text = " ".join(job_req_skills)
     query_text = f"{job_title}\n{skills_text}\n{job_desc}".strip()
 
@@ -432,9 +509,11 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
 
         # 5. Skill-Gap Analysis
         skill_gap = analyze_skill_gap(
-            job_req_skills,
+            coverage_req,
             resume_skills,
+            preferred_skills=coverage_pref,
             resume_text=resume_raw_text,
+            alternatives=extract_alternative_groups(job_desc),
         )
 
         # 6. Score aggregation
@@ -716,20 +795,27 @@ def warm_models() -> None:
 
 
 async def main_async() -> None:
-    global _parse_worker, _embed_worker, _match_worker, _analysis_worker
+    global _parse_worker, _embed_worker, _match_worker, _analysis_worker, _ocr_worker
     redis_opts = {"connection": settings.redis_url, "prefix": "bull", "concurrency": 2}
+    roles = served_queues(settings.worker_queues, settings.ocr_queue_enabled)
 
     init_telemetry("resumatch-ml-worker")
-    await asyncio.to_thread(warm_models)
+    # Parse/OCR-only processes never run the transformer models
+    if roles & {"embed", "match", "analysis"}:
+        await asyncio.to_thread(warm_models)
 
-    logger.info(
-        "Starting BullMQ Workers for resume-parsing-queue, "
-        "embedding-queue, match-scoring-queue, and analysis-queue..."
-    )
-    _parse_worker = Worker("resume-parsing-queue", process_parse_document, redis_opts)
-    _embed_worker = Worker("embedding-queue", process_embed_document, redis_opts)
-    _match_worker = Worker("match-scoring-queue", process_match_scoring, redis_opts)
-    _analysis_worker = Worker("analysis-queue", process_analysis, redis_opts)
+    logger.info("Starting BullMQ workers for roles: %s", ", ".join(sorted(roles)))
+    if "parse" in roles:
+        _parse_worker = Worker("resume-parsing-queue", process_parse_document, redis_opts)
+    if "ocr" in roles:
+        # One OCR job at a time per process: concurrent PyMuPDF/Tesseract use hung in load tests
+        _ocr_worker = Worker(OCR_QUEUE_NAME, process_ocr_document, {**redis_opts, "concurrency": 1})
+    if "embed" in roles:
+        _embed_worker = Worker("embedding-queue", process_embed_document, redis_opts)
+    if "match" in roles:
+        _match_worker = Worker("match-scoring-queue", process_match_scoring, redis_opts)
+    if "analysis" in roles:
+        _analysis_worker = Worker("analysis-queue", process_analysis, redis_opts)
 
     # Keep alive until shutdown requested
     while not _should_exit:
@@ -744,8 +830,12 @@ async def main_async() -> None:
         await _match_worker.close()
     if _analysis_worker:
         await _analysis_worker.close()
+    if _ocr_worker:
+        await _ocr_worker.close()
     if _embedding_queue:
         await _embedding_queue.close()
+    if _ocr_queue:
+        await _ocr_queue.close()
     logger.info("All BullMQ workers closed.")
 
 

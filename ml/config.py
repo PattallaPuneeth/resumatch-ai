@@ -61,6 +61,13 @@ class Settings(BaseSettings):
         default=20,
         alias="TOP_K_CANDIDATES",
     )
+    # Weight of a preferred skill relative to a required one in skill coverage (0 to 1)
+    preferred_skill_weight: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        alias="PREFERRED_SKILL_WEIGHT",
+    )
 
     # S3 Object Storage Configuration
     s3_endpoint: str = Field(default="http://localhost:9000", alias="S3_ENDPOINT")
@@ -71,6 +78,12 @@ class Settings(BaseSettings):
 
     # Document Parsing & OCR Configuration (Phase 2C)
     ocr_dpi: int = Field(default=300, alias="OCR_DPI")
+    # When true, parse jobs that need OCR move to resume-ocr-queue, served by a separate
+    # worker process, so text PDFs don't wait behind 6-7 s scans (docs/PERFORMANCE.md).
+    ocr_queue_enabled: bool = Field(default=False, alias="OCR_QUEUE_ENABLED")
+    # Queues this worker process serves: "all", or a comma list of parse, ocr, embed, match,
+    # analysis. The default keeps one process serving everything.
+    worker_queues: str = Field(default="all", alias="WORKER_QUEUES")
     ocr_max_pages: int = Field(default=5, alias="OCR_MAX_PAGES")
     ocr_min_chars: int = Field(default=200, alias="OCR_MIN_CHARS")
     ocr_alphanumeric_threshold: float = Field(default=0.50, alias="OCR_ALPHANUMERIC_THRESHOLD")

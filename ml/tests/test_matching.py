@@ -617,7 +617,11 @@ def test_skill_gap_analysis() -> None:
     assert "PostgreSQL" in result["matched"]
     assert "Kubernetes" in result["matched"]
     assert "GraphQL" in result["missing"]
-    assert result["coverageRatio"] == 0.75  # 3 of 4 required skills matched
+    # 3 of 4 required matched; preferred count at half weight (Docker matched, AWS missing):
+    # (3 + 0.5 * 1) / (4 + 0.5 * 2) = 0.7
+    assert result["coverageRatio"] == 0.7
+    assert result["preferred_matched"] == ["Docker"]
+    assert result["preferred_missing"] == ["AWS"]
 
 
 # =============================================================================

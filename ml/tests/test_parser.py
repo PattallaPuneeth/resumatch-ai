@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw
 from ml.pipelines.intake.exceptions import (
     CorruptFileError,
     EncryptedPdfError,
+    OcrDeferredError,
     TextTooShortAfterOcrError,
     UnsupportedTypeError,
 )
@@ -221,6 +222,25 @@ def test_scanned_pdf_triggers_ocr(temp_dir: str) -> None:
     assert result.extraction_method == "OCR"
     assert any(h.code == "OCR_REQUIRED" for h in result.ats_hazards)
     assert "Edison" in result.raw_text
+
+
+def test_scanned_pdf_defers_ocr_when_not_allowed(temp_dir: str) -> None:
+    """With an OCR worker (OCR_QUEUE_ENABLED), the parse worker hands scans off instead."""
+    pdf_path = os.path.join(temp_dir, "scanned_deferred.pdf")
+    create_scanned_image_pdf(pdf_path, "Ada Lovelace. Experience: analyst. " * 8)
+    transitions: list[str] = []
+    with pytest.raises(OcrDeferredError):
+        parse_document(
+            pdf_path, "application/pdf", status_callback=transitions.append, allow_ocr=False
+        )
+    assert transitions == ["NEEDS_OCR"]
+
+
+def test_text_pdf_unaffected_when_ocr_not_allowed(temp_dir: str) -> None:
+    pdf_path = os.path.join(temp_dir, "text_only.pdf")
+    create_sample_pdf(pdf_path)
+    result = parse_document(pdf_path, "application/pdf", allow_ocr=False)
+    assert result.extraction_method == "TEXT_LAYER"
 
 
 def test_ocr_text_too_short_fails(temp_dir: str) -> None:

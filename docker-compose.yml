@@ -236,6 +236,9 @@ services:
       # `--profile observability`), so load-test numbers stay free of tracing overhead.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      # Set OCR_QUEUE_ENABLED=true together with `--profile ocr-worker` to move scanned-PDF OCR
+      # to ml-ocr-worker. Off by default: this worker then runs OCR inline as before.
+      OCR_QUEUE_ENABLED: ${OCR_QUEUE_ENABLED:-false}
       S3_REGION: us-east-1
       S3_BUCKET: ${MINIO_BUCKET_NAME:-resumes}
       S3_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
@@ -268,6 +271,22 @@ services:
       start_period: 5s
     networks:
       - resumatch-network
+
+  # Optional OCR-only worker (Phase 10B sprint 2A). Serves resume-ocr-queue, one scan at a time,
+  # and loads no transformer models. Start with:
+  #   OCR_QUEUE_ENABLED=true docker compose --profile ocr-worker up -d
+  ml-ocr-worker:
+    extends:
+      service: ml-worker
+    container_name: resumatch-ml-ocr-worker
+    profiles: ["ocr-worker"]
+    environment:
+      WORKER_QUEUES: ocr
+      OCR_QUEUE_ENABLED: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
 
   frontend:
     build:

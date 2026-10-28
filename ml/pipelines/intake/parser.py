@@ -18,6 +18,7 @@ from ml.pipelines.intake.entities import (
 from ml.pipelines.intake.exceptions import (
     CorruptFileError,
     EncryptedPdfError,
+    OcrDeferredError,
     TextTooShortAfterOcrError,
     TooManyPagesError,
     UnsupportedTypeError,
@@ -232,6 +233,7 @@ def parse_document(
     file_path: str,
     mime_type: str,
     status_callback: Callable[[str], None] | None = None,
+    allow_ocr: bool = True,
 ) -> DocumentParseResult:
     """
     Parses a PDF or DOCX resume document according to Section 6 Phase 2C.
@@ -289,6 +291,11 @@ def parse_document(
             needs_ocr = text_length < settings.ocr_min_chars or _is_alphanumeric_ratio_low(
                 extracted_text, settings.ocr_alphanumeric_threshold
             )
+
+            if needs_ocr and not allow_ocr:
+                if status_callback:
+                    status_callback("NEEDS_OCR")
+                raise OcrDeferredError("PDF needs OCR; deferred to resume-ocr-queue")
 
             if needs_ocr:
                 is_ocr_required = True
