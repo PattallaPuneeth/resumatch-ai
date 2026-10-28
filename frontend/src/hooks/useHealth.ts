@@ -7,7 +7,8 @@ export function useBackendHealth() {
   return useQuery({
     queryKey: ['health', 'backend'],
     queryFn: () => api.getBackendHealth(),
-    refetchInterval: 5000,
+    // The public status panel: every 30 s is live enough and spares a request per visitor every 5 s
+    refetchInterval: 30000,
     retry: 1,
   });
 }
@@ -16,7 +17,7 @@ export function useMLHealth() {
   return useQuery({
     queryKey: ['health', 'ml'],
     queryFn: () => api.getMLHealth(),
-    refetchInterval: 5000,
+    refetchInterval: 30000,
     retry: 1,
   });
 }

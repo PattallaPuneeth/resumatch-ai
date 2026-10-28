@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { apiClient, UserSummary, ApiProblemError } from './apiClient';
+import { apiClient, UserSummary, ApiProblemError, getCsrfTokenFromCookie } from './apiClient';
 
 interface AuthContextValue {
   user: UserSummary | null;
@@ -20,6 +20,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
+    // Every session (register, login, refresh) sets the readable csrf_token cookie, and logout
+    // clears it. Without it there is no session to restore, so skip /auth/me and the refresh
+    // attempt that would follow: two failing requests on every page for logged-out visitors.
+    if (!getCsrfTokenFromCookie()) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
     try {
       const response = await apiClient.auth.getMe();
       setUser(response.user);
