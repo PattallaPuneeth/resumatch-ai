@@ -155,6 +155,50 @@ per scan) caps this upload mix at roughly 1 upload per second per worker process
 needs more worker processes or replicas (each with its own PyMuPDF), not code fixes. That's a sizing
 input for deployment.
 
+## Tracing overhead (OpenTelemetry, Workstream B)
+
+Method: image `3d8793f`, load-test overlay (mock LLM), smoke warm-up before each run, queues drained
+between runs, nothing else on the stack. "On" means `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-lgtm:4318`
+with sampling at 1.0 (every request traced), and the `otel-lgtm` backend running **on the same
+4-vCPU VM**. These numbers are therefore an upper bound: in production the backend is remote and
+sampling is planned at 0.2. Export was verified: Tempo held traces from `resumatch-backend` and
+`resumatch-ml-worker` after the runs.
+
+**Clean pair: `mixed` run on, then off, back to back**
+([on](../loadtest/results/20261028T081502Z_mixed_otelrepro_on.txt),
+[off](../loadtest/results/20261028T082244Z_mixed_otelrepro_off.txt)):
+
+| Metric | Tracing off | Tracing on | Difference |
+|---|---|---|---|
+| Failed requests | 0 of 44,331 | 0 of 47,874 | none |
+| `GET /v1/resumes` p50 / p95 | 5.9 ms / 31.6 ms | 8.0 ms / 72.4 ms | +2 ms / +41 ms |
+| `GET /v1/usage` p50 / p95 | 7.5 ms / 31.4 ms | 10.6 ms / 90.0 ms | +3 ms / +59 ms |
+| Backend CPU, average | 36.6% | 44.2% | +7.6 points |
+| `otel-lgtm` CPU, average (max) | stopped | 8.0% (54%) | |
+| ml-worker CPU, average | 205% | 216% | within noise |
+| Analysis p50 | 1.55 s | 1.64 s | +0.09 s |
+| Match p50 / p95 | 23.1 s / 43.7 s | 31.0 s / 44.9 s | p50 dominated by queueing at saturation |
+
+**`match` scenario pair**
+([off](../loadtest/results/20261028T072602Z_match_otel_off.txt),
+[on](../loadtest/results/20261028T074446Z_match_otel_on.txt)): scored within 90 s 391/609 (64%) off vs
+404/606 (66%) on; match p50 3.6 s vs 4.1 s; 0 failed requests in both. The idle smoke match was
+2.10 s off vs 2.08 s on.
+
+**One incident, not reproduced.** The first tracing-on `mixed` run
+([file](../loadtest/results/20261028T075323Z_mixed_otel_on.txt)) degraded badly: 8.8% of requests
+failed and `GET /v1/resumes` p95 reached 15.4 s. It started minutes after the `otel-lgtm` container
+did, and that container averaged 56% CPU (peaks of 99%) during the run, against 8% in the repeat. A
+repeat run with the same settings had 0 failures. The likely cause is the co-located backend's
+startup work competing for 4 vCPUs, not tracing in the services. Backend logs from that window were
+lost when the restore step recreated the container, so this is not proven.
+
+**Verdict.** At full sampling, tracing adds about 2 to 3 ms to light API reads at p50 and roughly
+doubles their p95 (still under 100 ms), costs the backend about 8 CPU points, and doesn't change
+worker throughput or error rates. For production: keep sampling at 0.2 and run the trace backend off
+the application hosts. Run-to-run noise (match p95 varies ±10 to 15 s) is larger than any tracing
+effect on the ML pipeline, so smaller effects there can't be resolved with these runs.
+
 ## ML memory (SPEC §7.4)
 
 `loadtest/memory/measure.sh` restarts `ml-worker` with a memory limit, then processes one fixture at a
