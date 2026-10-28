@@ -97,3 +97,6 @@ k6-results*
 !frontend/public/**/*.webp
 .coverage
 htmlcov/
+
+# Load-test data that must never be committed (e.g. scraped job postings without a license)
+loadtest/local/

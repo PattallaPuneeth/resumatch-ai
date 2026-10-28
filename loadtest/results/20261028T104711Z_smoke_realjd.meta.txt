@@ -1,0 +1,5 @@
+scenario=smoke label=realjd started=20261028T104711Z
+commit=4686ac5 dirty=4
+docker=cpus=4 mem_bytes=6214496256 server=29.6.1
+k6_args=-e JD_FILE=/loadtest/local/real_jds.json
+k6_exit=0 provider_hits=0

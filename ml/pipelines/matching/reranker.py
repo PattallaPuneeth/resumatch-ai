@@ -7,9 +7,12 @@ Enforces sequence length validation (max 512 tokens) and calibrated 0–100 scor
 
 from __future__ import annotations
 
+import functools
 import logging
 import math
-from typing import Any
+import threading
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
 
 from ml.config import settings
 from sentence_transformers import CrossEncoder
@@ -17,9 +20,27 @@ from sentence_transformers import CrossEncoder
 logger = logging.getLogger("resumatch-ml-reranker")
 
 _CROSS_ENCODER: CrossEncoder | None = None
+
+# Fast (Rust) tokenizers raise "RuntimeError: Already borrowed" when two threads use the same
+# tokenizer at once, and the worker runs model calls in threads (asyncio.to_thread). Every use of
+# the model or its tokenizer therefore holds this re-entrant lock (docs/PERFORMANCE.md, Finding 4).
+CROSS_ENCODER_LOCK = threading.RLock()
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+def _with_cross_encoder_lock(fn: Callable[P, R]) -> Callable[P, R]:
+    @functools.wraps(fn)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        with CROSS_ENCODER_LOCK:
+            return fn(*args, **kwargs)
+
+    return wrapper
+
 MAX_CROSS_ENCODER_SEQ_LENGTH = 512
 
 
+@_with_cross_encoder_lock
 def get_cross_encoder() -> CrossEncoder:
     """Returns singleton CrossEncoder instance."""
     global _CROSS_ENCODER
@@ -107,6 +128,7 @@ def _extract_requirement_excerpt(raw_description: str) -> str:
     return " ".join(content[:3])
 
 
+@_with_cross_encoder_lock
 def build_bounded_rerank_query(
     job_title: str,
     required_skills: list[str] | None,
@@ -154,6 +176,7 @@ def build_bounded_rerank_query(
     return str(tok.decode(truncated_tokens, skip_special_tokens=True).strip())
 
 
+@_with_cross_encoder_lock
 def rerank_candidates(
     job_query: str,
     candidates: list[dict[str, Any]],

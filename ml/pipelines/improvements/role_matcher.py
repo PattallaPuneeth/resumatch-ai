@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from ml.pipelines.embeddings.embedder import get_embedder
+from ml.pipelines.embeddings.embedder import MODEL_LOCK, get_embedder
 from ml.pipelines.improvements.models import SuggestedRole
 from ml.pipelines.matching.skill_gap import (
     _clean_text,
@@ -63,12 +63,13 @@ def get_role_vectors() -> tuple[list[dict[str, Any]], np.ndarray]:
     ]
 
     embedder = get_embedder()
-    raw_vecs = embedder.encode(
-        texts,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-        batch_size=32,
-    )
+    with MODEL_LOCK:  # the tokenizer isn't thread-safe; see embedder.MODEL_LOCK
+        raw_vecs = embedder.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            batch_size=32,
+        )
     _ROLE_VECTORS_CACHE = raw_vecs.astype(np.float32)
     logger.info("Cached %d role vectors in memory.", len(roles))
 

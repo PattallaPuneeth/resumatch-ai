@@ -23,6 +23,11 @@ const JD_TEMPLATE =
   'Design REST APIs, own CI/CD pipelines, mentor engineers, and improve reliability with observability tooling. ' +
   'Required: Python, TypeScript, PostgreSQL, Docker. Nice to have: Kubernetes, AWS, Kafka.';
 
+// Optional pool of real job descriptions: -e JD_FILE=/loadtest/local/real_jds.json, a JSON list
+// of {title, description}. Kept under loadtest/local/ (gitignored) because such postings are
+// usually scraped and unlicensed. Without it, createJob uses the short synthetic JD_TEMPLATE.
+const JD_POOL = __ENV.JD_FILE ? JSON.parse(open(__ENV.JD_FILE)) : null;
+
 export const ingestionE2E = new Trend('ingestion_e2e', true);
 export const matchE2E = new Trend('match_e2e', true);
 export const analysisE2E = new Trend('analysis_e2e', true);
@@ -97,14 +102,18 @@ export function uploadAndParse(headers, fixtureKey, fx = FIXTURES[fixtureKey]) {
 
 /** Creates a job description. A unique marker per call defeats the LLM cache on purpose. */
 export function createJob(headers, marker) {
+  const picked = JD_POOL ? JD_POOL[Math.floor(Math.random() * JD_POOL.length)] : null;
   const res = http.post(
     `${BASE_URL}/v1/jobs`,
     JSON.stringify({
-      title: 'Senior Backend Engineer',
+      title: picked ? picked.title : 'Senior Backend Engineer',
       company: 'Loadtest Corp',
       // Digits are mapped to letters: PII redaction turns long digit runs into [PHONE_NUMBER],
       // which made every JD identical after redaction and turned analyses into LLM cache hits.
-      rawDescription: `${JD_TEMPLATE} Reference ${marker.replace(/[0-9]/g, (d) => 'abcdefghij'[d])}.`,
+      rawDescription: `${picked ? picked.description : JD_TEMPLATE} Reference ${marker.replace(
+        /[0-9]/g,
+        (d) => 'abcdefghij'[d]
+      )}.`,
     }),
     { headers, tags: { name: 'job_create' } }
   );

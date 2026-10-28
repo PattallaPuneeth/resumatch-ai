@@ -8,8 +8,11 @@ strict dimension validation, and finite value checks.
 
 from __future__ import annotations
 
+import functools
 import logging
-from typing import TYPE_CHECKING
+import threading
+from collections.abc import Callable
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 import numpy as np
 from ml.config import settings
@@ -25,7 +28,24 @@ MODEL_NAME = getattr(settings, "embedding_model_name", "sentence-transformers/al
 
 _MODEL_INSTANCE: SentenceTransformer | None = None
 
+# Fast (Rust) tokenizers raise "RuntimeError: Already borrowed" when two threads use the same
+# tokenizer at once, and the worker runs model calls in threads (asyncio.to_thread). Every use of
+# the model or its tokenizer therefore holds this re-entrant lock (docs/PERFORMANCE.md, Finding 4).
+MODEL_LOCK = threading.RLock()
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+def _with_model_lock(fn: Callable[P, R]) -> Callable[P, R]:
+    @functools.wraps(fn)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        with MODEL_LOCK:
+            return fn(*args, **kwargs)
+
+    return wrapper
+
+
+@_with_model_lock
 def get_embedder() -> SentenceTransformer:
     """
     Returns the singleton SentenceTransformer instance.
@@ -39,6 +59,7 @@ def get_embedder() -> SentenceTransformer:
     return _MODEL_INSTANCE
 
 
+@_with_model_lock
 def generate_embeddings(texts: list[str]) -> list[list[float]]:
     """
     Generates normalized 384-dimensional embeddings for a list of texts.
@@ -109,6 +130,7 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
 QUERY_WINDOW_OVERLAP_TOKENS = 48
 
 
+@_with_model_lock
 def embed_query_text(text: str) -> list[float]:
     """
     Embeds a retrieval query of any length (e.g. job title + full job description).

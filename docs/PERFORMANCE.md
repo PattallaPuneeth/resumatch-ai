@@ -155,6 +155,43 @@ per scan) caps this upload mix at roughly 1 upload per second per worker process
 needs more worker processes or replicas (each with its own PyMuPDF), not code fixes. That's a sizing
 input for deployment.
 
+## Finding 4: concurrent tokenizer use crashes under real-length JDs (regression from the Finding 1 fix)
+
+Found by re-running `match` with **real job descriptions**: 123 unique postings, median 480 words,
+p90 843. They come from a user-supplied Glassdoor scrape, kept under `loadtest/local/`
+(gitignored, never committed) and loaded with `-e JD_FILE=/loadtest/local/real_jds.json`. Earlier
+runs used a ~70-token synthetic JD, which never stressed this path.
+
+Even the 1-VU smoke logged `RuntimeError: Already borrowed`: Hugging Face fast tokenizers aren't
+thread-safe, and since the Finding 1 fix runs model calls via `asyncio.to_thread`, a resume embed
+and a job embed tokenized at the same time. BullMQ's retry hid it.
+
+**Fix.** One re-entrant lock per model: `embedder.MODEL_LOCK` around `get_embedder`,
+`generate_embeddings`, `embed_query_text` and the role matcher's `encode`;
+`reranker.CROSS_ENCODER_LOCK` around `get_cross_encoder`, `build_bounded_rerank_query` and
+`rerank_candidates`. Regression test `ml/tests/test_model_locks.py` checks that the lock serializes
+calls across threads and that every model entry point is wrapped.
+
+Same image apart from the fix, back to back, real JDs, `match` scenario (counts from worker logs):
+
+| | Before (no lock) | After (lock) |
+|---|---|---|
+| `Already borrowed` crashes | 90 | **0** |
+| Embedding job failures (retried) | 23 | **0** |
+| Matches persisted in the run | 275 | **296** (+8%) |
+| Scored within 90 s | 171 of 535 (32%) | 202 of 538 (38%) |
+| Match p50 / p95 | 28.1 s / 80 s | **13.8 s** / 79 s |
+| Ingestion p95 (same run) | 11.2 s | **1.3 s** |
+| Idle smoke match (1 VU, real JD) | 16.4 s (with crash and retry) | 4.1 s |
+
+Files: `loadtest/results/20261028T105207Z_match_realjd_nolock*`, `…110142Z_match_realjd_lock*`.
+0 failed HTTP requests and 0 real provider calls in both.
+
+**Real-length JDs cost more.** An idle match takes about 4 s with a real JD vs about 0.5 s with the
+short synthetic one: more JD chunks to embed, and the query is embedded in overlapping 256-token
+windows. Worker throughput with real JDs is about 0.6 matches/s (296 in the 8.3-minute run) vs about
+0.7/s with short JDs. Size deployments from the real-JD number.
+
 ## Tracing overhead (OpenTelemetry, Workstream B)
 
 Method: image `3d8793f`, load-test overlay (mock LLM), smoke warm-up before each run, queues drained

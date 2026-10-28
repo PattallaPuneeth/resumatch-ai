@@ -1,0 +1,56 @@
+time="2026-10-28T10:58:21Z" level=warning msg="Insufficient VUs, reached 200 active VUs and cannot initialize more" executor=ramping-arrival-rate scenario=match
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✗ 'rate>0.99' rate=86.38%
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    match_e2e
+    ✗ 'p(95)<10000' p(95)=1m20s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......................: 2673   5.362956/s
+    checks_succeeded...................: 86.38% 2309 out of 2673
+    checks_failed......................: 13.61% 364 out of 2673
+
+    ✓ upload-url 201/200
+    ✓ s3 PUT 200
+    ✓ complete 200/202
+    ✓ resume reached PARSED
+    ✓ job create 201/200
+    ✓ match trigger 202/200
+    ✗ match scored
+      ↳  31% — ✓ 171 / ✗ 364
+
+    CUSTOM
+    ingestion_e2e...........................................................: avg=2.17s   min=564ms  med=768.5ms max=16.91s   p(90)=6.43s    p(95)=11.24s  
+    match_e2e...............................................................: avg=34.72s  min=13.23s med=28.12s  max=1m28s    p(90)=1m12s    p(95)=1m20s   
+    pipeline_timeouts.......................................................: 364   0.730309/s
+
+    HTTP
+    http_req_duration.......................................................: avg=71.03ms min=2.94ms med=41.14ms max=907.39ms p(90)=172.62ms p(95)=234.07ms
+      { expected_response:true }............................................: avg=71.03ms min=2.94ms med=41.14ms max=907.39ms p(90)=172.62ms p(95)=234.07ms
+    http_req_failed.........................................................: 0.00% 0 out of 84951
+    http_reqs...............................................................: 84951 170.440877/s
+
+    EXECUTION
+    dropped_iterations......................................................: 310   0.621966/s
+    iteration_duration......................................................: avg=1m13s   min=17.89s med=1m30s   max=1m45s    p(90)=1m31s    p(95)=1m32s   
+    iterations..............................................................: 535   1.073394/s
+    vus.....................................................................: 0     min=0          max=200
+    vus_max.................................................................: 200   min=40         max=200
+
+    NETWORK
+    data_received...........................................................: 64 MB 128 kB/s
+    data_sent...............................................................: 52 MB 105 kB/s
+
+
+
+time="2026-10-28T11:00:30Z" level=error msg="thresholds on metrics 'checks, match_e2e' have been crossed"
+

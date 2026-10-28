@@ -43,7 +43,11 @@ Run `smoke` once before measuring: the first jobs after a worker restart load th
 | `mixed` | 10% upload, 50% browse, 30% match, 10% analysis | ramp to `RATE` iterations/s | `RATE` (6), `SOAK=1` + `SOAK_DURATION` (30m) for a soak |
 | `single_upload` | One upload of `FIXTURE` (`text`, `docx`, `scan1`, `scan5`, `heavy`) | 1 iteration | used by `memory/measure.sh` |
 
-Common knobs: `USERS` (20), `POLL_INTERVAL_S` (0.5), `POLL_TIMEOUT_S` (90).
+Common knobs: `USERS` (20), `POLL_INTERVAL_S` (0.5), `POLL_TIMEOUT_S` (90), and `JD_FILE` for real
+job descriptions (a JSON list of `{title, description}`, e.g. `/loadtest/local/real_jds.json`). Keep
+such files under `loadtest/local/`, which is gitignored, because scraped postings are usually
+unlicensed. Without `JD_FILE`, jobs use a short synthetic JD. Real JDs are much longer and cost about
+8x more per match (see `docs/PERFORMANCE.md`, Finding 4).
 
 ## Metrics
 
