@@ -25,6 +25,7 @@ from ml.config import settings
 from ml.pipelines.llm.config import (
     PROMPT_VERSION,
     ProviderTierConfig,
+    llm_price_per_mtok,
     llm_settings,
 )
 from ml.pipelines.llm.grounding import (
@@ -41,6 +42,7 @@ from ml.pipelines.llm.safety import (
     RedactionResult,
     generate_delimiter_tag,
 )
+from ml.utils.telemetry import record_llm_usage
 from pydantic import ValidationError
 
 logger = logging.getLogger("resumatch-llm-gateway")
@@ -482,6 +484,14 @@ class LLMGateway:
                     usage = res_json.get("usage", {})
                     tokens_prompt = usage.get("prompt_tokens", 0)
                     tokens_completion = usage.get("completion_tokens", 0)
+                    record_llm_usage(
+                        tier.provider,
+                        model_id,
+                        "analysis",
+                        tokens_prompt,
+                        tokens_completion,
+                        usd_per_mtok=llm_price_per_mtok(tier.provider),
+                    )
 
                     # 4. JSON & Schema Validation
                     try:
@@ -748,6 +758,14 @@ class LLMGateway:
                     usage = res_json.get("usage", {})
                     tokens_prompt = usage.get("prompt_tokens", 0)
                     tokens_completion = usage.get("completion_tokens", 0)
+                    record_llm_usage(
+                        tier.provider,
+                        model_id,
+                        "rewriter",
+                        tokens_prompt,
+                        tokens_completion,
+                        usd_per_mtok=llm_price_per_mtok(tier.provider),
+                    )
 
                     try:
                         parsed_dict = self._clean_json_output(raw_content)
@@ -992,6 +1010,14 @@ class LLMGateway:
                     usage = res_json.get("usage", {})
                     tokens_prompt = usage.get("prompt_tokens", 0)
                     tokens_completion = usage.get("completion_tokens", 0)
+                    record_llm_usage(
+                        tier.provider,
+                        model_id,
+                        "improvements",
+                        tokens_prompt,
+                        tokens_completion,
+                        usd_per_mtok=llm_price_per_mtok(tier.provider),
+                    )
 
                     try:
                         parsed_dict = self._clean_json_output(raw_content)

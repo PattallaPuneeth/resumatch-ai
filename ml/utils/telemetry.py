@@ -43,6 +43,8 @@ ALLOWED_ATTRIBUTE_KEYS: frozenset[str] = frozenset(
         "gen_ai.request.model",
         "gen_ai.usage.input_tokens",
         "gen_ai.usage.output_tokens",
+        "gen_ai.token.type",
+        "gen_ai.operation.name",
         "messaging.system",
         "messaging.destination.name",
         "db.system",
@@ -62,6 +64,12 @@ QUEUE_CARRIER_KEY = "_otel"
 
 _tracer: Any = None
 _enabled = False
+_token_histogram: Any = None
+_cost_counter: Any = None
+_call_counter: Any = None
+
+# Token-count buckets for gen_ai.client.token.usage (OTel GenAI semantic conventions)
+_TOKEN_BUCKETS = (1, 4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144)
 
 
 def is_enabled() -> bool:
@@ -156,10 +164,85 @@ def _build_allowlist_exporter(inner: Any) -> Any:
     return AllowlistSpanExporter(inner)
 
 
-def init_telemetry(service_name: str, exporter: Any = None) -> bool:
+def _init_metrics(service_name: str, metric_reader: Any = None) -> None:
+    """LLM usage metrics. Uses `metric_reader` if given (tests), else OTLP/HTTP every 15 s."""
+    global _token_histogram, _cost_counter, _call_counter
+    from opentelemetry import metrics
+    from opentelemetry.sdk.metrics import Histogram, MeterProvider
+    from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
+    from opentelemetry.sdk.resources import Resource
+
+    if metric_reader is None:
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
+        metric_reader = PeriodicExportingMetricReader(
+            OTLPMetricExporter(), export_interval_millis=15000
+        )
+    provider = MeterProvider(
+        resource=Resource.create({"service.name": service_name}),
+        metric_readers=[metric_reader],
+        views=[
+            View(
+                instrument_type=Histogram,
+                instrument_name="gen_ai.client.token.usage",
+                aggregation=ExplicitBucketHistogramAggregation(_TOKEN_BUCKETS),
+            )
+        ],
+    )
+    metrics.set_meter_provider(provider)
+    meter = provider.get_meter("resumatch-ml")
+    _token_histogram = meter.create_histogram(
+        "gen_ai.client.token.usage", unit="{token}", description="Tokens per LLM call"
+    )
+    _cost_counter = meter.create_counter(
+        "resumatch.llm.cost_usd", unit="USD", description="Estimated LLM spend"
+    )
+    _call_counter = meter.create_counter(
+        "resumatch.llm.calls", unit="{call}", description="LLM calls by provider and outcome"
+    )
+
+
+def _label(value: str) -> str:
+    """Metric label values follow the resumatch.* rule: enum-like tokens only, else 'other'."""
+    digits = sum(ch.isdigit() for ch in value)
+    return value if _TOKEN_VALUE.match(value) and digits <= _MAX_TOKEN_DIGITS else "other"
+
+
+def record_llm_usage(
+    provider: str,
+    model: str,
+    operation: str,
+    input_tokens: int,
+    output_tokens: int,
+    outcome: str = "ok",
+    usd_per_mtok: tuple[float, float] = (0.0, 0.0),
+) -> None:
     """
-    Enables tracing for this process. Uses `exporter` if given (tests pass an in-memory
-    exporter), else OTLP/HTTP when OTEL_EXPORTER_OTLP_ENDPOINT is set. Returns True if on.
+    Records one LLM call: token histogram, estimated cost and a call counter. Only provider,
+    model, operation, token type and outcome are labels; prompts and responses never are.
+    Recorded inside a request span, the histogram carries an exemplar linking to the trace.
+    """
+    if _token_histogram is None:
+        return
+    base = {
+        "gen_ai.system": _label(provider),
+        "gen_ai.request.model": _label(model),
+        "gen_ai.operation.name": _label(operation),
+    }
+    in_tok, out_tok = max(0, int(input_tokens)), max(0, int(output_tokens))
+    _token_histogram.record(in_tok, {**base, "gen_ai.token.type": "input"})
+    _token_histogram.record(out_tok, {**base, "gen_ai.token.type": "output"})
+    cost = (in_tok * usd_per_mtok[0] + out_tok * usd_per_mtok[1]) / 1_000_000
+    _cost_counter.add(cost, base)
+    _call_counter.add(1, {**base, "resumatch.outcome": _label(outcome)})
+
+
+def init_telemetry(service_name: str, exporter: Any = None, metric_reader: Any = None) -> bool:
+    """
+    Enables tracing and LLM usage metrics for this process. Uses `exporter` / `metric_reader`
+    if given (tests pass in-memory ones), else OTLP/HTTP when OTEL_EXPORTER_OTLP_ENDPOINT is
+    set. Returns True if on.
     """
     global _tracer, _enabled
     if exporter is None and not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
@@ -189,6 +272,11 @@ def init_telemetry(service_name: str, exporter: Any = None) -> bool:
         )
     trace.set_tracer_provider(provider)
     _tracer = provider.get_tracer("resumatch-ml")
+    if metric_reader is not None or exporter is None:
+        try:
+            _init_metrics(service_name, metric_reader)
+        except ImportError:
+            logger.warning("opentelemetry metrics SDK missing; LLM usage metrics off")
     _enabled = True
     logger.info("OpenTelemetry tracing enabled for %s (sample ratio %.2f)", service_name, ratio)
     return True

@@ -5,6 +5,7 @@ Defines provider endpoints, model identifiers, API key bindings, and timeouts.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -81,6 +82,22 @@ class ProviderTierConfig:
                 "Set env var %s to a valid model ID to override.",
                 self.tier, self.name, model_id, self.env_model_var,
             )
+
+
+def llm_price_per_mtok(provider: str) -> tuple[float, float]:
+    """
+    Estimated USD per million (input, output) tokens for a provider, for the
+    resumatch.llm.cost_usd metric. Every configured tier is a free tier, so the default is 0.
+    To estimate paid usage set LLM_PRICES_JSON, e.g. '{"groq": [0.59, 0.79]}'.
+    """
+    try:
+        table = json.loads(os.getenv("LLM_PRICES_JSON", "") or "{}")
+        price = table.get(provider)
+        if isinstance(price, list | tuple) and len(price) == 2:
+            return float(price[0]), float(price[1])
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return 0.0, 0.0
 
 
 TIER_DEFINITIONS: list[ProviderTierConfig] = [

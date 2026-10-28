@@ -139,3 +139,38 @@ def test_filter_attributes_allowlist() -> None:
         }
     )
     assert cleaned == {"url.path": "/v1/resumes/abc", "resumatch.resume_id": "8a1f-22"}
+
+
+def test_llm_usage_metrics_carry_counts_not_text() -> None:
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+
+    reader = InMemoryMetricReader()
+    telemetry._init_metrics("resumatch-ml-test", reader)
+    with telemetry.stage_span("analysis"):
+        telemetry.record_llm_usage(
+            "groq", "llama-3.3-70b-versatile", "analysis", 1200, 300, usd_per_mtok=(0.5, 1.0)
+        )
+    # A label built from free text (here a prompt that leaked into the model field) is replaced
+    telemetry.record_llm_usage("openrouter", f"{CANARY_SENTENCE} {CANARY_EMAIL}", "rewriter", 5, 1)
+
+    data = reader.get_metrics_data()
+    assert data is not None
+    dumped = json.dumps(json.loads(data.to_json()), default=str)
+    for canary in CANARIES:
+        assert canary not in dumped
+
+    points: dict[str, list[Any]] = {}
+    for rm in data.resource_metrics:
+        for sm in rm.scope_metrics:
+            for m in sm.metrics:
+                points[m.name] = list(m.data.data_points)
+    tokens = {
+        (p.attributes["gen_ai.request.model"], p.attributes["gen_ai.token.type"]): p.sum
+        for p in points["gen_ai.client.token.usage"]
+    }
+    assert tokens[("llama-3.3-70b-versatile", "input")] == 1200
+    assert tokens[("llama-3.3-70b-versatile", "output")] == 300
+    assert tokens[("other", "input")] == 5
+    cost = {p.attributes["gen_ai.system"]: p.value for p in points["resumatch.llm.cost_usd"]}
+    assert cost["groq"] == pytest.approx((1200 * 0.5 + 300 * 1.0) / 1_000_000)
+    assert cost["openrouter"] == 0.0
