@@ -95,6 +95,29 @@ describe('telemetry PII safety (SEC-14)', () => {
     expect(carrier?.traceparent?.split('-')[1]).toBe(server?.spanContext().traceId);
   });
 
+  it('stamps trace_id and span_id on every request log line', async () => {
+    const lines: Array<Record<string, unknown>> = [];
+    const stream = { write: (msg: string) => lines.push(JSON.parse(msg)) };
+    const app = Fastify({ logger: { level: 'info', stream } });
+    registerTracingHooks(app);
+    app.get('/v1/ping', async (request) => {
+      request.log.info('handler ran');
+      return { ok: true };
+    });
+    await app.ready();
+    exporter.reset();
+
+    await app.inject({ method: 'GET', url: '/v1/ping' });
+    await app.close();
+
+    const span = exporter.getFinishedSpans().find((s) => s.name === 'GET /v1/ping');
+    const handlerLine = lines.find((l) => l.msg === 'handler ran');
+    expect(handlerLine?.trace_id).toBe(span?.spanContext().traceId);
+    expect(handlerLine?.span_id).toBe(span?.spanContext().spanId);
+    const completed = lines.find((l) => l.msg === 'request completed');
+    expect(completed?.trace_id).toBe(span?.spanContext().traceId);
+  });
+
   it('allowlist drops unknown keys and query strings', () => {
     expect(
       filterAttributes({

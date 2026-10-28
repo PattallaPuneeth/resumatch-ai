@@ -38,9 +38,18 @@ No resume text, JD text, contact details, query strings, headers or tokens are e
 (SEC-14 in `docs/SECURITY.md`; canary tests in `backend/src/__tests__/telemetry.pii.test.ts`
 and `ml/tests/test_telemetry_pii.py`).
 
+## Logs linked to traces
+
+- **Backend:** pino writes JSON in production, and with tracing on every request log line
+  carries `trace_id` and `span_id`, including Fastify's own "request completed" line.
+- **ML API and worker:** set `LOG_FORMAT=json` for one JSON object per line with the active
+  span's `trace_id` / `span_id` (`ml/utils/logging_setup.py`). The default stays text.
+
+Search a log line's `trace_id` in Tempo to open its trace. Shipping container stdout into Loki
+needs a log collector, which the otel-lgtm profile doesn't configure yet.
+
 ## Not done yet
 
 - Usage-meter threshold counters (per-user analysis quota) aren't emitted as metrics yet.
 - Overhead measurement: rerun the k6 `match` and `mixed` scenarios with tracing on and
   compare against the baselines in `docs/PERFORMANCE.md`.
-- Structured JSON logs with `trace_id` / `span_id`.

@@ -135,7 +135,7 @@ export function registerTracingHooks(app: FastifyInstance): void {
   if (!enabled) return;
   const tracer = trace.getTracer('resumatch-backend');
 
-  app.addHook('onRequest', async (request) => {
+  app.addHook('onRequest', async (request, reply) => {
     const route = request.routeOptions?.url ?? 'unmatched';
     // Only the trace-context headers are read from the caller, never other headers
     const carrier: Record<string, string> = {};
@@ -151,6 +151,11 @@ export function registerTracingHooks(app: FastifyInstance): void {
       parent,
     );
     requestSpans.set(request, span);
+    // Every log line for this request carries the IDs, so a log jumps straight to its trace
+    const { traceId, spanId } = span.spanContext();
+    const ids = { trace_id: traceId, span_id: spanId };
+    request.log = request.log.child(ids);
+    reply.log = reply.log.child(ids);
   });
 
   app.addHook('onError', async (request, _reply, error) => {

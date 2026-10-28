@@ -23,7 +23,10 @@ from ml.pipelines.rewriter.models import (
     RewriterServiceResponse,
 )
 from ml.pipelines.rewriter.service import BulletRewriterService
+from ml.utils.logging_setup import configure_logging
 from ml.utils.telemetry import init_telemetry, instrument_fastapi
+
+configure_logging("resumatch-ml-api", level=settings.log_level)
 
 app = FastAPI(
     title=settings.app_name,

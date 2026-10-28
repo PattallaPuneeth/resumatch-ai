@@ -68,12 +68,10 @@ from ml.pipelines.matching.skill_gap import (
     resolve_skill_requirements,
 )
 from ml.storage.s3 import download_file
+from ml.utils.logging_setup import configure_logging
 from ml.utils.telemetry import init_telemetry, queue_carrier, stage_span
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+configure_logging("resumatch-ml-worker", level="info")
 logger = logging.getLogger("resumatch-ml-worker")
 
 # All four BullMQ workers share this process's event loop. Blocking work (S3 I/O, parsing/OCR,

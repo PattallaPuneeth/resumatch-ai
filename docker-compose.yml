@@ -181,6 +181,8 @@ services:
       # `--profile observability`), so load-test numbers stay free of tracing overhead.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      # json: one JSON object per line with trace_id/span_id (ml/utils/logging_setup.py)
+      LOG_FORMAT: ${LOG_FORMAT:-text}
       DATABASE_URL: postgresql://${POSTGRES_USER:-resumatch_user}:${POSTGRES_PASSWORD:-resumatch_password}@postgres:5432/${POSTGRES_DB:-resumatch}
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
@@ -236,6 +238,8 @@ services:
       # `--profile observability`), so load-test numbers stay free of tracing overhead.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      # json: one JSON object per line with trace_id/span_id (ml/utils/logging_setup.py)
+      LOG_FORMAT: ${LOG_FORMAT:-text}
       # Set OCR_QUEUE_ENABLED=true together with `--profile ocr-worker` to move scanned-PDF OCR
       # to ml-ocr-worker. Off by default: this worker then runs OCR inline as before.
       OCR_QUEUE_ENABLED: ${OCR_QUEUE_ENABLED:-false}
