@@ -1,0 +1,513 @@
+{
+ "git": {
+  "commit": "e83919f",
+  "ml_tree_dirty": true
+ },
+ "edge_window": 7.0,
+ "thresholds": [
+  45.0,
+  75.0
+ ],
+ "rows": [
+  {
+   "pair_id": "kaggle_domain:test:R0118.txt:job_accountant.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 11.26,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": true,
+   "score": 4.0
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0254.txt:job_banking_operations_officer.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 3.13,
+   "near_edge": true,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.552857
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0073.txt:job_retail_sales_associate_apparel.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 9.02,
+   "near_edge": false,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.0
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0250.txt:job_data_analyst.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 0.11,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.984286
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0284.txt:job_accountant.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 0.38,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.945714
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0224.txt:job_financial_analyst.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 0.53,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.924286
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0132.txt:job_financial_analyst.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 0.77,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.89
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0107.txt:job_banking_operations_officer.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 0.36,
+   "near_edge": true,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.948571
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0182.txt:job_retail_sales_associate_apparel.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 17.08,
+   "near_edge": false,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.0
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0264.txt:job_accountant.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 0.84,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.88
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0145.txt:job_banking_operations_officer.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 1.0,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.857143
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0078.txt:job_accountant.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 2.16,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.691429
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0205.txt:job_data_analyst.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 2.69,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.615714
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0188.txt:job_retail_sales_associate_apparel.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 3.64,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.48
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0239.txt:job_data_analyst.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 15.85,
+   "near_edge": false,
+   "band_disagreement": 2,
+   "known_noise": true,
+   "score": 5.0
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0277.txt:job_retail_sales_associate_apparel.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 7.31,
+   "near_edge": false,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.0
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0083.txt:job_banking_operations_officer.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 1.39,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.801429
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0293.txt:job_banking_operations_officer.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 4.53,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.352857
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0206.txt:job_accountant.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 6.33,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.095714
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0255.txt:job_banking_operations_officer.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 7.83,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0286.txt:job_banking_operations_officer.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 9.89,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "extended:-:resume_backend_go.txt:job_backend_java.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 2.74,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.608571
+  },
+  {
+   "pair_id": "extended:-:resume_qa_automation.txt:job_frontend_vue.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 8.86,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "extended:-:resume_mobile_ios.txt:job_frontend_vue.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 16.79,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "extended:-:resume_data_engineer.txt:job_backend_go.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 23.82,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "extended:-:resume_security_eng.txt:job_backend_go.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 25.07,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "extended:-:resume_product_mgr.txt:job_backend_go.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 32.1,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "extended:-:resume_backend_go.txt:job_mobile_ios.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 0.62,
+   "near_edge": true,
+   "band_disagreement": 0,
+   "known_noise": false,
+   "score": 0.911429
+  },
+  {
+   "pair_id": "extended:-:resume_mobile_ios.txt:job_backend_go.txt",
+   "split": "",
+   "model_band": "weak",
+   "edge_distance": 2.75,
+   "near_edge": true,
+   "band_disagreement": 0,
+   "known_noise": false,
+   "score": 0.607143
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0297.txt:job_financial_analyst.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 0.92,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.868571
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0152.txt:job_accountant.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 1.45,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.792857
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0200.txt:job_accountant.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 2.47,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.647143
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0258.txt:job_financial_analyst.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 2.66,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.62
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0162.txt:job_financial_analyst.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 2.75,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.607143
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0298.txt:job_financial_analyst.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 2.8,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.6
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0245.txt:job_banking_operations_officer.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 2.92,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.582857
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0049.txt:job_research_assistant.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 1.87,
+   "near_edge": true,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.732857
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0025.txt:job_machine_learning_engineer.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 1.88,
+   "near_edge": true,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.731429
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0005.txt:job_machine_learning_engineer.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 2.37,
+   "near_edge": true,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.661429
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0051.txt:job_machine_learning_engineer.txt",
+   "split": "test",
+   "model_band": "weak",
+   "edge_distance": 4.41,
+   "near_edge": true,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.37
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0024.txt:job_java_backend_developer.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 6.31,
+   "near_edge": true,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.098571
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0001.txt:job_research_assistant.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 7.64,
+   "near_edge": false,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.0
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0001.txt:job_machine_learning_engineer.txt",
+   "split": "tune",
+   "model_band": "weak",
+   "edge_distance": 8.14,
+   "near_edge": false,
+   "band_disagreement": 2,
+   "known_noise": false,
+   "score": 2.0
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0232.txt:job_banking_operations_officer.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 0.5,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.928571
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0071.txt:job_school_teacher.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 0.76,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.891429
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0067.txt:job_school_teacher.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 1.48,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.788571
+  },
+  {
+   "pair_id": "kaggle_domain:test:R0153.txt:job_banking_operations_officer.txt",
+   "split": "test",
+   "model_band": "medium",
+   "edge_distance": 2.85,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.592857
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0100.txt:job_school_teacher.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 4.78,
+   "near_edge": true,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.317143
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0209.txt:job_school_teacher.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 8.28,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  },
+  {
+   "pair_id": "kaggle_domain:tune:R0295.txt:job_school_teacher.txt",
+   "split": "tune",
+   "model_band": "medium",
+   "edge_distance": 14.24,
+   "near_edge": false,
+   "band_disagreement": 1,
+   "known_noise": false,
+   "score": 1.0
+  }
+ ]
+}
