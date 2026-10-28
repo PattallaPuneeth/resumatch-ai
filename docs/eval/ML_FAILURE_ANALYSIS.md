@@ -434,6 +434,39 @@ The order is mostly right, but strong candidates score about 46 instead of 75+.
 
 **Next:** score compression on long JDs is the main real-world issue. Fixing it, for example by stripping benefits, company and EEO boilerplate before matching, or by calibrating by JD length, needs more human-labeled strong pairs on real postings than the 7 here. A good next sheet is about 60 more `real_fit` pairs, stratified toward pairs the model scores 40–75.
 
+### 8.12 60 more labels, and the real cause of the compression: the eval's job titles
+
+**Labels.** 60 more `real_fit` pairs were added: all 58 that the model scored 40–75, plus 2 above 75. Claude drafted a label and reason for each from the texts, with the source label and model score hidden. The user then audited every row. 38 were verified, 8 borderline calls were kept as drafted, 6 had notes corrected, and **8 labels were changed** (5 over-labeled, 3 under-labeled). The most common causes were keyword-stuffed summaries, misread dates in unspaced resume text, and must-have requirements such as bilingual Chinese. The audited label is the one used. `real_fit_human` now has **100 pairs** (36 `test`, 64 `tune`): strong 14 / medium 33 / weak 53.
+
+**Seniority, re-checked on 100 labels.** The share of pairs where the resume is "below" the JD's years:
+
+| Human label | n | Below |
+| :--- | :---: | :---: |
+| strong | 14 | 1 (7%) |
+| medium | 33 | 9 (27%) |
+| weak | 53 | 13 (25%) |
+
+It separates strong from the rest, but not medium from weak: many weak pairs meet the years and fail on domain. The best multiplier chosen on tune (×0.8 below, ×0.9 close) leaves test within-job ordering at 0.850 and test pairwise at 0.700 → 0.702. **Seniority stays explanation-only.** Shifting blend weight from the cross-encoder to the vector score raised cross-job pairwise but lowered test within-job ordering (0.850 → 0.750), so it was rejected too.
+
+**The cause.** The eval runner uses a job file's first line as the title. The `real_fit` postings have no title line, so in 25 of 47 jobs the "title" was a paragraph of 18–452 words, for example the full "About the company" text. Most of the rest got a heading such as "About Grainger" or "Job Summary". That paragraph leads the 180-token rerank query and pushes the skills out. Production never sees this, because the user types a short title in its own field.
+
+**The fix (eval only, no production code changed).** `ml/eval/datasets/real_fit_titles.csv` holds a short title for each of the 60 jobs, written by hand from each posting (the role it names), before any scoring. `build_real_fit_dataset.py` writes it as a `Job Title:` first line, and `--titles-only` applies it to an existing build. Effect on `real_fit_human`:
+
+| real_fit_human | Before | With titles |
+| :--- | :---: | :---: |
+| Pairwise, all 100 | 0.617 | **0.734** |
+| Pairwise, test (36) | 0.700 | **0.812** |
+| Pairwise, tune (64) | 0.568 | **0.683** |
+| Within-job ordering, all (55 comparisons) | 0.782 | 0.800 |
+| Band accuracy, all | 0.530 | 0.520 |
+| Median score, strong / medium / weak | 44.7 / 51.4 / 43.6 | **69.4** / 66.0 / 48.0 |
+
+Within-job, 6 comparisons were fixed and 5 broke (test: 1 fixed, 2 broke out of 20), so per-job ranking is unchanged within noise. **Most of the "score compression on long JDs" was the eval's title, not the model:** strong candidates now score a median of 69 instead of 45.
+
+**What is still weak.** Band accuracy stays near 0.52. The pipeline separates strong from weak, but medium and strong overlap (medians 66 and 69), and weak pairs from the same field score in the 45–60 range (for example a data analyst for a business-analyst post). The 60 new pairs were chosen from scores of 40–75, so this sample over-represents the hard middle. Refitting the bands on it would fit that selection, so the bands were not changed.
+
+**Next:** the remaining gap is domain and must-have requirements inside the same field (gaming, SAP, bilingual, people management). Measuring a fix needs labels on pairs picked without regard to score, so the band refit is unbiased.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.

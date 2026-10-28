@@ -22,9 +22,17 @@ Selection (see ml/eval/datasets/README.md, "What the next labeled dataset should
 The texts are third-party data with unclear licenses, so the output goes to a gitignored folder.
 Only manifest.csv (ids, hashes, labels, splits) and this script are committed.
 
+Titles: the source has no job titles, and the eval runner takes a job file's first line as the
+title. In real postings that line is usually company boilerplate or a whole paragraph, which then
+fills the rerank query. Production always has a short title typed by the user, so each job file
+gets a "Job Title:" first line from the committed real_fit_titles.csv (written by hand from each
+posting, before any scoring).
+
 Usage (needs pyarrow, e.g. in a throwaway python:3.11 container):
     python -m ml.eval.build_real_fit_dataset --train train.parquet --test test.parquet \
         [--kaggle-zip resumes-data.zip] [--out ml/eval/datasets_local/real_fit]
+    # add the titles to an existing build (no pyarrow needed)
+    python -m ml.eval.build_real_fit_dataset --titles-only [--out ml/eval/datasets_local/real_fit]
 """
 
 from __future__ import annotations
@@ -46,6 +54,8 @@ PAIR_RE = re.compile(
 MIN_JD_WORDS, MAX_JD_WORDS = 250, 1000
 MAX_RESUMES_PER_JOB = 5
 TARGET_JOBS = {"test": 25, "tune": 35}
+TITLES_CSV = Path(__file__).parent / "datasets" / "real_fit_titles.csv"
+TITLE_PREFIX = "Job Title: "
 
 # Ordered: the first field whose words appear most in the JD wins. Used only to spread jobs
 # across fields; it is never a label.
@@ -172,6 +182,29 @@ def select(
     return out
 
 
+def load_titles(path: Path = TITLES_CSV) -> dict[str, str]:
+    with open(path, encoding="utf-8", newline="") as f:
+        return {r["job"]: r["title"].strip() for r in csv.DictReader(f)}
+
+
+def with_title(jd_text: str, title: str) -> str:
+    """The JD with a "Job Title:" first line; a file that already has one is left as is."""
+    if jd_text.startswith(TITLE_PREFIX):
+        return jd_text
+    return f"{TITLE_PREFIX}{title}\n{jd_text}"
+
+
+def add_titles(jobs_dir: Path, titles: dict[str, str]) -> int:
+    """Adds the title line to every job file in a build; fails if a job has no title."""
+    files = sorted(jobs_dir.glob("job_*.txt"))
+    missing = [f.name for f in files if f.name not in titles]
+    if missing:
+        raise ValueError(f"no title in {TITLES_CSV.name} for: {', '.join(missing)}")
+    for f in files:
+        f.write_text(with_title(f.read_text(encoding="utf-8"), titles[f.name]), encoding="utf-8")
+    return len(files)
+
+
 def build(train: Path, test: Path, kaggle_zip: Path | None, out: Path) -> dict[str, object]:
     test_pairs = select(parse_pairs(read_parquet_rows(test), "test"), "test", set())
     used_in_test = {p["resume_id"] for p in test_pairs}
@@ -209,6 +242,7 @@ def build(train: Path, test: Path, kaggle_zip: Path | None, out: Path) -> dict[s
         w = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
+    add_titles(out / "jobs", load_titles())
     return {
         "pairs": len(rows),
         "jobs": len({r["job"] for r in rows}),
@@ -221,11 +255,18 @@ def build(train: Path, test: Path, kaggle_zip: Path | None, out: Path) -> dict[s
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Build the real_fit eval set from the fit parquets")
-    p.add_argument("--train", required=True)
-    p.add_argument("--test", required=True)
+    p.add_argument("--train")
+    p.add_argument("--test")
     p.add_argument("--kaggle-zip", default=None)
     p.add_argument("--out", default="ml/eval/datasets_local/real_fit")
+    p.add_argument("--titles-only", action="store_true",
+                   help="only add the job titles to an existing build")
     a = p.parse_args()
+    if a.titles_only:
+        print(f"titled {add_titles(Path(a.out) / 'jobs', load_titles())} job files")
+        return
+    if not (a.train and a.test):
+        p.error("--train and --test are required unless --titles-only is given")
     kaggle = Path(a.kaggle_zip) if a.kaggle_zip else None
     stats = build(Path(a.train), Path(a.test), kaggle, Path(a.out))
     print(json.dumps(stats, indent=2))

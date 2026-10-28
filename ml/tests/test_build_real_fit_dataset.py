@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
-from ml.eval.build_real_fit_dataset import field_of, parse_pairs, scrub, select
+from pathlib import Path
+
+import pytest
+
+from ml.eval.build_real_fit_dataset import (
+    add_titles,
+    field_of,
+    load_titles,
+    parse_pairs,
+    scrub,
+    select,
+    with_title,
+)
 
 LONG_JD = "Senior Python developer to build backend services and APIs. " * 40
 
@@ -44,3 +56,24 @@ def test_select_keeps_long_mixed_label_jobs_and_banned_resumes_out() -> None:
 def test_field_of_spreads_jobs() -> None:
     assert field_of("Staff accountant: ledger, audit and tax filings.") == "finance_accounting"
     assert field_of("Registered nurse for patient care in a hospital.") == "healthcare"
+
+
+def test_with_title_adds_a_title_line_once() -> None:
+    titled = with_title("About Acme. We sell tools.", "Data Analyst")
+    assert titled.splitlines()[0] == "Job Title: Data Analyst"
+    assert with_title(titled, "Other") == titled
+
+
+def test_add_titles_requires_every_job(tmp_path: Path) -> None:
+    (tmp_path / "job_a.txt").write_text("Long company intro.", encoding="utf-8")
+    (tmp_path / "job_b.txt").write_text("Another intro.", encoding="utf-8")
+    with pytest.raises(ValueError, match="job_b.txt"):
+        add_titles(tmp_path, {"job_a.txt": "Accountant"})
+    assert add_titles(tmp_path, {"job_a.txt": "Accountant", "job_b.txt": "Engineer"}) == 2
+    assert (tmp_path / "job_b.txt").read_text(encoding="utf-8").startswith("Job Title: Engineer\n")
+
+
+def test_committed_titles_are_short() -> None:
+    titles = load_titles()
+    assert len(titles) == 60
+    assert all(0 < len(t.split()) <= 6 for t in titles.values())
