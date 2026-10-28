@@ -523,6 +523,39 @@ It is not a gold standard: GPT-4o's labels are noisy and the JDs are synthetic.
 
 **The pipeline shows no systematic name bias.** Group means differ by at most 0.17 points. The small per-pair spread comes from the name changing the resume's tokens and chunk boundaries, not from a group pattern. The test is cheap to rerun after any model change, and should be.
 
+### 8.15 Blind labels: Claude is too strict, GPT-4o is weaker, and the pre-filled audit was anchored
+
+The user labeled the 30 blind `score_details` pairs with no label shown, and confirmed the labels are their own. In the returned sheet the notes on rows 21–23 were shifted down by one row; the labels were in the right rows. The notes were realigned, and row 21's own note is lost. The set is imported as `score_details_human`: 30 pairs (11 `test`, 19 `tune`), strong 14 / medium 10 / weak 6, with the manifest committed.
+
+| Against the user's labels | Exact | Kappa (weighted) | Higher than user | Lower than user | Opposite (strong ↔ weak) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Claude, blind | 18/30 | 0.42 (0.57) | 0 | 12 | 0 |
+| GPT-4o band rule | 15/30 | 0.25 (0.32) | 3 | 12 | 3 |
+| Claude vs GPT-4o | 20/30 | 0.50 | – | – | – |
+
+What this shows:
+- **Claude's bias is strictness.** In every one of the 12 disagreements, Claude is one band below the user. Claude marks down missing years or a different industry, while the user credits transferable experience, such as 8 years of real-estate sales with team training for a tech BD manager role. On the long `real_fit` postings, the user's audit instead found some over-labeling (section 8.12). So the direction depends on the data, and both directions need a human check.
+- **The two LLMs agree with each other more than with the person** (0.50 against 0.42 and 0.25). That is the shared-bias risk from section 8.14. GPT-4o's band labels are the weakest, so `score_details` labels must not be used as gold.
+- **GPT-4o's raw micro score is a decent ranking signal.** It orders the user's labels 0.792 pairwise, against 0.872 for Claude's labels in section 8.13.
+- **The pre-filled audit was anchored.** With Claude's labels filled in, the user changed 0 of 50. Blind, the user disagreed with Claude on 12 of 30. The 50 audited labels from section 8.13 are therefore treated as Claude's labels, not human ones, and are not imported. Future label rounds should be blind, or include known planted errors.
+
+**The current model vs the user's 30 labels** (redacted resumes):
+- **Ordering:** 0.771 pairwise, about as good as GPT-4o's 0.792.
+- **Band accuracy:** 14/30.
+- **Median score, strong / medium / weak:** 73.4 / 51.6 / 57.8. The 6 weak pairs score above the medium ones, mostly data-science or entry-level resumes scored against BD roles.
+
+Removing names and personal fields changed some scores by up to 7 points, through chunk boundaries and not through the names' meaning (the name-swap test in section 8.14 shows no group pattern).
+
+**Human-labeled pairs now available:**
+
+| Set | Pairs |
+| :--- | :---: |
+| `human_hard` | 50 |
+| `real_fit_human` | 100 (60 of them Claude drafts audited by the user, before anchoring was known) |
+| `score_details_human` | 30 |
+
+A learned score blend needs a few hundred blind labels. The next label rounds should be blind sheets.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.

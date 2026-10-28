@@ -29,6 +29,8 @@ SOURCE_DIRS = {
     "extended": Path("test-data/extended_dataset"),
     # Third-party texts (see build_real_fit_dataset.py): import into a gitignored --out folder
     "real_fit": Path("ml/eval/datasets_local/real_fit"),
+    # See build_score_details_dataset.py; also third-party, so import into datasets_local
+    "score_details": Path("ml/eval/datasets_local/score_details"),
 }
 _XLSX_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 
