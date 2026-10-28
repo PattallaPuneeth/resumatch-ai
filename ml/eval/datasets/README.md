@@ -97,4 +97,9 @@ Two other files the user supplied were reviewed and not used:
 - `resume_dataset_1200.csv`: synthetic profiles with a one-line generic target JD, so there is
   nothing realistic to match against.
 - `data.csv`: 521 unlabeled postings in lowercase. They could feed a future labeling sheet.
+- `8K-rows-dataset/` (train.csv 6,241 + test.csv 1,759; resume_text, job_description_text, label): the
+  same source as `real_fit` in CSV form. All 300 `real_fit` pairs are in it with identical labels. Its
+  labels agree with the user on 42 of 100 `real_fit_human` pairs (kappa 0.15, 14 opposite), and 476
+  resumes appear in both its train and test files, so the labels are not used for training. Its 351 JDs
+  and 643 resumes are a pool for future blind labeling sheets. The folder is gitignored.
 

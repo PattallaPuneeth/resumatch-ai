@@ -106,3 +106,6 @@ ml/eval/datasets_local/
 
 # Third-party resume dataset with real PII (see ml/eval/datasets/README.md); never commit
 /resume-score-details/
+
+# Third-party resume/JD dataset with real resumes; never commit
+/8K-rows-dataset/
