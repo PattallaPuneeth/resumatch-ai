@@ -60,6 +60,7 @@ from ml.pipelines.matching.reranker import (
 from ml.pipelines.matching.rrf import aggregate_resume_rrf, fuse_ranks
 from ml.pipelines.matching.scorer import compute_match_scores
 from ml.pipelines.matching.semantic import search_semantic
+from ml.pipelines.matching.seniority import seniority_fit
 from ml.pipelines.matching.skill_gap import (
     analyze_skill_gap,
     extract_alternative_groups,
@@ -552,6 +553,8 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
                 for c in reranked_chunks[:5]
             ],
             "totalChunksEvaluated": len(fused_chunks),
+            # Explanation only; not part of the score (see seniority.py)
+            "seniority": seniority_fit(job_title, job_desc, resume_raw_text),
         }
 
         # 7. Atomic persistence to matches table

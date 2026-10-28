@@ -260,6 +260,16 @@ k6 on one 4-vCPU laptop. Each scenario ran after a smoke warm-up, with queues dr
 
 The OCR worker removes the head-of-line blocking for text PDFs and halves median match latency. Under mixed load, though, the slowest matches get roughly twice as slow: two processes now compete for 4 vCPUs, the oversubscription noted in `docs/PERFORMANCE.md`. Since the gate was "text PDFs faster and matching no worse", it stays **off by default**. It is worth enabling on a host with more cores, and that's a sizing input for deployment. Code: `served_queues`, `process_ocr_document` and `enqueue_ocr_job` in `ml/worker.py`, plus `allow_ocr` in `parse_document`. Tests are in `ml/tests/test_worker_event_loop.py` and `ml/tests/test_parser.py`.
 
+### 8.5 Seniority signal: shown, not scored
+
+`ml/pipelines/matching/seniority.py` extracts two things:
+- **The years a JD asks for**, taking the largest lower bound, so "5 or more years, including at least 2 owning services" is 5.
+- **The years a resume shows**: dated work periods with overlaps merged, education dates skipped (single-line exports and broken en-dashes included), or a stated "N years of experience", whichever is larger.
+
+Every match explanation now carries `seniority: {requiredYears, resumeYears, jobLevel, status}`, where status is meets, close or below.
+
+**Not added to the score.** Over all 761 eval pairs, a conservative penalty (JD asks for 4+ years or a senior title, and the resume shows under half of it) fires on exactly **1 pair**: the fresher against the senior backend JD, already labeled weak and already scored weak (28.6). The Kaggle JDs ask for 0–1 years, and their labels ignore seniority. So no metric can move, and there's no evidence a penalty helps. Revisit with the human labels in `ml/eval/labeling/`.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.
