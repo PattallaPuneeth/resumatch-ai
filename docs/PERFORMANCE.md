@@ -126,10 +126,26 @@ the 8.3-minute window (about 0.8/s), and 105 in the 2.5-minute 4/s step (about 0
 scored at least 382 matches in the same window, so its throughput was at least about 0.76/s. The
 fixes removed the stalls (median latency, cold starts, stuck jobs), not the capacity limit.
 
-Leading hypothesis (not yet tested): CPU oversubscription. Up to four inference threads can now run
-at once (embed and match queues, concurrency 2 each), and each lets PyTorch use all 4 vCPUs. The old
-worker ran inference one call at a time. The next experiment is to cap PyTorch intra-op threads
-(`torch.set_num_threads` / `OMP_NUM_THREADS`), or serialize inference like parsing, and re-run `match`.
+**Thread-cap experiment: oversubscription isn't the limit (rejected).** Hypothesis: concurrent
+inference threads each using PyTorch's thread pool were fighting over 4 vCPUs. The ML analysis session
+tested it with `TORCH_NUM_THREADS` (commit `5ef5fb9`). Setup: same image, one sitting, smoke warm-up
+first, nothing else on the stack, throughput counted from "Successfully persisted Match" lines in the
+4/s step. PyTorch's default on this VM is 2 threads.
+
+| | Default (2 threads) | 1 thread | 1 thread + OCR worker |
+|---|---|---|---|
+| Matches/s in the 4/s step | 0.69 | 0.71 | 0.73 |
+| Matches persisted, whole run | 507 | 438 | 449 |
+| Iterations / timeouts | 631 / 172 | 586 / 209 | 590 / 208 |
+| `match` p50 / p95 | 6.6 s / 60.1 s | 9.2 s / 74.4 s | 10.3 s / 73.5 s |
+| `mixed` match p50 / p95 | 26.1 s / 41.3 s | 31.8 s / 47.8 s | 11.3 s / 78.1 s |
+| Idle smoke match | 0.5 s | 0.5 s | 0.5 s |
+
+Raw files: `loadtest/results/20261028T06*_thr_*` (control run: `*_thr_default_clean`); write-up in
+`docs/eval/ML_FAILURE_ANALYSIS.md` §8.7. Capping threads moved throughput by under 0.05 matches/s
+and made latency worse, so `TORCH_NUM_THREADS` stays at PyTorch's default. **Matching is simply
+CPU-bound at about 0.7 matches/s per worker on 4 vCPUs.** More throughput means more CPU or more
+worker replicas, not tuning. That's a deployment sizing input.
 
 0 failed HTTP requests and 0 real provider calls in every run.
 
