@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js';
+import { recordUsageConsume } from '../telemetry.js';
 
 export type MeterName = 'analyses' | 'job_suggestions' | 'resume_storage_bytes';
 
@@ -215,6 +216,16 @@ export class UsageService {
     userId: string,
     meter: MeterName,
     amount: number = 1
+  ): Promise<ConsumeResult> {
+    const result = await this.consumeUnrecorded(userId, meter, amount);
+    recordUsageConsume(meter, result.allowed, result.used, amount, result.limit);
+    return result;
+  }
+
+  private async consumeUnrecorded(
+    userId: string,
+    meter: MeterName,
+    amount: number
   ): Promise<ConsumeResult> {
     if (!Number.isInteger(amount) || amount <= 0 || amount > 1_000_000_000_000) {
       throw new Error(`Invalid consumption amount: ${amount}`);

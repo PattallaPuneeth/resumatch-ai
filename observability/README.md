@@ -15,6 +15,7 @@ Grafana is at http://localhost:3001 (local only; admin / admin on first login), 
 | Service RED (rate, error ratio, p50/p95/p99 per route) | `dashboards/service-red.json` | Tempo span metrics from backend and ml-api server spans |
 | ML pipeline stages (worker jobs/s, p95 per stage, failures) | `dashboards/ml-pipeline.json` | Tempo span metrics from `ml.job`, `ml.retrieve.bm25`, `ml.retrieve.vector`, `ml.rerank` |
 | LLM usage and cost (tokens/s, USD/h, calls by operation, p95 tokens per call with trace exemplars) | `dashboards/llm-usage.json` | OTel metrics from the ML API's LLM gateway: `gen_ai.client.token.usage`, `resumatch.llm.cost_usd`, `resumatch.llm.calls` |
+| Usage meters (metered actions by outcome, share blocked, 50/70/90/100% crossings, refunds by reason) | `dashboards/usage-meters.json` | Backend OTel metrics: `resumatch.usage.consumed`, `resumatch.usage.threshold_crossed`, `resumatch.usage.refunds`. Labels are meter, outcome, threshold and reason only, never a user id |
 
 All 7 LLM-usage panel queries were checked against a live `otel-lgtm` 0.36.0 fed by
 `ml/utils/telemetry.py` (Prometheus names: `gen_ai_client_token_usage_*`,
@@ -50,6 +51,5 @@ needs a log collector, which the otel-lgtm profile doesn't configure yet.
 
 ## Not done yet
 
-- Usage-meter threshold counters (per-user analysis quota) aren't emitted as metrics yet.
 - Overhead measurement: rerun the k6 `match` and `mixed` scenarios with tracing on and
   compare against the baselines in `docs/PERFORMANCE.md`.

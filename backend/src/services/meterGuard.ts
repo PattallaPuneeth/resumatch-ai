@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import crypto from 'crypto';
 import { usageService, type MeterName, type ConsumeResult } from './usageService.js';
 import { redisClient } from '../queues/redis.js';
+import { recordUsageRefund } from '../telemetry.js';
 
 export interface WithMeterOptions<T> {
   amount?: number;
@@ -155,6 +156,7 @@ export async function withMeter<T>(
     // Refund on downstream 5xx / timeout / network failure
     try {
       await usageService.refund(userId, meter, amount);
+      recordUsageRefund(meter, 'downstream_error');
     } catch (refundErr) {
       request.log.error({ err: refundErr, userId, meter }, 'Failed to refund meter on downstream exception');
     }
@@ -165,6 +167,7 @@ export async function withMeter<T>(
   if (options?.shouldRefund && options.shouldRefund(result)) {
     try {
       await usageService.refund(userId, meter, amount);
+      recordUsageRefund(meter, 'verification');
     } catch (refundErr) {
       request.log.error({ err: refundErr, userId, meter }, 'Failed to refund meter on shouldRefund condition');
     }

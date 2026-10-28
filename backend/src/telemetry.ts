@@ -20,9 +20,11 @@ import {
   SpanStatusCode,
   trace,
   type Attributes,
+  type Counter,
   type Span,
 } from '@opentelemetry/api';
 import type { ExportResult } from '@opentelemetry/core';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import {
@@ -33,6 +35,11 @@ import {
   type ReadableSpan,
   type SpanExporter,
 } from '@opentelemetry/sdk-trace-base';
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+  type MetricReader,
+} from '@opentelemetry/sdk-metrics';
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
@@ -51,6 +58,12 @@ const ALLOWED_ATTRIBUTE_KEYS = new Set([
 
 let enabled = false;
 let provider: NodeTracerProvider | undefined;
+let meterProvider: MeterProvider | undefined;
+let usageConsumed: Counter | undefined;
+let usageThresholds: Counter | undefined;
+let usageRefunds: Counter | undefined;
+
+const USAGE_THRESHOLDS = [50, 70, 90, 100] as const;
 const requestSpans = new WeakMap<FastifyRequest, Span>();
 
 export function isTelemetryEnabled(): boolean {
@@ -105,7 +118,11 @@ class AllowlistSpanExporter implements SpanExporter {
  * Starts tracing for this process. Uses `exporter` when given (tests pass an in-memory
  * exporter), otherwise OTLP/HTTP when OTEL_EXPORTER_OTLP_ENDPOINT is set. Returns true if on.
  */
-export function initTelemetry(serviceName: string, exporter?: SpanExporter): boolean {
+export function initTelemetry(
+  serviceName: string,
+  exporter?: SpanExporter,
+  metricReader?: MetricReader,
+): boolean {
   if (!exporter && !process.env.OTEL_EXPORTER_OTLP_ENDPOINT) return false;
   if (enabled) return true;
 
@@ -119,15 +136,69 @@ export function initTelemetry(serviceName: string, exporter?: SpanExporter): boo
     spanProcessors: [exporter ? new SimpleSpanProcessor(inner) : new BatchSpanProcessor(inner)],
   });
   provider.register();
+  // Usage metrics go to OTLP in real runs; tests pass an in-memory reader or none
+  const reader =
+    metricReader ??
+    (exporter
+      ? undefined
+      : new PeriodicExportingMetricReader({ exporter: new OTLPMetricExporter(), exportIntervalMillis: 15000 }));
+  if (reader) {
+    meterProvider = new MeterProvider({
+      resource: resourceFromAttributes({ 'service.name': serviceName }),
+      readers: [reader],
+    });
+    const meter = meterProvider.getMeter('resumatch-backend');
+    usageConsumed = meter.createCounter('resumatch.usage.consumed', {
+      description: 'Metered actions by meter and outcome (allowed or blocked)',
+    });
+    usageThresholds = meter.createCounter('resumatch.usage.threshold_crossed', {
+      description: 'Times a user crossed 50/70/90/100% of a monthly meter',
+    });
+    usageRefunds = meter.createCounter('resumatch.usage.refunds', {
+      description: 'Meter refunds by reason',
+    });
+  }
   enabled = true;
   return true;
 }
 
 export async function shutdownTelemetry(): Promise<void> {
+  if (meterProvider) {
+    await meterProvider.shutdown().catch(() => {});
+    meterProvider = undefined;
+    usageConsumed = usageThresholds = usageRefunds = undefined;
+  }
   if (!provider) return;
   await provider.shutdown().catch(() => {});
   provider = undefined;
   enabled = false;
+}
+
+/**
+ * Records one meter consume. Labels are fixed enums only (meter, outcome, threshold): never a
+ * user id. Threshold counters fire when this consume moved usage across 50/70/90/100%.
+ */
+export function recordUsageConsume(
+  meter: string,
+  allowed: boolean,
+  usedAfter: number,
+  amount: number,
+  limit: number | null,
+): void {
+  if (!usageConsumed) return;
+  usageConsumed.add(1, { meter, outcome: allowed ? 'allowed' : 'blocked' });
+  if (!allowed || !usageThresholds || limit === null || limit <= 0) return;
+  const before = usedAfter - amount;
+  for (const t of USAGE_THRESHOLDS) {
+    if (before * 100 < limit * t && usedAfter * 100 >= limit * t) {
+      usageThresholds.add(1, { meter, threshold: String(t) });
+    }
+  }
+}
+
+/** Records a refund: 'downstream_error' (5xx/timeout) or 'verification' (rejected output). */
+export function recordUsageRefund(meter: string, reason: 'downstream_error' | 'verification'): void {
+  usageRefunds?.add(1, { meter, reason });
 }
 
 /** One SERVER span per request: method, route template and status code only. */
