@@ -51,7 +51,11 @@ from ml.pipelines.llm.safety import (
     redact_pii,
 )
 from ml.pipelines.matching.lexical import search_lexical
-from ml.pipelines.matching.repository import get_match_context, persist_match_result
+from ml.pipelines.matching.repository import (
+    MatchTargetGoneError,
+    get_match_context,
+    persist_match_result,
+)
 from ml.pipelines.matching.reranker import (
     build_bounded_rerank_query,
     get_cross_encoder,
@@ -576,6 +580,15 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
             "finalScore": final_score,
         }
 
+    except MatchTargetGoneError as gone:
+        # Normal when a user deletes a resume or job with a match still queued: no retry, no trace
+        logger.warning("Skipped match scoring: %s", gone)
+        return {
+            "status": "SKIPPED",
+            "reason": "target_deleted",
+            "resumeId": resume_id,
+            "jobId": job_id,
+        }
     except Exception as e:
         logger.exception("Failed match scoring for resume %s and job %s: %s", resume_id, job_id, e)
         raise e

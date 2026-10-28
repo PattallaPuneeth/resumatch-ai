@@ -17,6 +17,10 @@ from ml.config import settings
 logger = logging.getLogger("resumatch-ml-matching-repo")
 
 
+class MatchTargetGoneError(Exception):
+    """The resume or job of a queued match was deleted before the result could be saved."""
+
+
 def get_match_context(resume_id: str, job_id: str) -> dict[str, Any] | None:
     """
     Fetches required resume and job data for match calculation.
@@ -153,6 +157,9 @@ def persist_match_result(
         )
         return match_id
 
+    except psycopg.errors.ForeignKeyViolation as e:
+        # The resume or job was deleted while this match was queued; nothing to save
+        raise MatchTargetGoneError(f"resume {resume_id} or job {job_id} no longer exists") from e
     except Exception as e:
         logger.exception(
             "Failed to persist match result for resume %s and job %s: %s", resume_id, job_id, e
