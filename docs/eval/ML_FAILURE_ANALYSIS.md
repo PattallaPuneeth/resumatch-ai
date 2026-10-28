@@ -467,6 +467,43 @@ Within-job, 6 comparisons were fixed and 5 broke (test: 1 fixed, 2 broke out of 
 
 **Next:** the remaining gap is domain and must-have requirements inside the same field (gaming, SAP, bilingual, people management). Measuring a fix needs labels on pairs picked without regard to score, so the band refit is unbiased.
 
+### 8.13 `score_details`: GPT-4o-scored pairs, checked before use
+
+**Source.** The user supplied the "Resume and Job Description Matching Dataset" (`resume-score-details`, 1,031 JSON files). Its card says GPT-4o wrote the JDs and the scores, and its license is given as "cc" in one file and "unknown" in the other. The resumes are real and include names, emails and phone numbers. The folder is gitignored, the built texts go to the gitignored `datasets_local/`, and only a manifest of ids, labels and scores is committed.
+
+**What it contains.** The 854 valid files are really **26 JDs × 199 resumes**: 651 unique pairs, each JD scored against many resumes. The JDs are synthetic, 180–340 words, mostly business development and sales, plus electrical engineering and telecom. Each file has GPT-4o's micro and macro scores (0–10) and a met / not-met flag for each minimum requirement.
+
+**GPT-4o disagrees with itself.** 166 pairs were scored more than once, and **101 of them differ by a point or more** (one pair got 7.28 and then 3.0). The builder averages repeated runs, and a requirement counts as met only if it was met in every run.
+
+**Build** (`ml/eval/build_score_details_dataset.py`):
+- the invalid and gibberish groups are skipped;
+- contact details are scrubbed, including spaced-out forms;
+- the role from the JD heading becomes a `Job Title:` line;
+- the split is by JD: 240 `test`, 411 `tune`. 98 resumes appear in both splits, with different JDs, because the JDs share most of their resumes;
+- the band rule: strong = micro ≥ 7 and all requirements met; weak = micro < 4 or fewer than half the requirements met; medium otherwise. That gives strong 44 / medium 213 / weak 394.
+
+**First trust check, before the user's audit.** Claude labeled 50 stratified pairs blind to GPT-4o's output:
+- **Band rule vs Claude's labels:** 31/50 exact, 2 opposite, kappa **0.43**.
+- **GPT-4o's raw micro score vs Claude's labels:** the score orders pairs the same way as the labels **0.872** of the time.
+
+So the raw score looks usable for ranking, and the band rule is the weaker part. These numbers become final only after the user audits the 50 labels (`labeling/score_details_trust50_DRAFT_review.xlsx`).
+
+**Current model vs GPT-4o's labels** (pipeline unchanged, clean titles):
+
+| score_details | Pairwise | Within-job | Band accuracy | Median strong / medium / weak |
+| :--- | :---: | :---: | :---: | :---: |
+| tune (411) | 0.724 | 0.676 | 0.569 | 60.4 / 58.5 / 41.9 |
+| test (240) | 0.737 | 0.736 | 0.567 | 75.1 / 58.2 / 42.9 |
+
+The rank correlation with GPT-4o's raw micro score is 0.55 overall, and 0.52 within a job on average. With the raw first-line titles, which were longer, pairwise was 0.754 and band accuracy 0.619. The clean titles are kept because they match what production gets.
+
+**How it can be used.**
+1. As eval data for a business-development and sales domain that no other set covers.
+2. The requirement flags, as a test set for must-have detection.
+3. If the audit confirms the raw score, the 411 `tune` pairs, with `real_fit_human` and `human_hard` tune, as training data for a learned score blend.
+
+It is not a gold standard: GPT-4o's labels are noisy and the JDs are synthetic.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.

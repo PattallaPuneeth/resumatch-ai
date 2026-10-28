@@ -103,3 +103,6 @@ loadtest/local/
 
 # Third-party eval texts with unclear licenses (rebuilt by ml/eval/build_real_fit_dataset.py)
 ml/eval/datasets_local/
+
+# Third-party resume dataset with real PII (see ml/eval/datasets/README.md); never commit
+/resume-score-details/
