@@ -46,11 +46,11 @@ export const createJobBodySchema = z.object({
 });
 
 export const matchJobBodySchema = z.object({
-  resumeId: z.string().uuid('Invalid resume UUID'),
+  resumeId: z.guid('Invalid resume UUID'),
 });
 
 export const analysisJobBodySchema = z.object({
-  resumeId: z.string().uuid('Invalid resume UUID'),
+  resumeId: z.guid('Invalid resume UUID'),
 });
 
 /**
@@ -94,7 +94,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(422).send({
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: parseResult.error.errors.map((e) => e.message).join('; '),
+          message: parseResult.error.issues.map((e) => e.message).join('; '),
         });
       }
 
@@ -244,7 +244,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(422).send({
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: bodyParse.error.errors.map((e) => e.message).join('; '),
+          message: bodyParse.error.issues.map((e) => e.message).join('; '),
         });
       }
 
@@ -424,7 +424,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(422).send({
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: bodyParse.error.errors.map((e) => e.message).join('; '),
+          message: bodyParse.error.issues.map((e) => e.message).join('; '),
         });
       }
 
@@ -627,8 +627,8 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
           status: 422,
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: parseResult.error.errors.map((e) => e.message).join('; '),
-          detail: parseResult.error.errors.map((e) => e.message).join('; '),
+          message: parseResult.error.issues.map((e) => e.message).join('; '),
+          detail: parseResult.error.issues.map((e) => e.message).join('; '),
         });
       }
 
@@ -667,7 +667,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   // Phase 8C: GET /v1/resumes/:id/matches (Owner-scoped list of matches for resume)
   // -------------------------------------------------------------------------
   const listResumeMatchesParamsSchema = z.object({
-    id: z.string().uuid('Invalid resume UUID'),
+    id: z.guid('Invalid resume UUID'),
   });
 
   app.get<{ Params: { id: string } }>(

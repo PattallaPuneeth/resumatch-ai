@@ -58,8 +58,7 @@
     "ioredis": "^5.4.1",
     "minio": "^8.0.2",
     "pino": "^9.5.0",
-    "zod": "^3.23.8",
-    "zod-to-json-schema": "^3.25.2"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.8.7",

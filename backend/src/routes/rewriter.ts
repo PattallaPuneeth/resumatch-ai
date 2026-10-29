@@ -7,13 +7,13 @@ import { withMeter } from '../services/meterGuard.js';
 import { usageService } from '../services/usageService.js';
 
 export const bulletRewriteBodySchema = z.object({
-  resumeId: z.string().uuid('Invalid resume UUID'),
+  resumeId: z.guid('Invalid resume UUID'),
   originalBullet: z
     .string()
     .min(1, 'originalBullet must not be empty')
     .max(500, 'originalBullet must not exceed 500 characters'),
   targetSkill: z.string().max(100).optional(),
-  jobId: z.string().uuid('Invalid job UUID').optional(),
+  jobId: z.guid('Invalid job UUID').optional(),
 });
 
 /**
@@ -49,8 +49,8 @@ export const rewriterRoutes: FastifyPluginAsync = async (app) => {
           status: 422,
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: bodyParse.error.errors.map((e) => e.message).join('; '),
-          detail: bodyParse.error.errors.map((e) => e.message).join('; '),
+          message: bodyParse.error.issues.map((e) => e.message).join('; '),
+          detail: bodyParse.error.issues.map((e) => e.message).join('; '),
         });
       }
 

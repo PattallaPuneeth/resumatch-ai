@@ -35,7 +35,7 @@ export async function clearSuggestionsCache(): Promise<void> {
 }
 
 export const suggestionsParamsSchema = z.object({
-  id: z.string().uuid('Invalid resume UUID'),
+  id: z.guid('Invalid resume UUID'),
 });
 
 interface MlScoreResponseItem {
@@ -86,8 +86,8 @@ export const suggestionsRoutes: FastifyPluginAsync = async (app) => {
           status: 422,
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: paramsParse.error.errors.map((e) => e.message).join('; '),
-          detail: paramsParse.error.errors.map((e) => e.message).join('; '),
+          message: paramsParse.error.issues.map((e) => e.message).join('; '),
+          detail: paramsParse.error.issues.map((e) => e.message).join('; '),
         });
       }
 
@@ -102,8 +102,8 @@ export const suggestionsRoutes: FastifyPluginAsync = async (app) => {
           status: 422,
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: bodyParse.error.errors.map((e) => e.message).join('; '),
-          detail: bodyParse.error.errors.map((e) => e.message).join('; '),
+          message: bodyParse.error.issues.map((e) => e.message).join('; '),
+          detail: bodyParse.error.issues.map((e) => e.message).join('; '),
         });
       }
 

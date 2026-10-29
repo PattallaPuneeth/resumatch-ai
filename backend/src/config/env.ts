@@ -62,9 +62,7 @@ export const EnvSchema = z.object({
 
   // Auth (Phase 5)
   JWT_SECRET: z
-    .string({
-      required_error: 'JWT_SECRET is required and must be at least 32 characters',
-    })
+    .string({ error: (issue) => (issue.input === undefined ? 'JWT_SECRET is required and must be at least 32 characters' : undefined) })
     .min(32, 'JWT_SECRET must be at least 32 characters')
     .refine(
       (val) => {
@@ -101,9 +99,7 @@ export const EnvSchema = z.object({
   // Python ML Service
   ML_SERVICE_URL: z.string().url().default('http://localhost:8000'),
   INTERNAL_API_TOKEN: z
-    .string({
-      required_error: 'INTERNAL_API_TOKEN is required and must be at least 32 characters',
-    })
+    .string({ error: (issue) => (issue.input === undefined ? 'INTERNAL_API_TOKEN is required and must be at least 32 characters' : undefined) })
     .min(32, 'INTERNAL_API_TOKEN must be at least 32 characters')
     .refine((val) => !val.toLowerCase().includes('change_me'), {
       message: 'INTERNAL_API_TOKEN cannot contain CHANGE_ME placeholder',

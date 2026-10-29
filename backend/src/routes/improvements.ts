@@ -6,7 +6,7 @@ import { withMeter } from '../services/meterGuard.js';
 import { usageService } from '../services/usageService.js';
 
 export const improvementsParamsSchema = z.object({
-  resumeId: z.string().uuid('Invalid resume UUID'),
+  resumeId: z.guid('Invalid resume UUID'),
 });
 
 /**
@@ -38,8 +38,8 @@ export const improvementsRoutes: FastifyPluginAsync = async (app) => {
           status: 422,
           statusCode: 422,
           error: 'Unprocessable Entity',
-          message: paramsParse.error.errors.map((e) => e.message).join('; '),
-          detail: paramsParse.error.errors.map((e) => e.message).join('; '),
+          message: paramsParse.error.issues.map((e) => e.message).join('; '),
+          detail: paramsParse.error.issues.map((e) => e.message).join('; '),
         });
       }
 

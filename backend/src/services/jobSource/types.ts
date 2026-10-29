@@ -32,7 +32,7 @@ export interface JobSource {
 }
 
 export const jobSuggestionsBodySchema = z.object({
-  jobId: z.string().uuid('Invalid job UUID').optional(),
+  jobId: z.guid('Invalid job UUID').optional(),
   location: z.string().max(100, 'Location too long').optional(),
   seniority: z.string().max(50, 'Seniority too long').optional(),
   limit: z.coerce.number().int().min(1).max(10).default(10).optional(),

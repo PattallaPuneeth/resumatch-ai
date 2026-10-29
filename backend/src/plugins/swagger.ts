@@ -3,12 +3,12 @@ import fp from 'fastify-plugin';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export function asOpenApiSchema(zodSchema: z.ZodTypeAny) {
-  const jsonSchema = zodToJsonSchema(zodSchema, {
-    target: 'openApi3',
-    $refStrategy: 'none',
+  const jsonSchema = z.toJSONSchema(zodSchema, {
+    target: 'openapi-3.0',
+    unrepresentable: 'any',
+    io: 'input',
   }) as any;
   const { $schema, ...rest } = jsonSchema;
   return rest;

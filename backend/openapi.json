@@ -112,8 +112,7 @@
                 "required": [
                   "username",
                   "password"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -150,8 +149,7 @@
                 "required": [
                   "username",
                   "password"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -174,20 +172,12 @@
           "content": {
             "application/json": {
               "schema": {
-                "anyOf": [
-                  {
-                    "not": {}
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "refreshToken": {
-                        "type": "string"
-                      }
-                    },
-                    "additionalProperties": false
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string"
                   }
-                ]
+                }
               }
             }
           }
@@ -284,8 +274,7 @@
                   "username",
                   "recoveryCode",
                   "newPassword"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -334,8 +323,7 @@
                 },
                 "required": [
                   "password"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -380,8 +368,8 @@
                   },
                   "sizeBytes": {
                     "type": "integer",
-                    "exclusiveMinimum": true,
                     "minimum": 0,
+                    "exclusiveMinimum": true,
                     "maximum": 5242880
                   }
                 },
@@ -389,8 +377,7 @@
                   "filename",
                   "mimeType",
                   "sizeBytes"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -593,22 +580,22 @@
                     "maxLength": 50
                   },
                   "requiredSkills": {
+                    "maxItems": 50,
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 80
-                    },
-                    "maxItems": 50
+                    }
                   },
                   "preferredSkills": {
+                    "maxItems": 50,
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 80
-                    },
-                    "maxItems": 50
+                    }
                   },
                   "experienceLevel": {
                     "type": "string",
@@ -619,8 +606,7 @@
                   "title",
                   "company",
                   "rawDescription"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -647,10 +633,10 @@
         "parameters": [
           {
             "schema": {
+              "default": 20,
               "type": "integer",
               "minimum": 1,
-              "maximum": 50,
-              "default": 20
+              "maximum": 50
             },
             "in": "query",
             "name": "limit",
@@ -658,9 +644,10 @@
           },
           {
             "schema": {
+              "default": 0,
               "type": "integer",
               "minimum": 0,
-              "default": 0
+              "maximum": 9007199254740991
             },
             "in": "query",
             "name": "offset",
@@ -729,13 +716,13 @@
                 "properties": {
                   "resumeId": {
                     "type": "string",
-                    "format": "uuid"
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
                   }
                 },
                 "required": [
                   "resumeId"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -822,13 +809,13 @@
                 "properties": {
                   "resumeId": {
                     "type": "string",
-                    "format": "uuid"
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
                   }
                 },
                 "required": [
                   "resumeId"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -947,7 +934,8 @@
                 "properties": {
                   "resumeId": {
                     "type": "string",
-                    "format": "uuid"
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
                   },
                   "originalBullet": {
                     "type": "string",
@@ -960,14 +948,14 @@
                   },
                   "jobId": {
                     "type": "string",
-                    "format": "uuid"
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
                   }
                 },
                 "required": [
                   "resumeId",
                   "originalBullet"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
