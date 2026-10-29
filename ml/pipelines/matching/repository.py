@@ -21,6 +21,23 @@ class MatchTargetGoneError(Exception):
     """The resume or job of a queued match was deleted before the result could be saved."""
 
 
+class ResumeNotEmbeddedError(Exception):
+    """The resume is parsed but its chunks are not embedded yet; the job should be retried."""
+
+
+def count_embedded_resume_chunks(resume_id: str) -> int:
+    """Chunks of this resume that already have a vector, i.e. are searchable for matching."""
+    with psycopg.connect(settings.database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT COUNT(*) FROM resume_chunks '
+                'WHERE "resumeId" = %s AND embedding IS NOT NULL;',
+                (resume_id,),
+            )
+            row = cur.fetchone()
+            return int(row[0]) if row else 0
+
+
 def get_match_context(resume_id: str, job_id: str) -> dict[str, Any] | None:
     """
     Fetches required resume and job data for match calculation.

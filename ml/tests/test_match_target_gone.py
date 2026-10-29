@@ -32,6 +32,8 @@ async def test_worker_skips_quietly_when_target_is_gone(caplog: pytest.LogCaptur
            "job_description": "Python and PostgreSQL", "resume_raw_text": "Python developer"}
 
     with patch("ml.worker.get_match_context", return_value=ctx), patch(
+        "ml.worker.count_embedded_resume_chunks", return_value=1
+    ), patch(
         "ml.worker.search_lexical", side_effect=MatchTargetGoneError("resume r-gone no longer exists")
     ):
         with caplog.at_level(logging.WARNING):
@@ -39,3 +41,39 @@ async def test_worker_skips_quietly_when_target_is_gone(caplog: pytest.LogCaptur
 
     assert result["status"] == "SKIPPED" and result["reason"] == "target_deleted"
     assert not any(r.levelno >= logging.ERROR for r in caplog.records)
+
+
+_CTX = {"resume_status": "PARSED", "job_title": "Backend Engineer",
+        "job_description": "Python and PostgreSQL", "resume_raw_text": "Python developer"}
+
+
+@pytest.mark.asyncio
+async def test_match_waits_for_resume_embeddings_before_scoring() -> None:
+    """Regression: a match right after upload scored before the chunks existed (all zeros)."""
+    job = MagicMock()
+    job.id, job.data = "job-wait", {"jobId": "j-1", "resumeId": "r-1"}
+    counts = iter([0, 0, 1])  # embeddings appear on the third check
+    with patch("ml.worker.get_match_context", return_value=_CTX), patch(
+        "ml.worker.count_embedded_resume_chunks", side_effect=lambda _r: next(counts)
+    ), patch("ml.worker.EMBEDDING_POLL_SECONDS", 0.01), patch(
+        "ml.worker.search_lexical", side_effect=MatchTargetGoneError("stop after the wait")
+    ) as lexical:
+        result = await process_match_scoring(job)
+    lexical.assert_called_once()  # retrieval ran only after the chunks existed
+    assert result["status"] == "SKIPPED"
+
+
+@pytest.mark.asyncio
+async def test_match_fails_for_retry_when_embeddings_never_arrive() -> None:
+    from ml.pipelines.matching.repository import ResumeNotEmbeddedError
+
+    job = MagicMock()
+    job.id, job.data = "job-noembed", {"jobId": "j-1", "resumeId": "r-1"}
+    with patch("ml.worker.get_match_context", return_value=_CTX), patch(
+        "ml.worker.count_embedded_resume_chunks", return_value=0
+    ), patch("ml.worker.EMBEDDING_WAIT_SECONDS", 0.05), patch(
+        "ml.worker.EMBEDDING_POLL_SECONDS", 0.01
+    ), patch("ml.worker.search_lexical") as lexical:
+        with pytest.raises(ResumeNotEmbeddedError):
+            await process_match_scoring(job)
+    lexical.assert_not_called()

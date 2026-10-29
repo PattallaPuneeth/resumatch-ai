@@ -53,6 +53,8 @@ from ml.pipelines.llm.safety import (
 from ml.pipelines.matching.lexical import search_lexical
 from ml.pipelines.matching.repository import (
     MatchTargetGoneError,
+    ResumeNotEmbeddedError,
+    count_embedded_resume_chunks,
     get_match_context,
     persist_match_result,
 )
@@ -74,6 +76,10 @@ from ml.pipelines.matching.skill_gap import (
 from ml.storage.s3 import download_file
 from ml.utils.logging_setup import configure_logging
 from ml.utils.telemetry import init_telemetry, queue_carrier, stage_span
+
+# How long a match waits for the resume's embedding job (see _process_match_scoring)
+EMBEDDING_WAIT_SECONDS = 30.0
+EMBEDDING_POLL_SECONDS = 0.5
 
 configure_logging("resumatch-ml-worker", level="info")
 logger = logging.getLogger("resumatch-ml-worker")
@@ -483,6 +489,22 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
     job_req_skills = resolve_required_skills(stored_req, job_title, job_desc)
     skills_text = " ".join(job_req_skills)
     query_text = f"{job_title}\n{skills_text}\n{job_desc}".strip()
+
+    # A resume is PARSED before its separate embedding job has stored any chunks. A match
+    # enqueued right after upload would otherwise retrieve nothing and score only on skills
+    # (every component 0). Wait for the chunks; if they never come, fail so BullMQ retries.
+    # A resume with no text never gets chunks, so it is scored as before.
+    if resume_raw_text.strip():
+        waited = 0.0
+        while await asyncio.to_thread(count_embedded_resume_chunks, resume_id) == 0:
+            if waited >= EMBEDDING_WAIT_SECONDS:
+                raise ResumeNotEmbeddedError(
+                    f"resume {resume_id} has no embedded chunks after {waited:.0f}s"
+                )
+            await asyncio.sleep(EMBEDDING_POLL_SECONDS)
+            waited += EMBEDDING_POLL_SECONDS
+        if waited:
+            logger.info("Resume %s embeddings ready after %.1fs; scoring", resume_id, waited)
 
     try:
         # 1. Sparse Lexical Search (BM25-style with GIN index)

@@ -54,6 +54,12 @@ test('upload, live status, match: the verdict agrees with the score and history 
   const expected = score >= 75 ? 'Strong Match' : score >= 45 ? 'Moderate Match' : 'Low Match';
   await expect(verdict).toContainText(expected);
 
+  // Regression: matching right after upload ran before the resume was embedded, so every
+  // component was 0 and only skill coverage counted. The reranker score must be real.
+  const fit = await page.getByTestId('score-bar-cross-encoder').innerText();
+  const fitValue = Number(fit.match(/\b\d+(\.\d+)?\b(?![^(]*\))/)?.[0] ?? '0');
+  expect(fitValue, `requirement-fit score in: ${fit}`).toBeGreaterThan(0);
+
   // 4. The worker's analysis items are shown, not blank (contract between ML and frontend)
   const strength = page.getByTestId('strength-item-0');
   if (await strength.count()) expect((await strength.innerText()).trim().length).toBeGreaterThan(3);
