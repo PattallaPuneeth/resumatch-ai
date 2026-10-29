@@ -166,6 +166,31 @@ describe('BulletEditor Component', () => {
     expect(screen.getByRole('button', { name: /Retry/i })).toBeDefined();
   });
 
+  it('selects the first bullet once bullets load after the first render', () => {
+    const { rerender } = render(<BulletEditor resumeId={resumeId} bullets={[]} />);
+    expect(screen.getByRole('button', { name: /Rewrite Bullet/i }).hasAttribute('disabled')).toBe(true);
+
+    rerender(<BulletEditor resumeId={resumeId} bullets={sampleBullets} />);
+    expect(screen.getByRole('button', { name: /Rewrite Bullet/i }).hasAttribute('disabled')).toBe(false);
+  });
+
+  it('reports the chosen rewrite so it can go into the exported resume', async () => {
+    const rewritten = 'Architected microservices serving 50k requests per second.';
+    vi.mocked(apiClient.rewriter.rewriteBullet).mockResolvedValueOnce({
+      status: 'SUCCESS',
+      originalBullet: sampleBullets[0],
+      options: [{ text: rewritten, evidenceSpans: [] }],
+    });
+    const onAccept = vi.fn();
+    render(<BulletEditor resumeId={resumeId} bullets={sampleBullets} onAccept={onAccept} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Rewrite Bullet/i }));
+    const useButton = await screen.findByRole('button', { name: /Use in exported resume/i });
+    fireEvent.click(useButton);
+
+    expect(onAccept).toHaveBeenCalledWith(sampleBullets[0], rewritten);
+  });
+
   it('renders malicious strings in evidence quotes inertly as text', async () => {
     const maliciousPayload = '<script>alert("xss")</script><img src=x onerror=alert(1)>';
     vi.mocked(apiClient.rewriter.rewriteBullet).mockResolvedValueOnce({

@@ -9,12 +9,14 @@ import { UsagePanel } from '@/components/UsagePanel';
 import { ResumeUpload } from '@/components/ResumeUpload';
 import { ResumeList } from '@/components/ResumeList';
 import { BulletEditor } from '@/components/BulletEditor';
+import { ResumeExport } from '@/components/ResumeExport';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
+  const [acceptedByResume, setAcceptedByResume] = React.useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -117,6 +119,17 @@ export default function DashboardPage() {
             bullets={resumeBullets}
             analysesMeter={usageData?.meters?.analyses}
             onUsageChange={refetchUsage}
+            acceptedRewrites={acceptedByResume[firstParsed.id] ?? {}}
+            onAccept={(original, rewritten) =>
+              setAcceptedByResume((prev) => ({
+                ...prev,
+                [firstParsed.id]: { ...(prev[firstParsed.id] ?? {}), [original]: rewritten },
+              }))
+            }
+          />
+          <ResumeExport
+            resumeId={firstParsed.id}
+            acceptedRewrites={acceptedByResume[firstParsed.id] ?? {}}
           />
         </section>
       )}

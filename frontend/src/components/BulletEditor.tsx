@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useEffect } from 'react';
 import { apiClient, RewriterResponse, ApiProblemError } from '../lib/apiClient';
 import { computeWordDiff } from '../lib/wordDiff';
 
@@ -10,6 +10,10 @@ interface BulletEditorProps {
   jobs?: Array<{ id: string; title: string; company: string }>;
   analysesMeter?: { used: number; limit: number | null };
   onUsageChange?: () => void;
+  /** Called when the user picks a rewrite to use in the exported resume */
+  onAccept?: (original: string, rewritten: string) => void;
+  /** Rewrites already chosen, keyed by the original bullet text */
+  acceptedRewrites?: Record<string, string>;
 }
 
 export function BulletEditor({
@@ -18,8 +22,15 @@ export function BulletEditor({
   jobs = [],
   analysesMeter,
   onUsageChange,
+  onAccept,
+  acceptedRewrites = {},
 }: BulletEditorProps) {
   const [selectedBullet, setSelectedBullet] = useState<string>(bullets[0] || '');
+  // The bullets arrive after the resume loads, so the first one is selected once they do
+  useEffect(() => {
+    setSelectedBullet((current) => (current && bullets.includes(current) ? current : bullets[0] || ''));
+  }, [bullets]);
+
   const [customBullet, setCustomBullet] = useState<string>('');
   const [useCustom, setUseCustom] = useState<boolean>(false);
   const [targetSkill, setTargetSkill] = useState<string>('');
@@ -325,6 +336,23 @@ export function BulletEditor({
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
                       Option {idx + 1}
                     </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                    {onAccept && (
+                      <button
+                        type="button"
+                        onClick={() => onAccept(result.originalBullet, opt.text)}
+                        aria-pressed={acceptedRewrites[result.originalBullet] === opt.text}
+                        className={`text-xs px-3.5 py-2 rounded-md font-semibold min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          acceptedRewrites[result.originalBullet] === opt.text
+                            ? 'bg-emerald-700 text-white'
+                            : 'bg-white border border-emerald-600 text-emerald-800 hover:bg-emerald-50'
+                        }`}
+                      >
+                        {acceptedRewrites[result.originalBullet] === opt.text
+                          ? 'Used in export'
+                          : 'Use in exported resume'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleCopy(opt.text, idx)}
@@ -345,6 +373,7 @@ export function BulletEditor({
                         <span>Copy Rewritten Bullet</span>
                       )}
                     </button>
+                    </div>
                   </div>
 
                   {/* Side-by-side or stacked diff view */}

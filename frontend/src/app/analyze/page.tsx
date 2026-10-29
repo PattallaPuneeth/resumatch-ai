@@ -17,6 +17,7 @@ import { ModeAResults } from '@/components/ModeAResults';
 import { ModeBResults } from '@/components/ModeBResults';
 import { JobSuggestionsList } from '@/components/JobSuggestionsList';
 import { BulletEditor } from '@/components/BulletEditor';
+import { ResumeExport } from '@/components/ResumeExport';
 import { MatchHistoryList } from '@/components/MatchHistoryList';
 import {
   RefreshCw,
@@ -33,6 +34,7 @@ function AnalyzePageContent() {
   const queryClient = useQueryClient();
 
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [acceptedByResume, setAcceptedByResume] = useState<Record<string, Record<string, string>>>({});
   const [selectedMode, setSelectedMode] = useState<'A' | 'B'>('A');
 
   // Operation States
@@ -479,6 +481,20 @@ function AnalyzePageContent() {
             jobs={jobsList}
             analysesMeter={usageData?.meters?.analyses}
             onUsageChange={refetchUsage}
+            acceptedRewrites={acceptedByResume[selectedResumeId] ?? {}}
+            onAccept={(original, rewritten) =>
+              setAcceptedByResume((prev) => ({
+                ...prev,
+                [selectedResumeId]: { ...(prev[selectedResumeId] ?? {}), [original]: rewritten },
+              }))
+            }
+          />
+        )}
+
+        {selectedResumeId && (
+          <ResumeExport
+            resumeId={selectedResumeId}
+            acceptedRewrites={acceptedByResume[selectedResumeId] ?? {}}
           />
         )}
       </div>
