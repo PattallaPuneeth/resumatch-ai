@@ -1,0 +1,41 @@
+{
+  "summary": "Strong backend match: Python and Node.js services, PostgreSQL tuning and Docker are all evidenced.",
+  "strengths": [
+    {
+      "point": "Builds production REST APIs",
+      "requirement": "REST API design",
+      "evidenceQuote": "Built REST APIs in Python (FastAPI) and Node.js (Express)",
+      "startChar": 120,
+      "endChar": 178
+    }
+  ],
+  "gaps": [
+    {
+      "requirement": "Kafka or RabbitMQ",
+      "importance": "nice",
+      "explanation": "No message-queue work is mentioned.",
+      "suggestedFix": "Add a bullet about any queue or event-streaming work."
+    }
+  ],
+  "prioritizedImprovements": [
+    {
+      "action": "Quantify the PostgreSQL tuning work.",
+      "reason": "The job lists query tuning as a core requirement."
+    }
+  ],
+  "matchScore": 97.12,
+  "atsScore": 70.0,
+  "verdictBand": "strong",
+  "matchedSkills": ["docker", "postgresql", "rest api"],
+  "missingSkills": [],
+  "partialSkills": ["kafka"],
+  "llmStatus": "SUCCESS",
+  "provider": "mock",
+  "model": "mock-model",
+  "promptVersion": "v1",
+  "tokensPrompt": 812,
+  "tokensCompletion": 214,
+  "latencyMs": 640,
+  "fabricatedEvidenceRate": 0.0,
+  "injectionSuspected": false
+}

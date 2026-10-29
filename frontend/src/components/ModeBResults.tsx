@@ -239,6 +239,7 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
               const action = typeof imp === 'string' ? imp : imp.action;
               const priority = typeof imp === 'string' ? idx + 1 : imp.priority;
               const evidence = typeof imp === 'string' ? null : imp.evidence;
+              const reason = typeof imp === 'string' ? null : imp.reason;
 
               return (
                 <div
@@ -254,6 +255,7 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
                       <span>{action}</span>
                     </span>
                   </div>
+                  {reason && <p className="pl-7 text-[11px] text-slate-600">Why: {reason}</p>}
                   {evidence && (
                     <blockquote className="pl-7 text-[11px] font-mono text-slate-600 italic">
                       Evidence: &ldquo;{evidence}&rdquo;
@@ -269,7 +271,12 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
                 <h4 className="text-xs font-semibold text-slate-700">Detailed Experience Gaps:</h4>
                 <ul className="list-disc list-inside text-xs text-slate-600 space-y-1">
                   {result.gaps.map((gap, gIdx) => (
-                    <li key={gIdx}>{typeof gap === 'string' ? gap : gap.gap}</li>
+                    <li key={gIdx} data-testid={`gap-item-${gIdx}`}>
+                      {typeof gap === 'string' ? gap : gap.gap}
+                      {typeof gap !== 'string' && gap.recommendation && (
+                        <span className="text-slate-500"> ({gap.recommendation})</span>
+                      )}
+                    </li>
                   ))}
                 </ul>
               </div>

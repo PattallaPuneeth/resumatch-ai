@@ -54,7 +54,13 @@ test('upload, live status, match: the verdict agrees with the score and history 
   const expected = score >= 75 ? 'Strong Match' : score >= 45 ? 'Moderate Match' : 'Low Match';
   await expect(verdict).toContainText(expected);
 
-  // 4. Match history updates without a reload
+  // 4. The worker's analysis items are shown, not blank (contract between ML and frontend)
+  const strength = page.getByTestId('strength-item-0');
+  if (await strength.count()) expect((await strength.innerText()).trim().length).toBeGreaterThan(3);
+  const improvement = page.getByTestId('improvement-item-0');
+  if (await improvement.count()) await expect(improvement).toContainText(/#\d/);
+
+  // 5. Match history updates without a reload
   const history = page.getByRole('region', { name: /Target Job Matches/ });
   await expect(history).toContainText('Target Job Matches (1)');
   await expect(history).toContainText('E2E Payments');

@@ -344,6 +344,8 @@ export interface AnalysisImprovement {
   priority: number;
   action: string;
   evidence?: string;
+  /** Why this step matters (the worker's `reason`) */
+  reason?: string;
 }
 
 export interface StructuredAnalysisData {
@@ -368,11 +370,44 @@ export function normalizeAnalysisData(raw: unknown): StructuredAnalysisData {
   const r = (raw ?? {}) as Record<string, unknown>;
   const pick = <T,>(camel: string, snake: string, fallback: T): T =>
     (r[camel] ?? r[snake] ?? fallback) as T;
+  // Item shapes as the ML worker writes them (see contracts/analysis-result.json); objects that
+  // already use the UI's field names pass through unchanged
+  type Item = Record<string, unknown> | string;
+  const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
+  const strengths = pick<Item[]>('strengths', 'strengths', []).map((s) =>
+    typeof s === 'string'
+      ? s
+      : {
+          claim: str(s.claim) ?? str(s.point) ?? '',
+          evidence: str(s.evidence) ?? str(s.evidenceQuote) ?? str(s.evidence_quote) ?? '',
+        }
+  );
+  const gaps = pick<Item[]>('gaps', 'gaps', []).map((g) =>
+    typeof g === 'string'
+      ? g
+      : {
+          gap: str(g.gap) ?? str(g.requirement) ?? '',
+          severity: str(g.severity) ?? str(g.importance),
+          recommendation:
+            str(g.recommendation) ?? str(g.suggestedFix) ?? str(g.suggested_fix) ?? str(g.explanation),
+        }
+  );
+  const improvements = pick<Item[]>('prioritizedImprovements', 'prioritized_improvements', []).map(
+    (imp, idx) =>
+      typeof imp === 'string'
+        ? imp
+        : {
+            priority: typeof imp.priority === 'number' ? imp.priority : idx + 1,
+            action: str(imp.action) ?? '',
+            evidence: str(imp.evidence),
+            reason: str(imp.reason),
+          }
+  );
   return {
     summary: pick('summary', 'summary', ''),
-    strengths: pick('strengths', 'strengths', []),
-    gaps: pick('gaps', 'gaps', []),
-    prioritized_improvements: pick('prioritizedImprovements', 'prioritized_improvements', []),
+    strengths,
+    gaps,
+    prioritized_improvements: improvements,
     match_score: pick('matchScore', 'match_score', undefined as unknown as number),
     ats_score: pick('atsScore', 'ats_score', null),
     verdict_band: pick('verdictBand', 'verdict_band', undefined as unknown as 'medium'),
