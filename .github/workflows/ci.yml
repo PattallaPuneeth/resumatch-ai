@@ -104,6 +104,8 @@ jobs:
           NODE_ENV: test
           JWT_SECRET: test-fake-jwt-secret-for-vitest-runs-only-32chars
           INTERNAL_API_TOKEN: test-fake-internal-api-token-vitest-32chars
+          # Never connected: exporting the spec only builds the routes
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/resumatch_test
         # Re-exports openapi.json from the routes and fails if it differs from the committed file
         run: npm run openapi:check
 

@@ -8,6 +8,26 @@ import { withMeter } from '../services/meterGuard.js';
 import { usageService } from '../services/usageService.js';
 import { withTraceContext } from '../telemetry.js';
 
+const PENDING_STATES = new Set(['waiting', 'active', 'delayed', 'prioritized', 'waiting-children']);
+
+/**
+ * Whether the queued job that will produce a result is still waiting or running. Lets the
+ * result routes answer 202 "pending" while a client polls, instead of a 404 that reads like an
+ * error; a result that was never requested (or whose job failed) still gets 404. A queue that
+ * cannot be asked counts as not pending.
+ */
+async function isQueuedOrRunning(
+  queue: { getJob: (id: string) => Promise<{ getState: () => Promise<string> } | undefined> },
+  queueJobId: string
+): Promise<boolean> {
+  try {
+    const queued = await queue.getJob(queueJobId);
+    return Boolean(queued && PENDING_STATES.has(await queued.getState()));
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Validation Schemas
 // ---------------------------------------------------------------------------
@@ -343,6 +363,9 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
       });
 
       if (!match) {
+        if (await isQueuedOrRunning(matchScoringQueue, `match-${jobId}-${resumeId}`)) {
+          return reply.status(202).send({ status: 'PENDING' });
+        }
         return reply.status(404).send({
           statusCode: 404,
           error: 'Not Found',
@@ -541,6 +564,9 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
       });
 
       if (!analysis) {
+        if (await isQueuedOrRunning(analysisQueue, `analysis-${jobId}-${resumeId}`)) {
+          return reply.status(202).send({ status: 'PENDING' });
+        }
         return reply.status(404).send({
           statusCode: 404,
           error: 'Not Found',
@@ -793,5 +819,6 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
 
   app.all('/jobs', stub501);
   app.all('/jobs/*', stub501);
-  app.delete('/v1/jobs/:id', stub501);
+  // Not implemented yet (501), so kept out of the API docs
+  app.delete('/v1/jobs/:id', { schema: { hide: true } }, stub501);
 };

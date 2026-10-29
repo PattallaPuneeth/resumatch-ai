@@ -54,6 +54,7 @@ vi.mock('../queues/bullmq.js', async (importOriginal) => {
     },
     matchScoringQueue: {
       add: vi.fn().mockResolvedValue({ id: 'mock-match-job-id' }),
+      getJob: vi.fn().mockResolvedValue(undefined),
     },
   };
 });
@@ -499,6 +500,44 @@ describe('Phase 3B: Job & Matching Routes', () => {
 
       expect(res.statusCode).toBe(404);
       expect(JSON.parse(res.payload).message).toBe('Match result not found');
+    });
+
+    it('returns 202 PENDING while the scoring job is still queued or running', async () => {
+      const token = await getAuthToken(app, 'user-A');
+      mockJobFindUnique.mockResolvedValueOnce({ id: validJobId, userId: 'user-A' } as any);
+      mockResumeFindUnique.mockResolvedValueOnce({ id: validResumeId, userId: 'user-A' } as any);
+      mockMatchFindUnique.mockResolvedValueOnce(null);
+      vi.mocked(matchScoringQueue.getJob).mockResolvedValueOnce({
+        getState: async () => 'active',
+      } as any);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/jobs/${validJobId}/matches/${validResumeId}`,
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(202);
+      expect(JSON.parse(res.payload)).toEqual({ status: 'PENDING' });
+      expect(matchScoringQueue.getJob).toHaveBeenCalledWith(`match-${validJobId}-${validResumeId}`);
+    });
+
+    it('still returns 404 when the scoring job failed instead of finishing', async () => {
+      const token = await getAuthToken(app, 'user-A');
+      mockJobFindUnique.mockResolvedValueOnce({ id: validJobId, userId: 'user-A' } as any);
+      mockResumeFindUnique.mockResolvedValueOnce({ id: validResumeId, userId: 'user-A' } as any);
+      mockMatchFindUnique.mockResolvedValueOnce(null);
+      vi.mocked(matchScoringQueue.getJob).mockResolvedValueOnce({
+        getState: async () => 'failed',
+      } as any);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/jobs/${validJobId}/matches/${validResumeId}`,
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode).toBe(404);
     });
 
     it('returns 200 with match record, scores, and details', async () => {

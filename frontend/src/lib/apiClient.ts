@@ -412,6 +412,18 @@ export function normalizeAnalysisData(raw: unknown): StructuredAnalysisData {
   };
 }
 
+/** What the result routes return while the job that produces the result is still running */
+export interface PendingResult {
+  status: 'PENDING';
+}
+
+function isPending(r: unknown): r is PendingResult {
+  return (
+    typeof r === 'object' && r !== null && (r as { status?: unknown }).status === 'PENDING' &&
+    !('id' in r)
+  );
+}
+
 export interface AnalysisResult {
   id: string;
   resumeId: string;
@@ -867,8 +879,11 @@ export const apiClient = {
         body: JSON.stringify({ resumeId }),
       }),
 
+    // 202 { status: 'PENDING' } while the scoring job is queued or running -> null (keep polling)
     getMatch: (jobId: string, resumeId: string) =>
-      apiClientRequest<MatchResult>(`/v1/jobs/${jobId}/matches/${resumeId}`),
+      apiClientRequest<MatchResult | PendingResult>(`/v1/jobs/${jobId}/matches/${resumeId}`).then(
+        (r) => (isPending(r) ? null : r)
+      ),
 
     createAnalysis: (jobId: string, resumeId: string) =>
       apiClientRequest<QueuedJobResponse>(`/v1/jobs/${jobId}/analysis`, {
@@ -877,8 +892,9 @@ export const apiClient = {
       }),
 
     getAnalysis: (jobId: string, resumeId: string) =>
-      apiClientRequest<AnalysisResult>(`/v1/jobs/${jobId}/analysis/${resumeId}`).then(
-        (analysis) => ({ ...analysis, result: normalizeAnalysisData(analysis.result) })
+      apiClientRequest<AnalysisResult | PendingResult>(`/v1/jobs/${jobId}/analysis/${resumeId}`).then(
+        (analysis) =>
+          isPending(analysis) ? null : { ...analysis, result: normalizeAnalysisData(analysis.result) }
       ),
   },
 

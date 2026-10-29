@@ -19,6 +19,21 @@ const swaggerPlugin = fp(async (app: FastifyInstance): Promise<void> => {
   app.setValidatorCompiler(() => () => true);
 
   await app.register(fastifySwagger, {
+    transform: ({ schema, url, route }) => {
+      // Unversioned paths (/resumes, /jobs/*, /analyses/*) are legacy stubs that only answer
+      // 501/410; they would list every HTTP method in the docs, so they are left out
+      if (!url.startsWith('/v1/') && url !== '/health') {
+        return { schema: { ...(schema ?? {}), hide: true }, url };
+      }
+      // Every route behind app.authenticate needs a session; most routes do not repeat
+      // `security` themselves, so it is added here and the docs match the code
+      const authenticate = (app as unknown as { authenticate?: unknown }).authenticate;
+      const guarded = [route.preHandler].flat().includes(authenticate as never);
+      if (guarded && !(schema as { security?: unknown } | undefined)?.security) {
+        return { schema: { ...(schema ?? {}), security: [{ cookieAuth: [] }, { bearerAuth: [] }] }, url };
+      }
+      return { schema, url };
+    },
     openapi: {
       openapi: '3.0.3',
       info: {
