@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Usage: scripts/ci-local.sh [--backend-only]
+BACKEND_ONLY=0
+[[ "${1:-}" == "--backend-only" ]] && BACKEND_ONLY=1
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
@@ -51,6 +55,10 @@ echo "==> [CI-Local] Running prisma migrate deploy on clean CI database..."
 
 echo "==> [CI-Local] Running Backend Vitest Suite against isolated CI ports..."
 (cd "$REPO_ROOT/backend" && npx vitest run)
+
+if [[ "$BACKEND_ONLY" == "1" ]]; then
+  exit 0
+fi
 
 echo "==> [CI-Local] Running ML Pytest Suite (-m 'not live')..."
 docker compose exec ml pytest -m "not live"

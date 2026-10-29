@@ -18,8 +18,8 @@ docker-down:
 	docker compose down
 
 test:
-	@echo "==> Running Backend Tests..."
-	cd backend && npm test
+	@echo "==> Running Backend Tests (with throwaway Postgres/Redis/MinIO)..."
+	bash scripts/ci-local.sh --backend-only
 	@echo "==> Running ML Tests..."
 	python -m pytest ml/tests -m "not live and not integration"
 	@echo "==> Running Frontend Tests..."
