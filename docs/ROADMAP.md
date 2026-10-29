@@ -57,8 +57,9 @@
 | 8A | Frontend foundation, auth, dashboard shell, upload & Usage panel | COMPLETE (Verified) |
 | 8B | Analyze flow, ATS score, match visualizer, suggestions UI | COMPLETE (verified) |
 | 8C | Interactive bullet editor, side-by-side diff, persistent history, final polish | COMPLETE (verified) |
-| 9 | Security audit and hardening | PLANNED |
-| 10 | Performance, observability, CI, deployment | PLANNED |
+| 9 | Security audit and hardening | COMPLETE & VERIFIED |
+| 10A | Reliability, quality gates, CI | COMPLETE & VERIFIED |
+| 10B | Load testing, OpenTelemetry, docs | COMPLETE (Render deployment deferred) |
 | 11 | Google OAuth, payments, plans | OPTIONAL (only after the core is done) |
 
 **Core path (required):** 3C, 4A, 4B, 4C, 5, 6, 7, 8, 9, 10.

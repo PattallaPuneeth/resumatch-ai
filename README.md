@@ -147,8 +147,9 @@ query strings or tokens (SEC-14, with canary tests). See [observability/README.m
 - **Throughput.** On one laptop, ingestion and matching miss the SPEC latency targets under sustained
   load (serialized OCR, CPU-bound reranking). Single requests meet them. See
   [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
-- **End-to-end tests need the running stack**, so CI runs the unit, contract and eval suites but
-  not the Playwright tests yet.
+- **End-to-end tests need the running stack.** CI runs them in the `e2e` (API smoke) and
+  `browser-e2e` (Playwright, including accessibility checks) jobs, which start the full Docker
+  Compose stack, so they are slower than the unit suites.
 - **Not deployed.** The Render deployment (Phase 10B Workstream C) is deferred, so there is no live
   demo.
 - Tracing covers HTTP and the match pipeline. LLM token and cost metrics have a dashboard, but cost
