@@ -1,4 +1,4 @@
-.PHONY: bootstrap health dev test lint migrate seed clean build-all docker-up docker-down
+.PHONY: bootstrap health dev test lint migrate seed seed-demo clean build-all docker-up docker-down
 
 # One-time setup: .env with generated secrets (LLM-off). Then `make docker-up`.
 bootstrap:
@@ -37,6 +37,9 @@ lint:
 migrate:
 	@echo "==> Running Database Migrations via Prisma..."
 	cd backend && npx prisma migrate deploy || npx prisma db push
+
+seed-demo:
+	node scripts/seed-demo.mjs
 
 seed:
 	@echo "==> Running Database Seed..."

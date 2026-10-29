@@ -158,7 +158,7 @@ query strings or tokens (SEC-14, with canary tests). See [observability/README.m
 ## Project docs
 
 [Specification](docs/SPECIFICATION.md) · [Model Card](docs/MODEL_CARD.md) · [Roadmap](docs/ROADMAP.md) · [Rules](docs/RULE.md) ·
-[CI](docs/CI.md) · [Reliability](docs/RELIABILITY.md) · [Phase 10B plan](docs/PHASE_10B_PLAN.md)
+[ADRs](docs/adr/README.md) · [CI](docs/CI.md) · [Reliability](docs/RELIABILITY.md) · [Phase 10B plan](docs/PHASE_10B_PLAN.md)
 
 ## License
 
