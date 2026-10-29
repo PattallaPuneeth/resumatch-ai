@@ -234,3 +234,54 @@ def compute_comprehensive_metrics(
         "ranking_by_job": calculate_ranking_metrics(scored_examples, score_key, "job"),
         "ranking_by_resume": calculate_ranking_metrics(scored_examples, score_key, "resume"),
     }
+
+
+def bootstrap_confidence_intervals(
+    scored_examples: list[dict[str, Any]],
+    score_key: str = "final_score",
+    strong_threshold: float = DEFAULT_STRONG_THRESHOLD,
+    weak_threshold: float = DEFAULT_WEAK_THRESHOLD,
+    n_resamples: int = 1000,
+    seed: int = 13,
+) -> dict[str, list[float]]:
+    """
+    95% percentile-bootstrap intervals for pairwise ordering and label accuracy.
+
+    Pairs are redrawn with replacement and both metrics recomputed on each resample, so the
+    interval shows how much a figure could move with a different sample of the same size.
+    On small sets (tens of pairs) the intervals are wide: a gain inside them is not evidence.
+    Kept out of compute_comprehensive_metrics because calibration and ablation call that in loops.
+    """
+    import numpy as np
+
+    if len(scored_examples) < 2:
+        return {}
+    ranks = np.array(
+        [LABEL_RANK_ORDER.get(str(ex.get("expected", "")).lower(), 0) for ex in scored_examples]
+    )
+    scores = np.array([float(ex.get(score_key, 0.0)) for ex in scored_examples])
+    predicted = np.where(
+        scores >= strong_threshold, 3, np.where(scores >= weak_threshold, 2, 1)
+    )
+    rng = np.random.default_rng(seed)
+    n = len(scored_examples)
+    pairwise: list[float] = []
+    label: list[float] = []
+    for _ in range(n_resamples):
+        idx = rng.integers(0, n, n)
+        r, s = ranks[idx], scores[idx]
+        higher = r[:, None] > r[None, :]  # each differently-labelled pair counted once
+        total = int(higher.sum())
+        if total:
+            correct = (s[:, None] > s[None, :]) + 0.5 * (s[:, None] == s[None, :])
+            pairwise.append(float(correct[higher].sum() / total))
+        label.append(float((predicted[idx] == r).mean()))
+
+    def interval(values: list[float]) -> list[float]:
+        lo, hi = np.percentile(values, [2.5, 97.5])
+        return [round(float(lo), 4), round(float(hi), 4)]
+
+    out = {"label_accuracy": interval(label)}
+    if pairwise:
+        out["pairwise_ordering_accuracy"] = interval(pairwise)
+    return out

@@ -21,7 +21,7 @@ from ml.config import settings
 from ml.eval.ablation import run_ablation_analysis
 from ml.eval.calibration import run_calibration_study
 from ml.eval.dataset import EvaluationExample, load_and_validate_dataset
-from ml.eval.metrics import compute_comprehensive_metrics
+from ml.eval.metrics import bootstrap_confidence_intervals, compute_comprehensive_metrics
 from ml.pipelines.embeddings.chunker import chunk_resume_text
 from ml.pipelines.embeddings.embedder import embed_query_text, generate_chunk_embeddings
 from ml.pipelines.intake.entities import extract_skills
@@ -320,6 +320,17 @@ def run_evaluation_suite(
 
     # Compute overall benchmark metrics
     metrics = compute_comprehensive_metrics(evaluated_pairs, score_key="final_score")
+    metrics["confidence_intervals"] = bootstrap_confidence_intervals(
+        evaluated_pairs, score_key="final_score"
+    )
+    ci = metrics["confidence_intervals"]
+
+    def _with_ci(name: str) -> str:
+        value = f"{metrics[name] * 100:.1f}%"
+        if name not in ci:
+            return value
+        lo, hi = ci[name]
+        return f"{value} (95% CI {lo * 100:.1f}–{hi * 100:.1f}%)"
     ablation_data = run_ablation_analysis(evaluated_pairs)
     calibration_data = run_calibration_study(evaluated_pairs, seed=42)
 
@@ -332,8 +343,8 @@ def run_evaluation_suite(
         "",
         "## 1. Benchmark Summary (Production Configuration)",
         "",
-        f"- **Pairwise Ordering Accuracy:** {metrics['pairwise_ordering_accuracy'] * 100:.1f}%",
-        f"- **Label Classification Accuracy:** {metrics['label_accuracy'] * 100:.1f}%",
+        f"- **Pairwise Ordering Accuracy:** {_with_ci('pairwise_ordering_accuracy')}",
+        f"- **Label Classification Accuracy:** {_with_ci('label_accuracy')}",
         f"- **Mean Score (Strong):** {metrics['mean_scores'].get('strong', 0.0):.1f}",
         f"- **Mean Score (Medium):** {metrics['mean_scores'].get('medium', 0.0):.1f}",
         f"- **Mean Score (Weak):** {metrics['mean_scores'].get('weak', 0.0):.1f}",

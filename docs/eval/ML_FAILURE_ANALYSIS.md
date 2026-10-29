@@ -590,6 +590,18 @@ Because the two failures pull in opposite directions, **no single threshold chan
 - about 15 strong-looking candidates on short JDs (failure 2);
 - about 25 at random, so that bands can later be refit on an unbiased sample.
 
+### 8.17 How precise are these numbers? Bootstrap confidence intervals
+
+`ml.eval.run` now reports a 95% percentile-bootstrap interval for pairwise ordering and band accuracy (1,000 resamples of the scored pairs, fixed seed; `bootstrap_confidence_intervals` in `ml/eval/metrics.py`). On the human-labeled sets, unchanged pipeline:
+
+| Set | Pairs | Pairwise ordering (95% CI) | Band accuracy (95% CI) |
+| :--- | :---: | :---: | :---: |
+| `human_hard` | 50 | 75.8% (62.4–86.6) | 44.0% (30.0–58.0) |
+| `real_fit_human` | 100 | 73.4% (65.1–81.2) | 52.0% (43.0–62.0) |
+| `score_details_human` | 30 | 77.1% (63.1–90.0) | 46.7% (29.9–63.3) |
+
+**What this means for decisions.** On 30–100 pairs, a metric can move by 10–15 points through sampling alone, so most differences reported in sections 8.10–8.16 (two to five points) are within noise. They were treated as "no clear gain", which these intervals support. From here on, a change counts as an improvement only if it holds on every set and its gain clearly exceeds the interval width, or if it is confirmed on a larger blind-labeled set. Several hundred human labels would narrow the intervals to about ±5 points.
+
 ## 9. Reproduce
 
 All eval runs used a one-off container from the ML image with the repo mounted. None touched the shared dev stack.
