@@ -170,7 +170,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": unknown | {
+                    "application/json": {
                         refreshToken?: string;
                     };
                 };
