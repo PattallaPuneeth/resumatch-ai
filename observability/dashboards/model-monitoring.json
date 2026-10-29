@@ -1,0 +1,148 @@
+{
+  "uid": "resumatch-model-monitoring",
+  "title": "ResuMatch: Production Model Monitoring & Drift Detection",
+  "description": "Live monitoring of matching model performance, score distributions vs eval baseline, verdict mix, and zero-passage match detector.",
+  "tags": [
+    "resumatch",
+    "ml",
+    "phase-3",
+    "model-monitoring"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Zero-Passage Match Rate (%)",
+      "description": "Percentage of matches where zero candidate passages were retrieved. Spikes indicate ingestion race conditions or query extraction failures.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 2, "color": "yellow" },
+              { "value": 5, "color": "red" }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "((sum(rate(resumatch_match_zero_passages_total[5m])) or vector(0)) / (sum(rate(resumatch_match_verdict_total[5m])) or vector(1))) * 100",
+          "legendFormat": "Zero-Passage Share"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "piechart",
+      "title": "Live Verdict Mix (vs 33/33/33 Balanced Baseline)",
+      "description": "Distribution of assigned match verdicts: Strong (>=75), Medium (45-74), Weak (<45).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (resumatch_verdict) (rate(resumatch_match_verdict_total[15m]))",
+          "legendFormat": "{{resumatch_verdict}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Mean Score & Verdict Rates (Drift Tracking)",
+      "description": "Tracking matches per second by verdict category.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "matches/s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (resumatch_verdict) (rate(resumatch_match_verdict_total[5m]))",
+          "legendFormat": "Verdict: {{resumatch_verdict}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Component Score Distributions (p90 by Subsystem)",
+      "description": "90th percentile scores for Cross-Encoder, Semantic Vector, Lexical BM25, and Skill Coverage.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "score (0-100)",
+          "min": 0,
+          "max": 100
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.90, sum by (le, resumatch_component) (rate(resumatch_match_component_score_bucket[5m])))",
+          "legendFormat": "p90 {{resumatch_component}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Passages Evaluated per Match (p50 / p95)",
+      "description": "Number of resume passage chunks retrieved and passed into cross-encoder reranker.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "chunks"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(resumatch_match_passages_bucket[5m])))",
+          "legendFormat": "p50 Passages"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(resumatch_match_passages_bucket[5m])))",
+          "legendFormat": "p95 Passages"
+        }
+      ]
+    }
+  ]
+}
+

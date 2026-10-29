@@ -29,6 +29,7 @@ CROSS_ENCODER_LOCK = threading.RLock()
 P = ParamSpec("P")
 R = TypeVar("R")
 
+
 def _with_cross_encoder_lock(fn: Callable[P, R]) -> Callable[P, R]:
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
@@ -36,6 +37,7 @@ def _with_cross_encoder_lock(fn: Callable[P, R]) -> Callable[P, R]:
             return fn(*args, **kwargs)
 
     return wrapper
+
 
 MAX_CROSS_ENCODER_SEQ_LENGTH = 512
 
@@ -224,10 +226,34 @@ def rerank_candidates(
 
         pairs.append([effective_query, content])
 
-    raw_scores = model.predict(pairs)
+    global _PAIR_LOGIT_CACHE
+    if not hasattr(rerank_candidates, "_pair_cache"):
+        rerank_candidates._pair_cache = {}  # type: ignore[attr-defined]
+    cache: dict[tuple[str, str], float] = rerank_candidates._pair_cache  # type: ignore[attr-defined]
+
+    uncached_indices: list[int] = []
+    uncached_pairs: list[list[str]] = []
+    logits: list[float] = [0.0] * len(pairs)
+
+    for i, pair in enumerate(pairs):
+        key = (pair[0], pair[1])
+        if key in cache:
+            logits[i] = cache[key]
+        else:
+            uncached_indices.append(i)
+            uncached_pairs.append(pair)
+
+    if uncached_pairs:
+        new_scores = model.predict(uncached_pairs)
+        if len(cache) > 8192:
+            cache.clear()
+        for idx, score in zip(uncached_indices, new_scores, strict=True):
+            f_score = float(score)
+            logits[idx] = f_score
+            cache[(pairs[idx][0], pairs[idx][1])] = f_score
 
     reranked: list[dict[str, Any]] = []
-    for item, logit in zip(subset, raw_scores, strict=True):
+    for item, logit in zip(subset, logits, strict=True):
         entry = dict(item)
         float_logit = float(logit)
         entry["cross_encoder_logit"] = round(float_logit, 4)

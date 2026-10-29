@@ -1,3 +1,4 @@
+import { asOpenApiSchema } from '../plugins/swagger.js';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { env, scaledRateLimit } from '../config/env.js';
@@ -22,6 +23,12 @@ export const rewriterRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/rewriter/bullet',
     {
+      schema: {
+        tags: ['Rewriter'],
+        summary: 'Rewrite bullet point for stronger impact and targeted skill alignment',
+        body: asOpenApiSchema(bulletRewriteBodySchema),
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       config: {
         rateLimit: {
           max: scaledRateLimit(20),

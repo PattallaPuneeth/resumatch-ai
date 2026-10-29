@@ -67,6 +67,11 @@ _enabled = False
 _token_histogram: Any = None
 _cost_counter: Any = None
 _call_counter: Any = None
+_match_score_histogram: Any = None
+_match_component_histogram: Any = None
+_match_verdict_counter: Any = None
+_match_zero_passages_counter: Any = None
+_match_passages_histogram: Any = None
 
 # Token-count buckets for gen_ai.client.token.usage (OTel GenAI semantic conventions)
 _TOKEN_BUCKETS = (1, 4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144)
@@ -198,8 +203,35 @@ def _init_metrics(service_name: str, metric_reader: Any = None) -> None:
     _cost_counter = meter.create_counter(
         "resumatch.llm.cost_usd", unit="USD", description="Estimated LLM spend"
     )
+    global _match_score_histogram, _match_component_histogram
+    global _match_verdict_counter, _match_zero_passages_counter, _match_passages_histogram
     _call_counter = meter.create_counter(
         "resumatch.llm.calls", unit="{call}", description="LLM calls by provider and outcome"
+    )
+    _match_score_histogram = meter.create_histogram(
+        "resumatch.match.final_score",
+        unit="1",
+        description="Distribution of final ATS match scores (0-100)",
+    )
+    _match_component_histogram = meter.create_histogram(
+        "resumatch.match.component_score",
+        unit="1",
+        description="Distribution of match component scores (0-100)",
+    )
+    _match_verdict_counter = meter.create_counter(
+        "resumatch.match.verdict",
+        unit="{match}",
+        description="Count of match verdicts (strong, medium, weak)",
+    )
+    _match_zero_passages_counter = meter.create_counter(
+        "resumatch.match.zero_passages",
+        unit="{match}",
+        description="Matches where zero passages were evaluated",
+    )
+    _match_passages_histogram = meter.create_histogram(
+        "resumatch.match.passages",
+        unit="{passage}",
+        description="Number of evaluated passages per match",
     )
 
 
@@ -236,6 +268,45 @@ def record_llm_usage(
     cost = (in_tok * usd_per_mtok[0] + out_tok * usd_per_mtok[1]) / 1_000_000
     _cost_counter.add(cost, base)
     _call_counter.add(1, {**base, "resumatch.outcome": _label(outcome)})
+
+
+def record_match_metrics(
+    final_score: float,
+    scores: Mapping[str, Any],
+    verdict: str,
+    passages_count: int,
+) -> None:
+    """
+    Records production monitoring metrics for match calculation:
+    score distributions, component scores, verdict mix, and zero-passage match counts.
+    """
+    if _match_score_histogram is None:
+        return
+
+    v_label = _label(verdict)
+    _match_score_histogram.record(float(final_score), {"resumatch.verdict": v_label})
+    _match_verdict_counter.add(1, {"resumatch.verdict": v_label})
+
+    _match_passages_histogram.record(int(passages_count))
+    if passages_count == 0:
+        _match_zero_passages_counter.add(1)
+
+    if "best_ce_score" in scores:
+        _match_component_histogram.record(
+            float(scores["best_ce_score"]), {"resumatch.component": "cross_encoder"}
+        )
+    if "best_vector" in scores:
+        _match_component_histogram.record(
+            float(scores["best_vector"] * 100.0), {"resumatch.component": "vector"}
+        )
+    if "best_bm25" in scores:
+        _match_component_histogram.record(
+            float(scores["best_bm25"]), {"resumatch.component": "bm25"}
+        )
+    if scores.get("skill_coverage") is not None:
+        _match_component_histogram.record(
+            float(scores["skill_coverage"] * 100.0), {"resumatch.component": "skill_coverage"}
+        )
 
 
 def init_telemetry(service_name: str, exporter: Any = None, metric_reader: Any = None) -> bool:

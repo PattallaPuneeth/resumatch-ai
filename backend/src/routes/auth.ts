@@ -1,3 +1,4 @@
+import { asOpenApiSchema } from '../plugins/swagger.js';
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import crypto from 'crypto';
@@ -101,6 +102,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/auth/register',
     {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Register new user account and generate backup recovery codes',
+        body: asOpenApiSchema(RegisterBodySchema),
+      },
       bodyLimit: SMALL_BODY_LIMIT,
       preHandler: authRateLimitHook,
     },
@@ -258,6 +264,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/auth/login',
     {
+      schema: {
+        tags: ['Auth'],
+        summary: 'User login with username and password, issuing access and refresh cookies',
+        body: asOpenApiSchema(LoginBodySchema),
+      },
       bodyLimit: SMALL_BODY_LIMIT,
       preHandler: authRateLimitHook,
     },
@@ -401,6 +412,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/auth/refresh',
     {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Rotate refresh token and issue new short-lived access token',
+        body: asOpenApiSchema(RefreshBodySchema),
+      },
       bodyLimit: SMALL_BODY_LIMIT,
       preHandler: authRateLimitHook,
     },
@@ -543,6 +559,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/auth/logout',
     {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Revoke user session and clear authentication cookies',
+      },
       preHandler: app.authenticate,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -641,6 +661,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/auth/recover',
     {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Recover account using a one-time recovery code and set a new password',
+        body: asOpenApiSchema(RecoverBodySchema),
+      },
       bodyLimit: SMALL_BODY_LIMIT,
       preHandler: authRateLimitHook,
     },
@@ -833,6 +858,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.delete(
     '/v1/account',
     {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Delete user account and all associated resumes, jobs, and matches',
+        body: asOpenApiSchema(DeleteAccountBodySchema),
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       bodyLimit: SMALL_BODY_LIMIT,
       preHandler: [authRateLimitHook, app.authenticate],
     },

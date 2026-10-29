@@ -6,8 +6,10 @@ import {
   handleGetDownloadUrl,
   handleDeleteResume,
   handleListResumes,
+  uploadUrlBodySchema,
 } from './resumeController.js';
 import { scaledRateLimit } from '../config/env.js';
+import { asOpenApiSchema } from '../plugins/swagger.js';
 
 /**
  * Resume routes — Phase 2B & 2D implementation.
@@ -30,6 +32,12 @@ export const resumesRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/resumes/upload-url',
     {
+      schema: {
+        tags: ['Resumes'],
+        summary: 'Request presigned S3 upload URL for resume document',
+        body: asOpenApiSchema(uploadUrlBodySchema),
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       config: {
         rateLimit: {
           max: scaledRateLimit(10),
@@ -47,6 +55,16 @@ export const resumesRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { id: string } }>(
     '/v1/resumes/:id/complete',
     {
+      schema: {
+        tags: ['Resumes'],
+        summary: 'Confirm upload completion, validate magic bytes, and enqueue parse job',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     (request, reply) => handleCompleteUpload(request, reply)
@@ -58,28 +76,53 @@ export const resumesRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/v1/resumes',
     {
+      schema: {
+        tags: ['Resumes'],
+        summary: 'List authenticated user resumes',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     (request, reply) => handleListResumes(request, reply)
   );
 
   // -------------------------------------------------------------------------
-  // Phase 2D: GET /v1/resumes/:id (Retrieve status and parsed result)
+  // Phase 2D: GET /v1/resumes/:id (Get single resume with parsed text & entities)
   // -------------------------------------------------------------------------
   app.get<{ Params: { id: string } }>(
     '/v1/resumes/:id',
     {
+      schema: {
+        tags: ['Resumes'],
+        summary: 'Retrieve resume status and parsed content',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     (request, reply) => handleGetResume(request, reply)
   );
 
   // -------------------------------------------------------------------------
-  // Phase 2D: GET /v1/resumes/:id/download-url (Presigned download URL)
+  // Phase 2D: GET /v1/resumes/:id/download-url (Get presigned download URL)
   // -------------------------------------------------------------------------
   app.get<{ Params: { id: string } }>(
     '/v1/resumes/:id/download-url',
     {
+      schema: {
+        tags: ['Resumes'],
+        summary: 'Get short-lived presigned download URL for resume file',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     (request, reply) => handleGetDownloadUrl(request, reply)
@@ -91,6 +134,16 @@ export const resumesRoutes: FastifyPluginAsync = async (app) => {
   app.delete<{ Params: { id: string } }>(
     '/v1/resumes/:id',
     {
+      schema: {
+        tags: ['Resumes'],
+        summary: 'Delete resume, object storage file, and derived analysis data',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     (request, reply) => handleDeleteResume(request, reply)

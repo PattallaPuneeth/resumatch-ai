@@ -9,7 +9,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "codegen:api": "openapi-typescript ../backend/openapi.json -o src/types/api.generated.ts",
+    "test:drift": "npm run codegen:api && git diff --exit-code -- src/types/api.generated.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.64.2",
@@ -34,6 +36,7 @@
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.1.4",
     "jsdom": "25.0.1",
+    "openapi-typescript": "^7.13.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3",

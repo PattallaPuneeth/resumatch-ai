@@ -11,6 +11,12 @@
  * - Zero tokens in localStorage/sessionStorage
  */
 
+import type {
+  CreateJobRequest as GeneratedCreateJobRequest,
+  RewriteBulletRequest,
+  UploadUrlRequest as GeneratedUploadUrlRequest,
+} from '@/types';
+
 export interface ProblemDetails {
   type?: string;
   title?: string;
@@ -182,11 +188,9 @@ export interface ResumeDetailsResponse extends ResumeSummary {
   parsedResume?: ParsedResumeDetails | null;
 }
 
-export interface UploadUrlRequest {
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-}
+// Request bodies come from the backend's OpenAPI spec (src/types/api.generated.ts, regenerated
+// by `npm run codegen:api` and checked in CI), so a backend schema change is a type error here
+export type UploadUrlRequest = GeneratedUploadUrlRequest;
 
 export interface UploadUrlResponse {
   resumeId: string;
@@ -206,16 +210,7 @@ export interface CompleteUploadResponse {
 // Phase 8B: Jobs, Match, Analysis, Improvements & Suggestions Types
 // ---------------------------------------------------------------------------
 
-export interface CreateJobRequest {
-  title: string;
-  company: string;
-  rawDescription: string;
-  location?: string;
-  jobType?: string;
-  requiredSkills?: string[];
-  preferredSkills?: string[];
-  experienceLevel?: string;
-}
+export type CreateJobRequest = GeneratedCreateJobRequest;
 
 export interface JobSummary {
   id: string;
@@ -888,12 +883,7 @@ export const apiClient = {
   },
 
   rewriter: {
-    rewriteBullet: (params: {
-      resumeId: string;
-      originalBullet: string;
-      targetSkill?: string;
-      jobId?: string;
-    }) =>
+    rewriteBullet: (params: RewriteBulletRequest) =>
       apiClientRequest<RewriterResponse>('/v1/rewriter/bullet', {
         method: 'POST',
         body: JSON.stringify(params),

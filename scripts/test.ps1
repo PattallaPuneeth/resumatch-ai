@@ -6,7 +6,7 @@ Write-Host "--> [1/3] Backend Vitest Suite (with its own throwaway Postgres/Redi
 $backendResult = $LASTEXITCODE
 
 Write-Host "--> [2/3] ML Pytest Suite:" -ForegroundColor Yellow
-python -m pytest ml/tests
+docker compose exec -T ml pytest -m "not live"
 $mlResult = $LASTEXITCODE
 
 Write-Host "--> [3/3] Frontend Vitest Suite:" -ForegroundColor Yellow

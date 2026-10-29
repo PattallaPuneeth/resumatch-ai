@@ -61,7 +61,13 @@ class EvaluationArtifactCache:
 
     def __init__(self, cache_dir: Path):
         self.cache_dir = cache_dir
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            import tempfile
+
+            self.cache_dir = Path(tempfile.gettempdir()) / "eval_cache"
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def get_parsed_resume(self, sha: str) -> dict[str, Any] | None:
         p = self.cache_dir / f"resume_{CACHE_VERSION}_{sha}.json"
@@ -144,7 +150,6 @@ def process_eval_pair(
             resume_skills = parsed_skills
             chunks = chunk_resume_text(resume_text)
             chunk_pairs = generate_chunk_embeddings(chunks)
-
 
         resume_chunks = [
             {
@@ -244,9 +249,7 @@ def process_eval_pair(
 
     # 6. Cross-Encoder Reranking
     job_rerank_query = build_bounded_rerank_query(job_title, job_skills, job_desc, max_tokens=180)
-    reranked = rerank_candidates(
-        job_rerank_query, fused_chunks, top_n=settings.top_k_candidates
-    )
+    reranked = rerank_candidates(job_rerank_query, fused_chunks, top_n=settings.top_k_candidates)
 
     # 7. Skill-Gap Analysis
     # Same split as the worker: coverage on required skills, preferred ones as a bonus
@@ -298,9 +301,11 @@ def run_evaluation_suite(
     output_dir: str | Path | None = None,
     cache_dir: str | Path | None = None,
     split: str | None = None,
+    track_run: bool = False,
 ) -> dict[str, Any]:
     """
-    Main evaluation workflow:
+    Main evaluation workflow (track_run=True appends the run to the experiment history;
+    only the ml.eval.run CLI sets it, so tests and scripts never write to the history):
     1. Loads and validates dataset.
     2. Runs each pair through real pipeline with caching.
     3. Computes comprehensive metrics, ablation study, and calibration study.
@@ -331,6 +336,7 @@ def run_evaluation_suite(
             return value
         lo, hi = ci[name]
         return f"{value} (95% CI {lo * 100:.1f}–{hi * 100:.1f}%)"
+
     ablation_data = run_ablation_analysis(evaluated_pairs)
     calibration_data = run_calibration_study(evaluated_pairs, seed=42)
 
@@ -380,7 +386,7 @@ def run_evaluation_suite(
         ce_l = f"{p['cross_encoder_logit']:.2f}"
         ce_c = f"{p['calibrated_ce_score']:.1f}"
         sk_c = "n/a" if p["skill_coverage"] is None else f"{p['skill_coverage'] * 100:.0f}%"
-        sem_s = f"{p['semantic_score']*100:.1f}%"
+        sem_s = f"{p['semantic_score'] * 100:.1f}%"
         md_report_sections.append(
             f"| `{p['resume']}` | `{p['job']}` | **{p['expected'].upper()}** | "
             f"**{p['final_score']:.1f}** | {ce_l} | {ce_c} | {sk_c} | {sem_s} |"
@@ -391,7 +397,13 @@ def run_evaluation_suite(
     # Save outputs if output_dir specified
     if output_dir:
         out_path = Path(output_dir)
-        out_path.mkdir(parents=True, exist_ok=True)
+        try:
+            out_path.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            import tempfile
+
+            out_path = Path(tempfile.gettempdir()) / out_path.name
+            out_path.mkdir(parents=True, exist_ok=True)
 
         # JSON
         with open(out_path / "results.json", "w", encoding="utf-8") as f:
@@ -437,6 +449,26 @@ def run_evaluation_suite(
         # Markdown
         with open(out_path / "report.md", "w", encoding="utf-8") as f:
             f.write(full_markdown)
+
+    if not track_run:
+        return {
+            "evaluated_pairs": evaluated_pairs,
+            "metrics": metrics,
+            "ablation": ablation_data,
+            "calibration": calibration_data,
+            "markdown_report": full_markdown,
+        }
+    try:
+        from ml.eval.tracker import record_eval_run
+
+        record_eval_run(
+            dataset_dir=dataset_dir,
+            evaluated_pairs=evaluated_pairs,
+            metrics=metrics,
+            calibration_data=calibration_data,
+        )
+    except Exception as e:
+        logger.warning("Could not auto-track eval run: %s", e)
 
     return {
         "evaluated_pairs": evaluated_pairs,

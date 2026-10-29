@@ -54,7 +54,7 @@ export function isPublicRoute(method: string, url: string): boolean {
   const rawPath = url.split('?')[0];
   const pathname = rawPath.length > 1 ? rawPath.replace(/\/+$/, '') : rawPath;
 
-  if ((method.toUpperCase() === 'GET' || method.toUpperCase() === 'HEAD') && pathname === '/health') {
+  if ((method.toUpperCase() === 'GET' || method.toUpperCase() === 'HEAD') && (pathname === '/health' || pathname === '/openapi.json' || pathname === '/docs' || pathname.startsWith('/docs/'))) {
     return true;
   }
   if (

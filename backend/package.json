@@ -12,7 +12,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "openapi:export": "tsx scripts/export-openapi.ts",
+    "openapi:check": "tsx scripts/export-openapi.ts && git diff --exit-code -- openapi.json"
   },
   "prisma": {
     "schema": "db/schema.prisma",
@@ -37,6 +39,8 @@
     "@fastify/jwt": "^9.1.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/sensible": "^6.0.1",
+    "@fastify/swagger": "^9.9.2",
+    "@fastify/swagger-ui": "^6.1.2",
     "@node-rs/argon2": "^2.2.2",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/core": "2.12.0",
@@ -54,7 +58,8 @@
     "ioredis": "^5.4.1",
     "minio": "^8.0.2",
     "pino": "^9.5.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/node": "^22.8.7",

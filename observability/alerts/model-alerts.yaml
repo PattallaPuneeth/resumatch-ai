@@ -1,0 +1,30 @@
+groups:
+  - name: resumatch-model-monitoring-alerts
+    rules:
+      - alert: HighZeroPassageMatchRate
+        expr: >-
+          ((sum(rate(resumatch_match_zero_passages_total[5m])) or vector(0)) /
+           (sum(rate(resumatch_match_verdict_total[5m])) or vector(1))) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          subsystem: ml-matching
+        annotations:
+          summary: "Spike in zero-passage matches detected (>5% over 5 minutes)"
+          description: "Over 5% of candidate matches evaluated with 0 passages. Check document ingestion, embedding race conditions, or unparsable PDFs."
+
+      - alert: ModelScoreDistributionDrift
+        expr: >-
+          (sum(rate(resumatch_match_verdict_total{resumatch_verdict="weak"}[15m])) /
+           sum(rate(resumatch_match_verdict_total[15m]))) > 0.75
+          or
+          (sum(rate(resumatch_match_verdict_total{resumatch_verdict="strong"}[15m])) /
+           sum(rate(resumatch_match_verdict_total[15m]))) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          subsystem: ml-matching
+        annotations:
+          summary: "Model score distribution drift detected"
+          description: "Match verdict distribution has shifted significantly from baseline (>75% weak or >80% strong). Check for query extraction anomalies or distribution drift."
+

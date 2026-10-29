@@ -13,6 +13,11 @@ export const usageRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/v1/usage',
     {
+      schema: {
+        tags: ['Usage'],
+        summary: 'Retrieve user quota limits and usage consumption counters',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {

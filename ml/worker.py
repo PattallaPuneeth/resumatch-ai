@@ -75,7 +75,7 @@ from ml.pipelines.matching.skill_gap import (
 )
 from ml.storage.s3 import download_file
 from ml.utils.logging_setup import configure_logging
-from ml.utils.telemetry import init_telemetry, queue_carrier, stage_span
+from ml.utils.telemetry import init_telemetry, queue_carrier, record_match_metrics, stage_span
 
 # How long a match waits for the resume's embedding job (see _process_match_scoring)
 EMBEDDING_WAIT_SECONDS = 30.0
@@ -97,6 +97,7 @@ _PARSE_LOCK = threading.Lock()
 def _parse_document_serialized(*args: Any, **kwargs: Any) -> Any:
     with _PARSE_LOCK:
         return parse_document(*args, **kwargs)
+
 
 _parse_worker: Worker | None = None
 _embed_worker: Worker | None = None
@@ -190,9 +191,7 @@ async def enqueue_embed_job(resume_id: str) -> None:
 async def process_parse_document(job: Job, token: str | None = None) -> dict[str, Any]:
     """Traced entry point; the span joins the backend request that enqueued the job."""
     with stage_span("job", carrier=queue_carrier(job.data), queue="resume-parsing-queue"):
-        return await _process_parse_document(
-            job, token, allow_ocr=not settings.ocr_queue_enabled
-        )
+        return await _process_parse_document(job, token, allow_ocr=not settings.ocr_queue_enabled)
 
 
 async def process_ocr_document(job: Job, token: str | None = None) -> dict[str, Any]:
@@ -579,6 +578,22 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
             "totalChunksEvaluated": len(fused_chunks),
             # Explanation only; not part of the score (see seniority.py)
             "seniority": seniority_fit(job_title, job_desc, resume_raw_text),
+            "modelMetadata": {
+                "embedder": "all-MiniLM-L6-v2",
+                "reranker": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+                "scoringVersion": "1.0.0",
+                "shift": scores.get("shift", -3.5),
+                "temp": scores.get("temp", 2.8),
+                "blendWeights": {
+                    "w_ce": scores.get("w_ce", 0.65),
+                    "w_skill": scores.get("w_skill", 0.25),
+                    "w_vec": scores.get("w_vec", 0.10),
+                },
+                "thresholds": {
+                    "strong": 75.0,
+                    "weak": 45.0,
+                },
+            },
         }
 
         # 7. Atomic persistence to matches table
@@ -592,6 +607,15 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
             cross_encoder_score=best_ce_score,
             final_score=final_score,
             explanation=explanation,
+        )
+
+        # Record production monitoring metrics (score distributions, zero-passage monitor)
+        verdict = "strong" if final_score >= 75.0 else ("medium" if final_score >= 45.0 else "weak")
+        record_match_metrics(
+            final_score=final_score,
+            scores=scores,
+            verdict=verdict,
+            passages_count=len(reranked_chunks),
         )
 
         return {

@@ -5,6 +5,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import { env, scaledRateLimit } from './config/env.js';
 import { registerErrorHandler } from './plugins/errorHandler.js';
 import authPlugin from './plugins/auth.js';
+import swaggerPlugin from './plugins/swagger.js';
 import { authRoutes } from './routes/auth.js';
 import { analysesRoutes } from './routes/analyses.js';
 import { healthRoutes } from './routes/health.js';
@@ -113,6 +114,9 @@ export function buildServer(options?: { onRoute?: (routeOptions: any) => void })
 
   // Session & JWT authentication
   app.register(authPlugin);
+
+  // OpenAPI Documentation (Phase 1 Contract)
+  app.register(swaggerPlugin);
 
   // Central Error Handler
   registerErrorHandler(app);

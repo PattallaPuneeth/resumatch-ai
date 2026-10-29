@@ -36,6 +36,7 @@ MODEL_LOCK = threading.RLock()
 P = ParamSpec("P")
 R = TypeVar("R")
 
+
 def _with_model_lock(fn: Callable[P, R]) -> Callable[P, R]:
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
@@ -130,30 +131,21 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
 QUERY_WINDOW_OVERLAP_TOKENS = 48
 
 
-@_with_model_lock
-def embed_query_text(text: str) -> list[float]:
-    """
-    Embeds a retrieval query of any length (e.g. job title + full job description).
-
-    generate_embeddings() refuses texts longer than the model window so stored chunk
-    vectors are never silently truncated. A query has no such contract, so a long query
-    is split into overlapping token windows that each fit the model, every window is
-    embedded, and the L2-normalized mean of the window vectors is returned. Queries that
-    already fit are embedded as a single text, exactly as before.
-    """
-    if not text or not text.strip():
-        raise ValueError("Cannot embed an empty query text")
-
+@functools.lru_cache(maxsize=512)
+def _compute_query_embedding_cached(cleaned_text: str) -> tuple[float, ...]:
+    """Internal cached helper: computes and returns normalized query embedding tuple."""
     model = get_embedder()
     tokenizer = getattr(model, "tokenizer", None)
     max_len = int(getattr(model, "max_seq_length", 256))
     if tokenizer is None:
-        return generate_embeddings([text])[0]
+        return tuple(generate_embeddings([cleaned_text])[0])
 
-    if len(tokenizer.encode(text, add_special_tokens=True)) <= max_len:
-        return generate_embeddings([text])[0]
+    if len(tokenizer.encode(cleaned_text, add_special_tokens=True)) <= max_len:
+        return tuple(generate_embeddings([cleaned_text])[0])
 
-    encoding = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True, verbose=False)
+    encoding = tokenizer(
+        cleaned_text, add_special_tokens=False, return_offsets_mapping=True, verbose=False
+    )
     offsets = encoding["offset_mapping"]
     window = max_len - 2  # room for [CLS] and [SEP]
     stride = window - QUERY_WINDOW_OVERLAP_TOKENS
@@ -161,7 +153,7 @@ def embed_query_text(text: str) -> list[float]:
     windows: list[str] = []
     for start in range(0, len(offsets), stride):
         end = min(start + window, len(offsets))
-        piece = text[offsets[start][0] : offsets[end - 1][1]].strip()
+        piece = cleaned_text[offsets[start][0] : offsets[end - 1][1]].strip()
         if piece:
             windows.append(piece)
         if end == len(offsets):
@@ -179,7 +171,24 @@ def embed_query_text(text: str) -> list[float]:
     norm = float(np.linalg.norm(mean))
     if norm == 0.0 or not np.isfinite(norm):
         raise ValueError("Query window embeddings averaged to a zero or non-finite vector")
-    return [float(v) for v in (mean / norm)]
+    return tuple(float(v) for v in (mean / norm))
+
+
+@_with_model_lock
+def embed_query_text(text: str) -> list[float]:
+    """
+    Embeds a retrieval query of any length with process-level LRU caching.
+
+    generate_embeddings() refuses texts longer than the model window so stored chunk
+    vectors are never silently truncated. A query has no such contract, so a long query
+    is split into overlapping token windows that each fit the model, every window is
+    embedded, and the L2-normalized mean of the window vectors is returned.
+    Cached across matching calls to avoid re-embedding identical job descriptions.
+    """
+    if not text or not text.strip():
+        raise ValueError("Cannot embed an empty query text")
+
+    return list(_compute_query_embedding_cached(text.strip()))
 
 
 def generate_chunk_embeddings(
@@ -199,10 +208,7 @@ def generate_chunk_embeddings(
     if not chunks:
         return []
 
-    texts = [
-        c.embedding_text if hasattr(c, "embedding_text") else c.content
-        for c in chunks
-    ]
+    texts = [c.embedding_text if hasattr(c, "embedding_text") else c.content for c in chunks]
     vectors = generate_embeddings(texts)
 
     if len(chunks) != len(vectors):

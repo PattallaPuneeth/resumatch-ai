@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { asOpenApiSchema } from '../plugins/swagger.js';
 import { scaledRateLimit } from '../config/env.js';
 import { prisma } from '../db/prisma.js';
 import { analysisQueue, embeddingQueue, matchScoringQueue } from '../queues/bullmq.js';
@@ -50,6 +51,12 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/v1/jobs',
     {
+      schema: {
+        tags: ['Jobs'],
+        summary: 'Create a new job description and trigger embedding generation',
+        body: asOpenApiSchema(createJobBodySchema),
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       config: {
         rateLimit: {
           max: scaledRateLimit(20),
@@ -130,6 +137,16 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string } }>(
     '/v1/jobs/:id',
     {
+      schema: {
+        tags: ['Jobs'],
+        summary: 'Get job description details and chunk status',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     async (request, reply) => {
@@ -178,6 +195,17 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { id: string } }>(
     '/v1/jobs/:id/match',
     {
+      schema: {
+        tags: ['Matching'],
+        summary: 'Enqueue match scoring between a job and resume',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        body: asOpenApiSchema(matchJobBodySchema),
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       config: {
         rateLimit: {
           max: scaledRateLimit(20),
@@ -267,6 +295,19 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string; resumeId: string } }>(
     '/v1/jobs/:id/matches/:resumeId',
     {
+      schema: {
+        tags: ['Matching'],
+        summary: 'Retrieve match scoring results, rank breakdown, and skill gap',
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            resumeId: { type: 'string', format: 'uuid' },
+          },
+          required: ['id', 'resumeId'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     async (request, reply) => {
@@ -331,6 +372,17 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { id: string } }>(
     '/v1/jobs/:id/analysis',
     {
+      schema: {
+        tags: ['Analysis'],
+        summary: 'Enqueue deep resume-job analysis',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        body: asOpenApiSchema(analysisJobBodySchema),
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       config: {
         rateLimit: {
           max: scaledRateLimit(20),
@@ -441,6 +493,19 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string; resumeId: string } }>(
     '/v1/jobs/:id/analysis/:resumeId',
     {
+      schema: {
+        tags: ['Analysis'],
+        summary: 'Retrieve deep analysis and explanation breakdown',
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            resumeId: { type: 'string', format: 'uuid' },
+          },
+          required: ['id', 'resumeId'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     async (request, reply) => {
@@ -516,6 +581,12 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/v1/jobs',
     {
+      schema: {
+        tags: ['Jobs'],
+        summary: 'List user job descriptions (paginated)',
+        querystring: asOpenApiSchema(listJobsQuerySchema),
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -576,6 +647,16 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string } }>(
     '/v1/resumes/:id/matches',
     {
+      schema: {
+        tags: ['Matching'],
+        summary: 'List all job match results for a resume',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['id'],
+        },
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      },
       preHandler: app.authenticate,
     },
     async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {

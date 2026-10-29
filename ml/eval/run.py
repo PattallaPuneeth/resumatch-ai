@@ -72,6 +72,7 @@ def main() -> int:
             output_dir=args.output_dir,
             cache_dir=args.cache_dir,
             split=args.split,
+            track_run=True,
         )
 
         if not args.quiet:

@@ -1173,7 +1173,10 @@ describe('Phase 5: Accounts and Authentication Suite', () => {
 
         if (route.method === 'OPTIONS') {
           category = 'CORS_PREFLIGHT';
-        } else if (route.method === 'GET' && route.url === '/health') {
+        } else if (
+          route.method === 'GET' &&
+          (route.url === '/health' || route.url === '/openapi.json' || route.url.startsWith('/docs'))
+        ) {
           category = 'PUBLIC';
         } else if (publicAuthPaths.includes(route.url)) {
           category = 'PUBLIC_AUTH';

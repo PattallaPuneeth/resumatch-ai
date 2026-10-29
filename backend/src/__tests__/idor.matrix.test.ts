@@ -138,6 +138,11 @@ export const ROUTE_SECURITY_MATRIX: RouteMatrixEntry[] = [
   { method: 'GET', url: '/health', isPublic: true },
   { method: 'HEAD', url: '/health', isPublic: true },
 
+  // Public Documentation & OpenAPI Spec
+  { method: 'GET', url: '/docs', isPublic: true },
+  { method: 'GET', url: '/docs/*', isPublic: true },
+  { method: 'GET', url: '/openapi.json', isPublic: true },
+
   // Public Authentication Endpoints
   { method: 'POST', url: '/v1/auth/register', isPublic: true },
   { method: 'POST', url: '/v1/auth/login', isPublic: true },
@@ -247,7 +252,8 @@ describe('Comprehensive Route Security & IDOR Verification Matrix', () => {
         (entry) =>
           entry.method === discovered.method &&
           (entry.url === discovered.url ||
-            entry.url.replace(/:[a-zA-Z0-9_]+/g, '.*') === discovered.url.replace(/:[a-zA-Z0-9_]+/g, '.*'))
+            entry.url.replace(/:[a-zA-Z0-9_]+/g, '.*') === discovered.url.replace(/:[a-zA-Z0-9_]+/g, '.*') ||
+            (entry.url.endsWith('/*') && (discovered.url === entry.url.slice(0, -2) || discovered.url.startsWith(entry.url.slice(0, -1)))))
       );
 
       expect(
