@@ -109,3 +109,6 @@ ml/eval/datasets_local/
 
 # Third-party resume/JD dataset with real resumes; never commit
 /8K-rows-dataset/
+
+# README screenshots (captured by frontend/scripts/screenshots.mjs) are part of the docs
+!docs/images/*.png
