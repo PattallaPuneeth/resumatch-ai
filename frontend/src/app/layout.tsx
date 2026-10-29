@@ -10,7 +10,8 @@ const fraunces = Fraunces({ subsets: ['latin'], display: 'swap', variable: '--fo
 
 export const metadata: Metadata = {
   title: 'ResuMatch AI - ATS Resume Analysis & Matching',
-  description: 'Production-grade AI resume platform with ATS format compliance, hybrid matching, and usage metering.',
+  description:
+    'See how an applicant tracking system reads your resume, compare it with a job post, and find the skills you are missing.',
 };
 
 export default function RootLayout({

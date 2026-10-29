@@ -233,7 +233,7 @@ function AnalyzePageContent() {
           // 404 indicates job still in queue/processing
           if (pollErr.status === 404) {
             pollDelay = Math.min(pollDelay * 1.5, 6000);
-            setProgressStep(`Step 2/3: Scoring hybrid match (${Math.round((Date.now() - matchStart) / 1000)}s)...`);
+            setProgressStep(`Step 2/3: Comparing your resume with the job (${Math.round((Date.now() - matchStart) / 1000)}s)...`);
             continue;
           }
           throw pollErr;
@@ -268,7 +268,7 @@ function AnalyzePageContent() {
         } catch (pollErr: any) {
           if (pollErr.status === 404) {
             pollDelay = Math.min(pollDelay * 1.5, 6000);
-            setProgressStep(`Step 3/3: Generating analysis findings (${Math.round((Date.now() - analysisStart) / 1000)}s)...`);
+            setProgressStep(`Step 3/3: Writing up your skills and gaps (${Math.round((Date.now() - analysisStart) / 1000)}s)...`);
             continue;
           }
           throw pollErr;
