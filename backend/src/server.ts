@@ -15,6 +15,8 @@ import { rewriterRoutes } from './routes/rewriter.js';
 import { improvementsRoutes } from './routes/improvements.js';
 import { usageRoutes } from './routes/usage.js';
 import { suggestionsRoutes } from './routes/suggestions.js';
+import { dlqRoutes } from './routes/dlq.js';
+import { eventsRoutes } from './routes/events.js';
 import { logJobSourceStatus } from './services/jobSource/factory.js';
 import { registerTracingHooks } from './telemetry.js';
 
@@ -131,6 +133,8 @@ export function buildServer(options?: { onRoute?: (routeOptions: any) => void })
   app.register(improvementsRoutes);
   app.register(usageRoutes);
   app.register(suggestionsRoutes);
+  app.register(dlqRoutes);
+  app.register(eventsRoutes);
 
   // Explicitly log active JobSource and reason at startup (non-secret)
   logJobSourceStatus(app.log);

@@ -6,12 +6,30 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
+export function configureDatabaseUrl(rawUrl: string): string {
+  try {
+    const url = new URL(rawUrl);
+    if (!url.searchParams.has('connection_limit')) {
+      url.searchParams.set('connection_limit', String(env.DB_CONNECTION_LIMIT));
+    }
+    if (!url.searchParams.has('pool_timeout')) {
+      url.searchParams.set('pool_timeout', String(env.DB_POOL_TIMEOUT));
+    }
+    if (!url.searchParams.has('statement_timeout')) {
+      url.searchParams.set('statement_timeout', String(env.DB_STATEMENT_TIMEOUT_MS));
+    }
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 export const prisma: PrismaClient =
   global.__prisma ??
   new PrismaClient({
     datasources: {
       db: {
-        url: env.DATABASE_URL,
+        url: configureDatabaseUrl(env.DATABASE_URL),
       },
     },
     log: env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],

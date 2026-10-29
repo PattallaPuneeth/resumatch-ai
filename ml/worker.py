@@ -1,12 +1,17 @@
 import asyncio
+import json
 import logging
 import os
 import signal
+import socket
 import threading
 import time
+from datetime import UTC, datetime
 from types import FrameType
 from typing import Any, Literal
 
+import psycopg
+import redis.asyncio as aioredis
 from bullmq import Job, Queue, Worker
 
 from ml.config import settings
@@ -161,6 +166,55 @@ def get_embedding_queue() -> Queue:
     return _embedding_queue
 
 
+def get_user_id_for_resume(resume_id: str) -> str | None:
+    try:
+        with psycopg.connect(settings.database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT "userId" FROM resumes WHERE id = %s;', (resume_id,))
+                row = cur.fetchone()
+                return str(row[0]) if row and row[0] else None
+    except Exception:
+        return None
+
+
+def get_user_id_for_job(job_id: str) -> str | None:
+    try:
+        with psycopg.connect(settings.database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT "userId" FROM jobs WHERE id = %s;', (job_id,))
+                row = cur.fetchone()
+                return str(row[0]) if row and row[0] else None
+    except Exception:
+        return None
+
+
+_redis_pub_client: aioredis.Redis | None = None
+
+
+def get_redis_pub_client() -> aioredis.Redis:
+    global _redis_pub_client
+    if _redis_pub_client is None:
+        _redis_pub_client = aioredis.from_url(settings.redis_url)
+    return _redis_pub_client
+
+
+async def publish_user_event(user_id: str | None, event_type: str, data: dict[str, Any]) -> None:
+    """Publishes a real-time event to the user's private channel over Redis Pub/Sub."""
+    if not user_id:
+        return
+    try:
+        r = get_redis_pub_client()
+        channel = f"resumatch:events:user:{user_id}"
+        payload = json.dumps({
+            "type": event_type,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "data": data,
+        })
+        await r.publish(channel, payload)
+    except Exception as e:
+        logger.debug("Failed to publish event %s for user %s: %s", event_type, user_id, e)
+
+
 async def enqueue_embed_job(resume_id: str) -> None:
     """Enqueues an EMBED_DOCUMENT job for a parsed resume."""
     try:
@@ -212,6 +266,7 @@ async def _process_parse_document(
     storage_key = data.get("storageKey") or data.get("s3Key")
     bucket = data.get("bucket", settings.s3_bucket)
     mime_type = data.get("mimeType", "application/pdf")
+    user_id = data.get("userId") or await asyncio.to_thread(get_user_id_for_resume, resume_id)
 
     if not resume_id or not storage_key:
         logger.error("Job %s missing resumeId or storageKey", job.id)
@@ -245,6 +300,10 @@ async def _process_parse_document(
             job.id,
         )
         return {"status": "ABORTED", "reason": "INVALID_TRANSITION"}
+
+    await publish_user_event(
+        user_id, "RESUME_STATUS", {"resumeId": resume_id, "status": "EXTRACTING"}
+    )
 
     # Determine local temp path
     ext = storage_key.split(".")[-1].lower() if "." in storage_key else "pdf"
@@ -297,6 +356,16 @@ async def _process_parse_document(
 
         # 6. Enqueue embedding generation for the parsed resume
         await enqueue_embed_job(resume_id)
+        await publish_user_event(
+            user_id,
+            "RESUME_STATUS",
+            {
+                "resumeId": resume_id,
+                "status": "PARSED",
+                "atsScore": result.ats_score,
+                "method": result.extraction_method,
+            },
+        )
 
         return {
             "status": "PARSED",
@@ -321,6 +390,16 @@ async def _process_parse_document(
             e,
         )
         mark_resume_failed(resume_id, e.error_code, e.safe_message)
+        await publish_user_event(
+            user_id,
+            "RESUME_STATUS",
+            {
+                "resumeId": resume_id,
+                "status": "FAILED",
+                "errorCode": e.error_code,
+                "errorMessage": e.safe_message,
+            },
+        )
         return {
             "status": "FAILED",
             "resumeId": resume_id,
@@ -448,6 +527,7 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
     data = job.data
     job_id = data.get("jobId")
     resume_id = data.get("resumeId")
+    user_id = data.get("userId") or await asyncio.to_thread(get_user_id_for_job, job_id)
 
     if not job_id or not resume_id:
         logger.error("Job %s missing jobId or resumeId in data: %s", job.id, data)
@@ -616,6 +696,18 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
             scores=scores,
             verdict=verdict,
             passages_count=len(reranked_chunks),
+        )
+
+        await publish_user_event(
+            user_id,
+            "MATCH_STATUS",
+            {
+                "jobId": job_id,
+                "resumeId": resume_id,
+                "status": "COMPLETED",
+                "score": final_score,
+                "verdict": verdict,
+            },
         )
 
         return {
@@ -860,6 +952,51 @@ def warm_models() -> None:
     logger.info("ML models preloaded in %.1fs", time.monotonic() - started)
 
 
+HEARTBEAT_TTL_SECONDS = 15
+HEARTBEAT_INTERVAL_SECONDS = 5
+
+
+def get_worker_id() -> str:
+    return os.environ.get("WORKER_ID") or socket.gethostname() or "default-worker"
+
+
+async def run_heartbeat_loop(worker_id: str, roles: set[str]) -> None:
+    """Periodically refreshes the worker's heartbeat in Redis with a 15-second TTL.
+
+    The healthcheck script (ml/healthcheck_worker.py) verifies that this key exists
+    and is recent, ensuring the asyncio event loop is not blocked or deadlocked.
+    """
+    heartbeat_key = f"resumatch:worker:heartbeat:{worker_id}"
+    try:
+        redis_client = aioredis.from_url(settings.redis_url)
+    except Exception as e:
+        logger.warning("Failed to initialize Redis client for worker heartbeat: %s", e)
+        return
+
+    try:
+        while not _should_exit:
+            payload = json.dumps({
+                "worker_id": worker_id,
+                "roles": sorted(roles),
+                "timestamp": time.time(),
+                "status": "healthy",
+                "pid": os.getpid(),
+            })
+            try:
+                await redis_client.set(heartbeat_key, payload, ex=HEARTBEAT_TTL_SECONDS)
+            except Exception as e:
+                logger.warning("Worker heartbeat write to Redis failed: %s", e)
+            await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        try:
+            await redis_client.delete(heartbeat_key)
+        except Exception:
+            pass
+        await redis_client.aclose()
+
+
 async def main_async() -> None:
     global _parse_worker, _embed_worker, _match_worker, _analysis_worker, _ocr_worker
     redis_opts = {"connection": settings.redis_url, "prefix": "bull", "concurrency": 2}
@@ -883,9 +1020,19 @@ async def main_async() -> None:
     if "analysis" in roles:
         _analysis_worker = Worker("analysis-queue", process_analysis, redis_opts)
 
+    worker_id = get_worker_id()
+    heartbeat_task = asyncio.create_task(run_heartbeat_loop(worker_id, roles))
+    logger.info("Worker heartbeat started for %s (roles: %s)", worker_id, ", ".join(sorted(roles)))
+
     # Keep alive until shutdown requested
     while not _should_exit:
         await asyncio.sleep(1)
+
+    heartbeat_task.cancel()
+    try:
+        await heartbeat_task
+    except asyncio.CancelledError:
+        pass
 
     logger.info("Closing BullMQ workers...")
     if _parse_worker:

@@ -7,6 +7,7 @@ import { analysisQueue, embeddingQueue, matchScoringQueue } from '../queues/bull
 import { withMeter } from '../services/meterGuard.js';
 import { usageService } from '../services/usageService.js';
 import { withTraceContext } from '../telemetry.js';
+import { eventDispatcher } from '../services/eventDispatcher.js';
 
 const PENDING_STATES = new Set(['waiting', 'active', 'delayed', 'prioritized', 'waiting-children']);
 
@@ -285,6 +286,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
           withTraceContext(request, {
             jobId,
             resumeId,
+            userId,
           }),
           {
             jobId: `match-${jobId}-${resumeId}`,
@@ -299,6 +301,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
+      eventDispatcher.publishUserEvent(userId, { type: 'MATCH_STATUS', data: { jobId, resumeId, status: 'QUEUED' } });
       return reply.status(202).send({
         statusCode: 202,
         message: 'Match scoring job enqueued',

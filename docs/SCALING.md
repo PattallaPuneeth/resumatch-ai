@@ -31,8 +31,8 @@ settings. Per-worker counts come from each container's log.
   (see [PERFORMANCE.md](PERFORMANCE.md) for the existing k6 results).
 - The API limits job creation and match requests to 20 per minute per client IP, so one
   machine cannot drive larger bursts without raising `RATE_LIMIT_MULTIPLIER`.
-- `ml-worker` has a fixed `container_name` in `docker-compose.yml`, so `docker compose --scale`
-  does not work; this benchmark starts the extra workers with `docker run`.
+- With `container_name` removed from `ml-worker`, `docker compose up -d --scale ml-worker=N`
+  now scales worker replicas directly without manual `docker run` scripts.
 
 ## Reproduce
 

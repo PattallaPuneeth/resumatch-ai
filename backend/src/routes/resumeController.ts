@@ -18,6 +18,7 @@ import { withResumeCoordinationLock } from '../utils/coordinationLock.js';
 import { usageService } from '../services/usageService.js';
 import { sendUsageLimitExceeded } from '../services/meterGuard.js';
 import { withTraceContext } from '../telemetry.js';
+import { eventDispatcher } from '../services/eventDispatcher.js';
 
 // ---------------------------------------------------------------------------
 // Supported formats per Section 2B of the specification
@@ -366,6 +367,7 @@ export async function handleCompleteUpload(
     const jobPayload: ResumeParsingJobPayload = {
       type: 'PARSE_DOCUMENT',
       resumeId: outcome.resume.id,
+      userId,
       bucket: env.S3_BUCKET,
       storageKey: outcome.resume.storageKey,
       mimeType: outcome.resume.mimeType,
@@ -474,6 +476,7 @@ export async function handleCompleteUpload(
   const jobPayload: ResumeParsingJobPayload = {
     type: 'PARSE_DOCUMENT',
     resumeId,
+    userId,
     bucket: env.S3_BUCKET,
     storageKey: outcome.resume.storageKey,
     mimeType: outcome.resume.mimeType,
@@ -485,6 +488,7 @@ export async function handleCompleteUpload(
       jobId: `parse-${resumeId}`,
     });
     request.log.info({ resumeId, sha256: outcome.sha256 }, 'PARSE_DOCUMENT job enqueued');
+    eventDispatcher.publishUserEvent(userId, { type: 'RESUME_STATUS', data: { resumeId, status: 'UPLOADED' } });
   } catch (queueErr) {
     // Queue failure: Roll back status to UPLOAD_PENDING under the coordination lock
     // so the resume is not permanently stuck in UPLOADED without a queue job.
@@ -834,6 +838,7 @@ export async function handleDeleteResume(
   }
 
   request.log.info({ resumeId, userId }, 'Resume and derived records deleted successfully');
+  eventDispatcher.publishUserEvent(userId, { type: 'RESUME_STATUS', data: { resumeId, status: 'DELETED' } });
 
   return reply.status(200).send({
     statusCode: 200,

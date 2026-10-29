@@ -9,7 +9,8 @@ export MSYS_NO_PATHCONV=1
 cd "$(dirname "$0")/../.."
 
 limit="${1:-2g}"
-container=resumatch-ml-worker
+container="${CONTAINER_NAME:-$(docker compose ps -q ml-worker 2>/dev/null | head -n 1)}"
+[ -z "$container" ] && container="resumatch-ml-worker"
 compose=(docker compose -f docker-compose.yml -f docker-compose.loadtest.yml)
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 csv="loadtest/results/${stamp}_memory_${limit}.csv"

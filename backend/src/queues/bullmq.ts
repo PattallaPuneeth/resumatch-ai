@@ -10,6 +10,7 @@ export const redisConnectionOptions = {
 export interface ResumeParsingJobPayload {
   type: 'PARSE_DOCUMENT';
   resumeId: string;
+  userId?: string;
   bucket: string;
   storageKey: string;
   mimeType: string;
@@ -29,6 +30,7 @@ export interface EmbeddingJobPayload {
 export interface MatchScoringJobPayload {
   resumeId: string;
   jobId: string;
+  userId?: string;
 }
 
 export interface AnalysisJobPayload {

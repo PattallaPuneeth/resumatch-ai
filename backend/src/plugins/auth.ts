@@ -10,6 +10,7 @@ export interface JwtPayload {
   sid?: string;      // sessionId (checked against DB for immediate revocation)
   username?: string; // username
   email?: string;
+  role?: string;
   iat?: number;
   exp?: number;
 }
@@ -84,6 +85,13 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     if (request.user) {
       return;
     }
+
+    // Internal service-to-service authentication with secure internal token
+    const internalToken = request.headers['x-internal-token'];
+    if (internalToken && internalToken === env.INTERNAL_API_TOKEN) {
+      request.user = { sub: 'internal-admin', role: 'ADMIN' };
+      return;
+    }
     // RFC 7807 Error helper
     const sendAuthError = (status: number, title: string, detail: string) => {
       return reply
@@ -115,6 +123,10 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     } else if (request.cookies && typeof request.cookies.access_token === 'string') {
       token = request.cookies.access_token.trim();
       authType = 'cookie';
+    }
+    else if ((request.query as any)?.token && typeof (request.query as any).token === 'string') {
+      token = (request.query as any).token.trim();
+      authType = 'bearer';
     }
 
     if (!token || !authType) {

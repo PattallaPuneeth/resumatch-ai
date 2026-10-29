@@ -6,6 +6,7 @@ import { apiClient, ResumeSummary } from '@/lib/apiClient';
 import Link from 'next/link';
 import { FileText, Trash2, AlertCircle, RefreshCw, Award, Clock, Sparkles } from 'lucide-react';
 import { formatBytes, formatDate } from '@/components/UsagePanel';
+import { useEventStream } from '@/hooks/useEventStream';
 
 interface ResumeListProps {
   onDeleteSuccess?: () => void;
@@ -14,6 +15,7 @@ interface ResumeListProps {
 
 export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
   const queryClient = useQueryClient();
+  const { isConnected: isSseConnected } = useEventStream();
   const [deleteCandidate, setDeleteCandidate] = useState<ResumeSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
     // Anything not finished (uploaded, extracting, OCR, ...) is still being worked on
     const hasActiveJobs = resumes.some((r) => r.status !== 'PARSED' && r.status !== 'FAILED');
 
-    if (hasActiveJobs) {
+    if (hasActiveJobs && !isSseConnected) {
       setPollInterval((prev) => {
         if (!prev) return 2000;
         return Math.min(prev * 1.5, 10000);

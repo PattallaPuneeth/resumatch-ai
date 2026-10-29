@@ -17,6 +17,9 @@ export const EnvSchema = z.object({
 
   // PostgreSQL + pgvector
   DATABASE_URL: z.string().url().default('postgresql://resumatch_user:resumatch_password@localhost:5432/resumatch?schema=public'),
+  DB_CONNECTION_LIMIT: z.coerce.number().int().positive().default(20),
+  DB_POOL_TIMEOUT: z.coerce.number().int().positive().default(10),
+  DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
 
   // Redis & BullMQ
   REDIS_HOST: z.string().default('localhost'),

@@ -56,6 +56,8 @@ const swaggerPlugin = fp(async (app: FastifyInstance): Promise<void> => {
         { name: 'Analysis', description: 'In-depth resume-job gap analysis and scoring breakdown' },
         { name: 'Rewriter', description: 'Bullet point improvement suggestions and rewriting' },
         { name: 'Usage', description: 'Account rate limits and quota consumption metrics' },
+        { name: 'Admin', description: 'Administrative operations, queue inspection and DLQ management' },
+        { name: 'Events', description: 'Real-time asynchronous events and push notifications via Server-Sent Events (SSE)' },
       ],
       components: {
         securitySchemes: {

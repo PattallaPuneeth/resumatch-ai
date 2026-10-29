@@ -224,6 +224,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           sub: user.id,
           sid: session.id,
           username: username.trim(),
+          role: user.role,
         },
         { expiresIn: '15m' }
       );
@@ -374,6 +375,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           sub: credential.userId,
           sid: session.id,
           username: credential.username,
+          role: credential.user.role,
         },
         { expiresIn: '15m' }
       );
@@ -439,6 +441,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const tokenHash = sha256Hash(rawRefreshToken.trim());
       const session = await prisma.session.findUnique({
         where: { tokenHash },
+        include: { user: true },
       });
 
       if (!session) {
@@ -532,6 +535,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           sub: session.userId,
           sid: nextSession.id,
           username,
+          role: session.user.role,
         },
         { expiresIn: '15m' }
       );

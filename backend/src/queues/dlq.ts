@@ -100,6 +100,91 @@ export async function retryDlqJob(
   return true;
 }
 
+export interface DlqQueueSummary {
+  queue: MonitoredQueueName;
+  dlqName: string;
+  counts: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    total: number;
+  };
+}
+
+export async function getDlqSummary(): Promise<DlqQueueSummary[]> {
+  const results: DlqQueueSummary[] = [];
+  for (const queueName of MONITORED_QUEUES) {
+    const dlq = getDlqQueue(queueName);
+    const counts = await dlq.getJobCounts('waiting', 'active', 'completed', 'failed');
+    results.push({
+      queue: queueName,
+      dlqName: getDlqName(queueName),
+      counts: {
+        waiting: counts.waiting,
+        active: counts.active,
+        completed: counts.completed,
+        failed: counts.failed,
+        total: counts.waiting + counts.active + counts.completed + counts.failed,
+      },
+    });
+  }
+  return results;
+}
+
+export async function getDlqJobs(queueName: string, start = 0, limit = 20) {
+  const dlq = getDlqQueue(queueName);
+  const jobs = await dlq.getJobs(['waiting', 'failed', 'active'], start, start + limit - 1);
+  return jobs.map((j) => ({
+    id: j.id,
+    name: j.name,
+    data: j.data,
+    timestamp: j.timestamp,
+    failedReason: j.failedReason,
+  }));
+}
+
+export async function purgeDlqQueue(queueName: string): Promise<number> {
+  const dlq = getDlqQueue(queueName);
+  const jobs = await dlq.getJobs(['waiting', 'active', 'failed'], 0, 1000);
+  let count = 0;
+  for (const job of jobs) {
+    await job.remove();
+    count++;
+  }
+  return count;
+}
+
+export async function replayDlqJobs(
+  queueName: string,
+  jobId?: string
+): Promise<{ replayed: number; failed: number }> {
+  const dlq = getDlqQueue(queueName);
+  const targetQueue = new Queue(queueName, {
+    connection: redisConnectionOptions,
+    prefix: 'bull',
+  });
+  try {
+    if (jobId) {
+      const ok = await retryDlqJob(getDlqName(queueName), jobId, targetQueue);
+      return { replayed: ok ? 1 : 0, failed: ok ? 0 : 1 };
+    }
+    const jobs = await dlq.getJobs(['waiting', 'failed'], 0, 500);
+    let replayed = 0;
+    let failed = 0;
+    for (const job of jobs) {
+      if (job.id) {
+        const ok = await retryDlqJob(getDlqName(queueName), job.id, targetQueue);
+        if (ok) replayed++;
+        else failed++;
+      }
+    }
+    return { replayed, failed };
+  } finally {
+    await targetQueue.close();
+  }
+}
+
 /**
  * Closes all active DLQ connection handles (used during graceful shutdown and tests).
  */

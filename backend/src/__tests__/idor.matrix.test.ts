@@ -193,6 +193,15 @@ export const ROUTE_SECURITY_MATRIX: RouteMatrixEntry[] = [
 
   // Suggestions
   { method: 'POST', url: '/v1/resumes/:id/suggestions', isPublic: false, tenantBound: true },
+
+  // Admin & Dead Letter Queue (DLQ) Management
+  { method: 'GET', url: '/v1/admin/dlq', isPublic: false },
+  { method: 'GET', url: '/v1/admin/dlq/:queueName', isPublic: false },
+  { method: 'POST', url: '/v1/admin/dlq/:queueName/retry', isPublic: false },
+  { method: 'POST', url: '/v1/admin/dlq/:queueName/purge', isPublic: false },
+
+  // Real-Time Server-Sent Events (SSE)
+  { method: 'GET', url: '/v1/events/stream', isPublic: false },
 ];
 
 describe('Comprehensive Route Security & IDOR Verification Matrix', () => {

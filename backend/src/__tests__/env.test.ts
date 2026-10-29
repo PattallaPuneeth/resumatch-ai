@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { loadEnv, EnvSchema, scaledRateLimit } from '../config/env.js';
+import { configureDatabaseUrl } from '../db/prisma.js';
 
 describe('Environment Configuration - INTERNAL_API_TOKEN', () => {
   const validBaseEnv: Record<string, string> = {
@@ -260,5 +261,38 @@ describe('Environment Configuration - Load Test Rate Limit Guard (Phase 10B)', (
   it('scaledRateLimit multiplies the base ceiling', () => {
     expect(scaledRateLimit(10, 1)).toBe(10);
     expect(scaledRateLimit(10, 50)).toBe(500);
+  });
+});
+
+describe('Database Pool and Timeout Configuration', () => {
+  const baseEnv: Record<string, string> = {
+    NODE_ENV: 'test',
+    DATABASE_URL: 'postgresql://resumatch_test:StrongTestPass123!@localhost:5432/resumatch_test?schema=public',
+    JWT_SECRET: 'super-strong-production-jwt-secret-9876543210123456789',
+    INTERNAL_API_TOKEN: 'super-strong-production-internal-token-987654321',
+  };
+
+  it('defaults DB pool and timeout parameters', () => {
+    const loaded = loadEnv(baseEnv);
+    expect(loaded.DB_CONNECTION_LIMIT).toBe(20);
+    expect(loaded.DB_POOL_TIMEOUT).toBe(10);
+    expect(loaded.DB_STATEMENT_TIMEOUT_MS).toBe(10000);
+  });
+
+  it('attaches connection_limit, pool_timeout and statement_timeout to raw database url', () => {
+    const configured = configureDatabaseUrl('postgresql://user:pass@localhost:5432/resumatch?schema=public');
+    const parsed = new URL(configured);
+    expect(parsed.searchParams.get('connection_limit')).toBe('20');
+    expect(parsed.searchParams.get('pool_timeout')).toBe('10');
+    expect(parsed.searchParams.get('statement_timeout')).toBe('10000');
+  });
+
+  it('preserves existing connection_limit and statement_timeout if already in url', () => {
+    const raw = 'postgresql://user:pass@localhost:5432/resumatch?schema=public&connection_limit=5&statement_timeout=3000';
+    const configured = configureDatabaseUrl(raw);
+    const parsed = new URL(configured);
+    expect(parsed.searchParams.get('connection_limit')).toBe('5');
+    expect(parsed.searchParams.get('statement_timeout')).toBe('3000');
+    expect(parsed.searchParams.get('pool_timeout')).toBe('10');
   });
 });

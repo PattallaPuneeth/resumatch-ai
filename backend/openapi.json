@@ -1049,6 +1049,210 @@
           }
         }
       }
+    },
+    "/v1/admin/dlq": {
+      "get": {
+        "summary": "Retrieve summary counts for all dead letter queues",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/admin/dlq/{queueName}": {
+      "get": {
+        "summary": "List jobs in a specific dead letter queue",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "resume-parsing-queue",
+                "embedding-queue",
+                "match-scoring-queue",
+                "analysis-queue",
+                "cleanup-queue"
+              ]
+            },
+            "in": "path",
+            "name": "queueName",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/admin/dlq/{queueName}/retry": {
+      "post": {
+        "summary": "Replay dead letter queue jobs back to original active queue",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jobId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "resume-parsing-queue",
+                "embedding-queue",
+                "match-scoring-queue",
+                "analysis-queue",
+                "cleanup-queue"
+              ]
+            },
+            "in": "path",
+            "name": "queueName",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/admin/dlq/{queueName}/purge": {
+      "post": {
+        "summary": "Purge all dead letter queue jobs from a DLQ",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "resume-parsing-queue",
+                "embedding-queue",
+                "match-scoring-queue",
+                "analysis-queue",
+                "cleanup-queue"
+              ]
+            },
+            "in": "path",
+            "name": "queueName",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/events/stream": {
+      "get": {
+        "summary": "Subscribe to real-time user event stream via Server-Sent Events (SSE)",
+        "tags": [
+          "Events"
+        ],
+        "description": "Long-lived SSE connection pushing real-time asynchronous processing updates (e.g. resume parsing status, ATS score computation, match scoring) directly to the client.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "token",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
     }
   },
   "servers": [
@@ -1089,6 +1293,14 @@
     {
       "name": "Usage",
       "description": "Account rate limits and quota consumption metrics"
+    },
+    {
+      "name": "Admin",
+      "description": "Administrative operations, queue inspection and DLQ management"
+    },
+    {
+      "name": "Events",
+      "description": "Real-time asynchronous events and push notifications via Server-Sent Events (SSE)"
     }
   ]
 }
