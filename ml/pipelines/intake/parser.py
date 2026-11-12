@@ -62,16 +62,29 @@ def _extract_pdf_blocks(doc: fitz.Document) -> tuple[str, bool, bool, set[str]]:
         if not text_blocks:
             continue
 
-        # Check for header/footer margins (top < 50pt, bottom > height - 50pt)
-        for b in text_blocks:
-            y0, y1 = b[1], b[3]
-            if y0 < 50 or y1 > (height - 50):
-                has_header_footer = True
+        # Check for header/footer margins:
+        # On single-page resumes, top margin banner text (< 50pt) containing contact details
+        # is standard. Hazard is body text repeating across pages or non-contact body text
+        # crammed in extreme margins (< 20pt / > height - 20pt)
+        if len(doc) > 1:
+            for b in text_blocks:
+                y0, y1 = b[1], b[3]
+                if (y0 < 40 or y1 > (height - 40)) and len(b[4].strip()) > 15:
+                    has_header_footer = True
+        else:
+            for b in text_blocks:
+                y0, y1 = b[1], b[3]
+                if (y0 < 20 or y1 > (height - 20)) and len(b[4].strip()) > 50:
+                    has_header_footer = True
 
         # Check for multi-column layout on this page:
-        # A 2-column page has blocks with x0 in left & right halves with overlapping y-ranges
+        # A 2-column page has substantive blocks in left & right halves with overlapping y-ranges
         left_blocks = [b for b in text_blocks if b[0] < width * 0.45]
-        right_blocks = [b for b in text_blocks if b[0] >= width * 0.48]
+        right_blocks = [
+            b
+            for b in text_blocks
+            if b[0] >= width * 0.48 and len(b[4].strip()) > 25 and (b[2] - b[0]) > width * 0.15
+        ]
 
         page_is_multi_column = False
         if len(left_blocks) >= 2 and len(right_blocks) >= 2:
@@ -108,10 +121,13 @@ def _extract_pdf_blocks(doc: fitz.Document) -> tuple[str, bool, bool, set[str]]:
                     for span in line.get("spans", []):
                         font_name = span.get("font")
                         if font_name:
-                            # Clean font prefix (e.g. ABCDE+ArialMT -> Arial)
+                            # Clean font prefix (e.g. ABCDE+ArialMT -> ArialMT)
                             clean_font = re.sub(r"^[A-Z]{6}\+", "", font_name)
                             clean_font = re.sub(
-                                r"(-MT|-Bold|-Regular|-Italic|MT|PS)", "", clean_font
+                                r"[,\-_](Bold|Regular|Italic|Light|Medium|Black|Roman|Oblique).*",
+                                "",
+                                clean_font,
+                                flags=re.IGNORECASE,
                             )
                             fonts_detected.add(clean_font.strip())
         except Exception:
@@ -203,12 +219,21 @@ def _extract_docx(file_path: str) -> tuple[str, bool, bool]:
     # Check headers / footers
     for section in doc.sections:
         if section.header and any(p.text.strip() for p in section.header.paragraphs):
-            has_header_footer = True
+            header_text = " ".join(
+                p.text.strip() for p in section.header.paragraphs if p.text.strip()
+            )
+            # Flag if header contains contact info or substantive body text (> 30 chars)
+            if len(header_text) > 30 or "@" in header_text:
+                has_header_footer = True
             for p in section.header.paragraphs:
                 if p.text.strip():
                     parts.append(p.text.strip())
         if section.footer and any(p.text.strip() for p in section.footer.paragraphs):
-            has_header_footer = True
+            footer_text = " ".join(
+                p.text.strip() for p in section.footer.paragraphs if p.text.strip()
+            )
+            if len(footer_text) > 30:
+                has_header_footer = True
             for p in section.footer.paragraphs:
                 if p.text.strip():
                     parts.append(p.text.strip())
@@ -322,6 +347,9 @@ def parse_document(
         extraction_method = "DOCX"
         page_count = max(1, len(raw_text) // 2500)  # estimate pages for DOCX
 
+    # Strip private-use glyphs (e.g. FontAwesome icon codes)
+    raw_text = re.sub(r"[\uE000-\uF8FF\u0080-\u009F]", "", raw_text)
+
     # Canonicalize raw_text: normalize whitespace and paragraphs
     paragraphs = [p.strip() for p in raw_text.split("\n") if p.strip()]
     canonical_text = "\n\n".join(paragraphs)
@@ -329,25 +357,51 @@ def parse_document(
     if not canonical_text:
         raise CorruptFileError("Document contains no readable text content.")
 
+    # Calculate extractability ratio on non-whitespace characters
+    non_ws = [c for c in canonical_text if not c.isspace()]
+    if non_ws:
+        bad_chars = sum(1 for c in non_ws if c == "\ufffd" or 0xE000 <= ord(c) <= 0xF8FF)
+        cid_count = len(re.findall(r"\(cid:\d+\)", canonical_text)) * 5
+        extractability_ratio = max(0.0, (len(non_ws) - bad_chars - cid_count) / len(non_ws))
+    else:
+        extractability_ratio = 1.0
+
     # Section mapping on canonical text
     sections = _find_sections(canonical_text)
     sections_found = set(sections.keys())
 
-    # ATS Hazard Analysis and Scoring
-    ats_score, ats_hazards = analyze_ats_hazards(
+    # Extract Entities with exact offsets referencing canonical_text BEFORE scoring
+    contact, candidate_name = extract_contact_info(canonical_text)
+    skills = extract_skills(canonical_text, sections)
+    education = extract_education(canonical_text, sections)
+
+    # Extract experience; fall back to projects if formal experience is absent
+    experience = extract_experience(canonical_text, sections, section_key="experience")
+    experience_source = "experience"
+    if not experience and "projects" in sections:
+        experience = extract_experience(canonical_text, sections, section_key="projects")
+        if experience:
+            experience_source = "projects"
+
+    # ATS Hazard Analysis and Scoring using 4-pillar engine
+    analysis_res = analyze_ats_hazards(
         is_ocr_required=is_ocr_required,
         has_multi_column=has_multi_column,
         has_tables=has_tables,
         has_header_footer=has_header_footer,
         fonts_detected=fonts_detected,
         sections_found=sections_found,
+        extractability_ratio=extractability_ratio,
+        contact=contact,
+        skills=skills,
+        experience_items=experience,
+        education_items=education,
+        experience_source=experience_source,
+        raw_text=canonical_text,
     )
-
-    # Extract Entities with exact offsets referencing canonical_text
-    contact, candidate_name = extract_contact_info(canonical_text)
-    skills = extract_skills(canonical_text, sections)
-    experience = extract_experience(canonical_text, sections)
-    education = extract_education(canonical_text, sections)
+    ats_score = analysis_res.ats_score
+    ats_hazards = analysis_res.ats_hazards
+    ats_subscores = analysis_res.subscores
 
     # Extract summary if present
     summary_text = None
@@ -378,5 +432,11 @@ def parse_document(
             "has_header_footer": has_header_footer,
             "is_ocr_required": is_ocr_required,
             "ocr_dpi": settings.ocr_dpi if is_ocr_required else None,
+            "extractability_ratio": round(extractability_ratio, 3),
+            "experience_source": experience_source,
+            "ats_rubric_version": getattr(analysis_res, "rubric_version", "ats-v2"),
+            "ats_readability_coverage": getattr(analysis_res, "coverage", 1.0),
+            "ats_subscores": ats_subscores,
+            "content_insights": getattr(analysis_res, "content_insights", {}),
         },
     )

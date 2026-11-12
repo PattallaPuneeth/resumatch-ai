@@ -1,0 +1,11 @@
+{
+  "version": "seniority_params_v1",
+  "kappa": 0.22,
+  "delta0": 0.5,
+  "m_floor": 0.40,
+  "hard_gap_potential": 2.0,
+  "cap_potential": 69,
+  "hard_gap_no_fit": 3.0,
+  "cap_no_fit": 44,
+  "overqualified_threshold": -2.0
+}

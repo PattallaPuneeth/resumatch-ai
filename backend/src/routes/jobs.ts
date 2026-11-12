@@ -320,7 +320,7 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
     {
       schema: {
         tags: ['Matching'],
-        summary: 'Retrieve match scoring results, rank breakdown, and skill gap',
+        summary: 'Retrieve the Item 1 Resume + JD assessment and separate retrieval diagnostics',
         params: {
           type: 'object',
           properties: {
@@ -330,6 +330,48 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
           required: ['id', 'resumeId'],
         },
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              resumeId: { type: 'string' },
+              jobId: { type: 'string' },
+              bm25Score: { anyOf: [{ type: 'number' }, { type: 'null' }] },
+              vectorScore: { anyOf: [{ type: 'number' }, { type: 'null' }] },
+              rrfScore: { anyOf: [{ type: 'number' }, { type: 'null' }] },
+              crossEncoderScore: { anyOf: [{ type: 'number' }, { type: 'null' }] },
+              item1Result: {
+                anyOf: [
+                  { type: 'object', additionalProperties: true },
+                  { type: 'null' },
+                ],
+              },
+              retrievalScore: { type: 'number' },
+              finalScore: { type: 'number', deprecated: true },
+              explanation: {
+                anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+              },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+            },
+            required: [
+              'id',
+              'resumeId',
+              'jobId',
+              'bm25Score',
+              'vectorScore',
+              'rrfScore',
+              'crossEncoderScore',
+              'item1Result',
+              'retrievalScore',
+              'finalScore',
+              'explanation',
+              'createdAt',
+              'updatedAt',
+            ],
+          },
+        },
       },
       preHandler: app.authenticate,
     },
@@ -384,7 +426,10 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
         vectorScore: match.vectorScore,
         rrfScore: match.rrfScore,
         crossEncoderScore: match.crossEncoderScore,
+        retrievalScore: match.finalScore,
+        /** @deprecated Use item1Result.score for Resume + JD fit. */
         finalScore: match.finalScore,
+        item1Result: match.item1Result,
         explanation: match.explanation,
         createdAt: match.createdAt,
         updatedAt: match.updatedAt,
@@ -779,7 +824,11 @@ export const jobsRoutes: FastifyPluginAsync = async (app) => {
           resumeId: m.resumeId,
           jobId: m.jobId,
           job: m.job,
-          matchScore: m.finalScore,
+          matchScore:
+            m.item1Result && typeof m.item1Result === 'object' && 'score' in m.item1Result
+              ? (m.item1Result as { score: number | null }).score
+              : null,
+          item1Result: m.item1Result,
           subScores: {
             bm25Score: m.bm25Score,
             vectorScore: m.vectorScore,

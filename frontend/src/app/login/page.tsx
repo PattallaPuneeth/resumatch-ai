@@ -89,7 +89,7 @@ function LoginForm() {
           </div>
           <h1 className="font-display text-xl font-semibold text-foreground">Sign in to ResuMatch AI</h1>
           <p className="text-xs text-muted-foreground">
-            Enter your credentials to access your resumes, ATS analyses, and usage limits.
+            Enter your credentials to access your resumes, analyses, and usage limits.
           </p>
         </div>
 

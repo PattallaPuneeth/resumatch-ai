@@ -201,7 +201,6 @@ async def test_service_fabricated_quote_rejected_fallback_unavailable(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000001",
         resumeRawText=raw_text,
-        atsScore=90.0,
         atsHazards=[],
     )
 
@@ -211,7 +210,6 @@ async def test_service_fabricated_quote_rejected_fallback_unavailable(
     assert res.llmStatus == "UNAVAILABLE"
     assert res.explanation is None
     # Deterministic findings must still be returned!
-    assert res.atsScore == 90.0
     assert len(res.suggestedRoles) == 5
     assert len(res.contentFindings) > 0
 
@@ -234,7 +232,6 @@ async def test_service_prompt_injection_leaves_scores_unchanged(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000002",
         resumeRawText=injection_text,
-        atsScore=65.0,
         atsHazards=[{"code": "MISSING_SECTION_EXPERIENCE", "severity": "HIGH"}],
     )
 
@@ -243,7 +240,6 @@ async def test_service_prompt_injection_leaves_scores_unchanged(
     # Must NOT call LLM gateway
     assert mock_gateway.execute_improvements.call_count == 0
     # Must preserve deterministic ATS score and findings
-    assert res.atsScore == 65.0
     assert len(res.atsFixes) == 1
     assert res.atsFixes[0].hazardCode == "MISSING_SECTION_EXPERIENCE"
     assert res.llmStatus == "UNAVAILABLE"
@@ -287,7 +283,6 @@ async def test_service_pii_redacted_before_llm(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000003",
         resumeRawText=raw_text,
-        atsScore=88.0,
         atsHazards=[],
     )
 
@@ -322,7 +317,6 @@ async def test_service_all_tiers_fail_returns_unavailable(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000004",
         resumeRawText=raw_text,
-        atsScore=95.0,
         atsHazards=[],
     )
 
@@ -331,7 +325,6 @@ async def test_service_all_tiers_fail_returns_unavailable(
     # 200 response returned with llmStatus UNAVAILABLE
     assert res.llmStatus == "UNAVAILABLE"
     assert res.explanation is None
-    assert res.atsScore == 95.0
     assert len(res.suggestedRoles) == 5
     assert mock_gateway.execute_improvements.call_count == 1
 
@@ -368,7 +361,6 @@ async def test_service_gateway_called_exactly_once(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000005",
         resumeRawText=raw_text,
-        atsScore=92.0,
         atsHazards=[],
     )
 

@@ -15,7 +15,7 @@ export const eventsRoutes: FastifyPluginAsync = async (app) => {
         tags: ['Events'],
         summary: 'Subscribe to real-time user event stream via Server-Sent Events (SSE)',
         description:
-          'Long-lived SSE connection pushing real-time asynchronous processing updates (e.g. resume parsing status, ATS score computation, match scoring) directly to the client.',
+          'Long-lived SSE connection pushing real-time asynchronous processing updates (e.g. resume parsing status, match scoring) directly to the client.',
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         querystring: asOpenApiSchema(streamQuerySchema),
       },

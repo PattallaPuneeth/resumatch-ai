@@ -1,0 +1,22 @@
+{
+  "javascript": ["js", "ecmascript"],
+  "typescript": ["ts"],
+  "kubernetes": ["k8s"],
+  "react": ["reactjs", "react.js"],
+  "postgresql": ["postgres", "psql"],
+  "python": ["py"],
+  "golang": ["go programming", "go lang"],
+  "docker": ["containerization", "containers"],
+  "amazon web services": ["aws"],
+  "google cloud platform": ["gcp", "google cloud"],
+  "microsoft azure": ["azure"],
+  "node.js": ["nodejs", "node"],
+  "vue": ["vuejs", "vue.js"],
+  "angular": ["angularjs"],
+  "next.js": ["nextjs", "next"],
+  "mongodb": ["mongo"],
+  "elasticsearch": ["elastic search", "es"],
+  "redis": ["redis cache"],
+  "graphql": ["gql"],
+  "continuous integration": ["ci/cd", "cicd", "continuous delivery"]
+}

@@ -78,6 +78,8 @@ from ml.pipelines.matching.skill_gap import (
     resolve_required_skills,
     resolve_skill_requirements,
 )
+from ml.scoring.pipeline_v31 import VERSION as ITEM1_VERSION
+from ml.scoring.pipeline import assess_pair
 from ml.storage.s3 import download_file
 from ml.utils.logging_setup import configure_logging
 from ml.utils.telemetry import init_telemetry, queue_carrier, record_match_metrics, stage_span
@@ -348,10 +350,9 @@ async def _process_parse_document(
             return {"status": "ABORTED", "reason": "RESUME_DELETED"}
 
         logger.info(
-            "Resume %s successfully parsed and persisted (method=%s, score=%.1f)",
+            "Resume %s successfully parsed and persisted (method=%s)",
             resume_id,
             result.extraction_method,
-            result.ats_score,
         )
 
         # 6. Enqueue embedding generation for the parsed resume
@@ -362,7 +363,6 @@ async def _process_parse_document(
             {
                 "resumeId": resume_id,
                 "status": "PARSED",
-                "atsScore": result.ats_score,
                 "method": result.extraction_method,
             },
         )
@@ -371,7 +371,6 @@ async def _process_parse_document(
             "status": "PARSED",
             "resumeId": resume_id,
             "extractionMethod": result.extraction_method,
-            "atsScore": result.ats_score,
             "pageCount": result.page_count,
         }
 
@@ -551,16 +550,45 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
     job_pref_skills = ctx.get("job_preferred_skills")
     resume_skills = ctx.get("resume_skills")
     resume_raw_text = ctx.get("resume_raw_text") or ""
+    stored_req = job_req_skills if isinstance(job_req_skills, list) else []
+    stored_pref = job_pref_skills if isinstance(job_pref_skills, list) else []
 
     if not job_desc or not job_desc.strip():
         logger.warning("Job %s has no description text.", job_id)
         return {"status": "ABORTED", "reason": "EMPTY_JOB_DESCRIPTION"}
 
+    structured_required = stored_req if isinstance(stored_req, list) else []
+    structured_preferred = stored_pref if isinstance(stored_pref, list) else []
+    item1_jd = "\n".join(
+        [
+            job_title,
+            job_desc,
+            "Required Skills:",
+            *[f"- {skill}" for skill in structured_required],
+            "Preferred Skills:",
+            *[f"- {skill}" for skill in structured_preferred],
+        ]
+    )
+    try:
+        item1_result = await asyncio.to_thread(
+            assess_pair, resume_raw_text, item1_jd
+        )
+    except Exception:
+        logger.exception("Item 1 assessment failed for resume %s and job %s", resume_id, job_id)
+        item1_result = {
+            "version": ITEM1_VERSION,
+            "state": "ABSTAIN",
+            "score": None,
+            "verdict": None,
+            "confidence": "Low",
+            "verdict_withheld": True,
+            "withheld_reason": "Item 1 assessment could not be completed.",
+            "limitations": ["Internal extraction error was recorded by the worker."],
+        }
+
     # Build query text for lexical and semantic retrieval
     # The analyze UI sends only title + raw description, so requiredSkills is usually empty.
     # Fall back to taxonomy skills found in the JD instead of scoring with no requirements.
-    stored_req = job_req_skills if isinstance(job_req_skills, list) else []
-    stored_pref = job_pref_skills if isinstance(job_pref_skills, list) else []
     # Coverage counts required skills; preferred ones only add a small bonus.
     coverage_req, coverage_pref = resolve_skill_requirements(
         stored_req, stored_pref, job_title, job_desc
@@ -687,6 +715,7 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
             cross_encoder_score=best_ce_score,
             final_score=final_score,
             explanation=explanation,
+            item1_result=item1_result,
         )
 
         # Record production monitoring metrics (score distributions, zero-passage monitor)
@@ -705,8 +734,10 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
                 "jobId": job_id,
                 "resumeId": resume_id,
                 "status": "COMPLETED",
-                "score": final_score,
-                "verdict": verdict,
+                "score": item1_result.get("score"),
+                "verdict": item1_result.get("verdict"),
+                "item1Result": item1_result,
+                "retrievalScore": final_score,
             },
         )
 
@@ -716,6 +747,7 @@ async def _process_match_scoring(job: Job, token: str | None = None) -> dict[str
             "resumeId": resume_id,
             "jobId": job_id,
             "finalScore": final_score,
+            "item1Result": item1_result,
         }
 
     except MatchTargetGoneError as gone:
@@ -780,7 +812,6 @@ async def _process_analysis(job: Job, token: str | None = None) -> dict[str, Any
 
         # 2. Deterministic Score Injection (LLM never sees or edits scores)
         final_score = float(match_final_score)
-        ats_score = float(ctx["ats_score"]) if ctx.get("ats_score") is not None else None
 
         verdict_band: Literal["strong", "medium", "weak"]
         if final_score >= DEFAULT_STRONG_THRESHOLD:
@@ -820,7 +851,6 @@ async def _process_analysis(job: Job, token: str | None = None) -> dict[str, Any
                 gaps=[],
                 prioritized_improvements=[],
                 match_score=final_score,
-                ats_score=ats_score,
                 verdict_band=verdict_band,
                 matched_skills=matched_skills,
                 missing_skills=missing_skills,
@@ -847,7 +877,6 @@ async def _process_analysis(job: Job, token: str | None = None) -> dict[str, Any
                     gaps=exec_res.llm_response.gaps,
                     prioritized_improvements=exec_res.llm_response.prioritized_improvements,
                     match_score=final_score,
-                    ats_score=ats_score,
                     verdict_band=verdict_band,
                     matched_skills=matched_skills,
                     missing_skills=missing_skills,
@@ -881,7 +910,6 @@ async def _process_analysis(job: Job, token: str | None = None) -> dict[str, Any
                     gaps=[],
                     prioritized_improvements=[],
                     match_score=final_score,
-                    ats_score=ats_score,
                     verdict_band=verdict_band,
                     matched_skills=matched_skills,
                     missing_skills=missing_skills,

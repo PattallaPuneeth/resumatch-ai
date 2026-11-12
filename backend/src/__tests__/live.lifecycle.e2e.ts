@@ -7,7 +7,7 @@
  * 3. PUTs a valid PDF directly to MinIO storage
  * 4. Completes upload via Fastify API (POST /v1/resumes/:id/complete)
  * 5. Polls Fastify API (GET /v1/resumes/:id) until ML worker parses the document
- * 6. Validates parsed entities, ATS score, hazards, page count
+ * 6. Validates parsed entities, page count
  * 7. Fetches presigned download URL (GET /v1/resumes/:id/download-url) and downloads the PDF
  * 8. Deletes the resume (DELETE /v1/resumes/:id)
  * 9. Validates S3 object is deleted, database records are cascaded, and AuditLog is created
@@ -151,7 +151,6 @@ async function runLiveLifecycleE2E() {
 
   console.log('   Document parsed successfully!');
   console.log(`   Candidate: ${parsedDetails.parsedResume?.candidateName || 'N/A'}`);
-  console.log(`   ATS Score: ${parsedDetails.parsedResume?.atsScore}`);
   console.log(`   Skills detected: ${parsedDetails.parsedResume?.skills?.length || 0}`);
 
   // Step 6: Test GET /v1/resumes/:id/download-url

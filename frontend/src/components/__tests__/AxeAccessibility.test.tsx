@@ -176,7 +176,6 @@ describe('Automated Axe Accessibility Suite (Part 3.1 - All Main Screens)', () =
   it('passes axe audit on ModeAResults screen', async () => {
     const mockImprovements = {
       resumeId: '1',
-      atsScore: 90,
       subScores: {
         formatCompliance: 92,
         keywordOptimization: 88,
@@ -215,7 +214,6 @@ describe('Automated Axe Accessibility Suite (Part 3.1 - All Main Screens)', () =
       llmStatus: 'UNAVAILABLE' as const,
       result: {
         match_score: 93.47,
-        ats_score: 88,
         verdict_band: 'strong',
         strengths: [{ claim: 'Strong TypeScript', evidence: 'TypeScript developer' }],
         gaps: [],

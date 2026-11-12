@@ -41,7 +41,6 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
       status: 'PARSED',
       createdAt: '2026-10-26T10:00:00Z',
       updatedAt: '2026-10-26T10:00:00Z',
-      atsScore: 84.5,
     },
     {
       id: 'res-processing-2',
@@ -193,7 +192,6 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
   // =========================================================================
   describe('ModeAResults Component', () => {
     const mockModeAData: ImprovementsResponse = {
-      atsScore: 78.4,
       atsFixes: [
         {
           hazardCode: 'TWO_COLUMN_LAYOUT',
@@ -225,13 +223,12 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
       llmStatus: 'UNAVAILABLE',
     };
 
-    it('renders ATS score verbatim without rounding or alteration (Rule 4)', () => {
+    it('shows no ATS score, readability grade or formatting score (Item 4)', () => {
       render(<ModeAResults data={mockModeAData} />);
 
-      const scoreEl = screen.getByTestId('mode-a-ats-score');
-      // Must contain exact string "78.4"
-      expect(scoreEl.textContent).toContain('78.4');
-      expect(screen.getByTestId('mode-a-score-band').textContent).toContain('Moderate ATS Compatibility');
+      expect(screen.queryByTestId('mode-a-ats-score')).toBeNull();
+      expect(screen.queryByTestId('mode-a-score-band')).toBeNull();
+      expect(document.body.textContent).not.toMatch(/ATS (Score|Readability)|Compatibility|Parse Integrity/i);
     });
 
     it('renders neutral notice when llmStatus is UNAVAILABLE without error styling', () => {
@@ -242,10 +239,10 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
       expect(notice.textContent).toMatch(/AI explanation unavailable, showing deterministic results/i);
     });
 
-    it('renders ATS fixes, character span content findings, and suggested roles', () => {
+    it('renders formatting tips, character span content findings, and suggested roles', () => {
       render(<ModeAResults data={mockModeAData} />);
 
-      expect(screen.getByTestId('ats-fix-item-0').textContent).toContain('TWO_COLUMN_LAYOUT');
+      expect(screen.getByTestId('resume-fix-item-0').textContent).toContain('TWO_COLUMN_LAYOUT');
       expect(screen.getByTestId('content-finding-0').textContent).toContain('chars 140–210');
       expect(screen.getByTestId('content-finding-0').textContent).toContain(
         'Optimized internal databases and reduced application load times.'
@@ -268,6 +265,28 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
       rrfScore: 0.031,
       crossEncoderScore: 0.89,
       finalScore: 82.7,
+      item1Result: {
+        version: 'item1-india-it-prototype-0.1',
+        state: 'SCORED',
+        score: 72,
+        raw_score: '72.0',
+        capped_score: '72.0',
+        verdict: null,
+        confidence: 'Low',
+        verdict_withheld: true,
+        withheld_reason: 'Not enough validated extraction coverage for a verdict.',
+        score_range: null,
+        components: { sk: '0.72' },
+        coverage: { assessable: 3, total: 3, ratio: 1 },
+        skill_units: [],
+        gate_units: [],
+        years: {},
+        confirm_only: [],
+        public_sector_cue: null,
+        stuffing_guard_applied: false,
+        limitations: ['Engineering review only.'],
+        guidance: 'Guidance based on what the resume says. It is not a hiring decision.',
+      },
       explanation: {
         skillGap: {
           matched: ['python', 'fastapi'],
@@ -316,7 +335,6 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
           },
         ],
         match_score: 82.7,
-        ats_score: 85.0,
         verdict_band: 'strong',
         matched_skills: ['python', 'fastapi'],
         missing_skills: ['kubernetes', 'grpc'],
@@ -326,27 +344,24 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
       updatedAt: '2026-10-26T12:00:00Z',
     };
 
-    it('renders Mode B overall match score and ATS score verbatim (Rule 4)', () => {
+    it('renders Mode B overall match score and no ATS score (Rule 4, Item 4)', () => {
       render(<ModeBResults analysis={mockAnalysisResult} matchResult={mockMatchResult} />);
 
       const matchScoreEl = screen.getByTestId('mode-b-match-score');
-      expect(matchScoreEl.textContent).toContain('82.7');
+      expect(matchScoreEl.textContent).toContain('72');
 
-      const atsScoreEl = screen.getByTestId('mode-b-ats-score');
-      expect(atsScoreEl.textContent).toContain('85');
+      expect(screen.queryByTestId('mode-b-ats-score')).toBeNull();
 
-      expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Strong Match');
+      expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Verdict withheld');
     });
 
-    it('shows the verdict from the real camelCase API payload, not a default', () => {
-      // Shape returned by GET /v1/jobs/:id/analysis/:resumeId (captured from the live backend)
+    it('keeps the Item 1 score separate from legacy analysis scores', () => {
       const apiResult = {
         summary: 'Candidate shows relevant experience for the role.',
         strengths: [],
         gaps: [],
         prioritizedImprovements: [{ priority: 1, action: 'Add a Kafka project.' }],
         matchScore: 97.12,
-        atsScore: 70,
         verdictBand: 'strong',
         matchedSkills: ['docker', 'postgresql'],
         missingSkills: [],
@@ -359,17 +374,21 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
         />
       );
 
-      expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Strong Match');
-      expect(screen.getByTestId('mode-b-ats-score').textContent).toContain('70');
+      expect(screen.getByTestId('mode-b-match-score').textContent).toContain('72');
+      expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Verdict withheld');
+      expect(screen.queryByTestId('mode-b-ats-score')).toBeNull();
       expect(screen.getByTestId('improvement-item-0').textContent).toContain('Add a Kafka project.');
     });
 
-    it('works out the verdict from the score when a result has none', () => {
+    it('does not fall back to the legacy score when Item 1 is missing', () => {
       const result = normalizeAnalysisData({ matchScore: 30 });
       render(
-        <ModeBResults analysis={{ ...mockAnalysisResult, score: 30, result }} matchResult={mockMatchResult} />
+        <ModeBResults
+          analysis={{ ...mockAnalysisResult, score: 30, result }}
+          matchResult={{ ...mockMatchResult, item1Result: null }}
+        />
       );
-      expect(screen.getByTestId('mode-b-verdict-band').textContent).toContain('Low Match');
+      expect(screen.getByTestId('item1-no-score').textContent).toContain('No score available');
     });
 
     it('renders MatchVisualizer with exact sub-scores and missing keywords', () => {

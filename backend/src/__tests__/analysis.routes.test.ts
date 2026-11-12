@@ -294,7 +294,6 @@ describe('Phase 4A: Structured Analysis Routes', () => {
           gaps: [],
           prioritizedImprovements: [],
           matchScore: 83.39,
-          atsScore: 92.0,
           verdictBand: 'strong',
           matchedSkills: ['TypeScript', 'Node.js'],
           missingSkills: [],

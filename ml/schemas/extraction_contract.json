@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://resumatch.ai/schemas/extraction_contract.json",
+  "title": "ResuMatch Call 1 verbatim extraction contract",
+  "description": "Spans only. No judgment fields (status, class, priority, section, role, jurisdiction, credit) are allowed; code derives all of them from verified offsets. Offsets are Unicode code-point indices into the canonical text named by its hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "offset_unit", "documents", "facts"],
+  "properties": {
+    "contract_version": { "const": "1.0.0" },
+    "offset_unit": { "const": "unicode_code_point_nfc_canonical" },
+    "documents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resume_sha256", "jd_sha256"],
+      "properties": {
+        "resume_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "jd_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "facts": {
+      "type": "array",
+      "maxItems": 600,
+      "items": { "$ref": "#/$defs/fact" }
+    }
+  },
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_id", "doc", "kind", "start", "end", "text"],
+      "properties": {
+        "fact_id": { "type": "string", "pattern": "^f[0-9]{1,4}$" },
+        "doc": { "enum": ["resume", "jd"] },
+        "kind": {
+          "enum": [
+            "skill_mention",
+            "role_header",
+            "date_range",
+            "education_entry",
+            "credential_mention",
+            "credential_date",
+            "years_claim",
+            "jd_title",
+            "jd_requirement",
+            "jd_priority_cue",
+            "jd_years_phrase",
+            "jd_alternative_path"
+          ]
+        },
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 1 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "links": {
+          "type": "array",
+          "maxItems": 10,
+          "description": "Optional fact_ids this fact refers to (e.g. a jd_priority_cue linked to its jd_requirement). Links are hints only and are re-checked by code.",
+          "items": { "type": "string", "pattern": "^f[0-9]{1,4}$" }
+        }
+      }
+    }
+  }
+}

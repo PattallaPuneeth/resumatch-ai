@@ -1,0 +1,298 @@
+{
+  "schema_version": "skill-implications-v1",
+  "review_status": "draft",
+  "reviewed_on": "2026-11-12",
+  "scope": "Standard facts of the form 'if the resume names this tool or library, it evidences this parent skill'. A match earns the stated credit (spec V7 implied edge, 0.9) and quotes the trigger text. Only well-established relations are listed; nothing is inferred from similarity.",
+  "rows": [
+    {
+      "when": [
+        "pyspark"
+      ],
+      "implies": [
+        "python"
+      ],
+      "credit": 0.9,
+      "note": "PySpark is the Python API for Spark"
+    },
+    {
+      "when": [
+        "django",
+        "flask",
+        "fastapi",
+        "pandas",
+        "numpy",
+        "scikit-learn",
+        "sklearn",
+        "pytest"
+      ],
+      "implies": [
+        "python"
+      ],
+      "credit": 0.9,
+      "note": "Python libraries and frameworks"
+    },
+    {
+      "when": [
+        "spring boot",
+        "spring framework",
+        "hibernate",
+        "junit",
+        "testng"
+      ],
+      "implies": [
+        "java"
+      ],
+      "credit": 0.9,
+      "note": "Java frameworks and test libraries"
+    },
+    {
+      "when": [
+        "react",
+        "react.js",
+        "reactjs",
+        "node.js",
+        "nodejs",
+        "typescript",
+        "jquery",
+        "vue",
+        "vue.js"
+      ],
+      "implies": [
+        "javascript"
+      ],
+      "credit": 0.9,
+      "note": "JavaScript runtimes, frameworks and supersets"
+    },
+    {
+      "when": [
+        "ruby on rails",
+        "rails"
+      ],
+      "implies": [
+        "ruby"
+      ],
+      "credit": 0.9,
+      "note": "Rails is a Ruby framework"
+    },
+    {
+      "when": [
+        "laravel",
+        "symfony"
+      ],
+      "implies": [
+        "php"
+      ],
+      "credit": 0.9,
+      "note": "PHP frameworks"
+    },
+    {
+      "when": [
+        "postgresql",
+        "postgres",
+        "mysql",
+        "sql server",
+        "t-sql",
+        "pl/sql",
+        "oracle database",
+        "sqlite",
+        "mariadb"
+      ],
+      "implies": [
+        "sql"
+      ],
+      "credit": 0.9,
+      "note": "relational databases are queried with SQL"
+    },
+    {
+      "when": [
+        "ec2",
+        "s3",
+        "redshift",
+        "dynamodb",
+        "lambda"
+      ],
+      "implies": [
+        "aws"
+      ],
+      "credit": 0.9,
+      "note": "AWS services"
+    },
+    {
+      "when": [
+        "bigquery",
+        "dataproc",
+        "gke",
+        "cloud run"
+      ],
+      "implies": [
+        "gcp"
+      ],
+      "credit": 0.9,
+      "note": "Google Cloud services"
+    },
+    {
+      "when": [
+        "azure devops",
+        "azure data factory",
+        "azure synapse"
+      ],
+      "implies": [
+        "azure"
+      ],
+      "credit": 0.9,
+      "note": "Azure services"
+    },
+    {
+      "when": [
+        "spark mllib",
+        "spark streaming",
+        "structured streaming"
+      ],
+      "implies": [
+        "spark"
+      ],
+      "credit": 0.9,
+      "note": "Spark components"
+    },
+    {
+      "when": [
+        "gstr-1",
+        "gstr-3b",
+        "gstr-9",
+        "gstr-2b",
+        "gst returns",
+        "gst return filing",
+        "e-way bill",
+        "e-invoicing",
+        "e-invoice"
+      ],
+      "implies": [
+        "gst"
+      ],
+      "credit": 0.9,
+      "note": "GST returns, e-invoicing and e-way bills are GST compliance work"
+    },
+    {
+      "when": [
+        "sap fico",
+        "sap abap",
+        "sap hana",
+        "sap mm",
+        "sap sd",
+        "sap basis"
+      ],
+      "implies": [
+        "sap"
+      ],
+      "credit": 0.9,
+      "note": "SAP modules"
+    },
+    {
+      "when": [
+        "form 26q",
+        "form 24q",
+        "form 27q",
+        "tds returns",
+        "tds return filing"
+      ],
+      "implies": [
+        "tds"
+      ],
+      "credit": 0.9,
+      "note": "TDS return forms"
+    },
+    {
+      "when": [
+        "docker compose",
+        "docker swarm"
+      ],
+      "implies": [
+        "docker"
+      ],
+      "credit": 0.9,
+      "note": "Docker tooling"
+    },
+    {
+      "when": [
+        "next.js",
+        "nextjs",
+        "react native"
+      ],
+      "implies": [
+        "react"
+      ],
+      "credit": 0.85,
+      "note": "React-based frameworks"
+    },
+    {
+      "when": [
+        "next.js",
+        "nextjs",
+        "react native",
+        "angular",
+        "angularjs",
+        "vue.js",
+        "node.js",
+        "nodejs"
+      ],
+      "implies": [
+        "javascript"
+      ],
+      "credit": 0.9,
+      "note": "JavaScript frameworks and runtimes"
+    },
+    {
+      "when": [
+        "mig welding",
+        "tig welding",
+        "arc welding",
+        "gas welding"
+      ],
+      "implies": [
+        "welding"
+      ],
+      "credit": 0.9,
+      "note": "Welding processes"
+    },
+    {
+      "when": [
+        "amazon redshift",
+        "amazon s3",
+        "amazon ec2",
+        "aws glue",
+        "aws lambda"
+      ],
+      "implies": [
+        "aws"
+      ],
+      "credit": 0.9,
+      "note": "AWS services"
+    },
+    {
+      "when": [
+        "azure data lake",
+        "azure functions",
+        "azure sql",
+        "azure databricks"
+      ],
+      "implies": [
+        "azure"
+      ],
+      "credit": 0.9,
+      "note": "Azure services"
+    },
+    {
+      "when": [
+        "tally prime",
+        "tally erp 9",
+        "tally erp9",
+        "tally.erp 9"
+      ],
+      "implies": [
+        "accounting"
+      ],
+      "credit": 0.8,
+      "note": "Tally is accounting software"
+    }
+  ]
+}

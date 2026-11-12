@@ -49,7 +49,7 @@ describe('ResumeList Component (src/components/ResumeList.tsx)', () => {
     vi.spyOn(apiClient.resumes, 'get').mockResolvedValue({
       ...base,
       status: 'PARSED',
-      parsedResume: { id: 'pr', rawText: 't', atsScore: 70, createdAt: '', updatedAt: '' },
+      parsedResume: { id: 'pr', rawText: 't', createdAt: '', updatedAt: '' },
     } as ResumeDetailsResponse);
 
     renderWithClient(<ResumeList />);
@@ -88,7 +88,6 @@ describe('ResumeList Component (src/components/ResumeList.tsx)', () => {
         status: 'PARSED',
         createdAt: '2026-10-26T10:10:00Z',
         updatedAt: '2026-10-26T10:10:00Z',
-        atsScore: 88,
       },
       {
         id: 'r-4',
@@ -113,7 +112,6 @@ describe('ResumeList Component (src/components/ResumeList.tsx)', () => {
       parsedResume: {
         id: 'pr-3',
         rawText: 'text',
-        atsScore: 88,
         createdAt: '2026-10-26T10:10:00Z',
         updatedAt: '2026-10-26T10:10:00Z',
       },
@@ -133,11 +131,8 @@ describe('ResumeList Component (src/components/ResumeList.tsx)', () => {
     expect(screen.getByText('parsed.pdf')).toBeDefined();
     expect(screen.getByText('corrupt.pdf')).toBeDefined();
 
-    // Verify ATS score is shown for parsed resume
-    await waitFor(() => {
-      // The score is rendered twice (its own column on larger screens, under the badge on phones)
-      expect(screen.getByTestId('ats-score-r-3').textContent).toMatch(/88 \/ 100/);
-    });
+    // No ATS score is shown for any resume (Item 4)
+    expect(screen.queryByTestId('ats-score-r-3')).toBeNull();
   });
 
   it('prompts user with confirmation dialog and deletes resume on confirm', async () => {

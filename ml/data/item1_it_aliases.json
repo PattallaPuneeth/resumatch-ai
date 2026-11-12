@@ -1,0 +1,33 @@
+{
+  "schema_version": "item1-it-aliases-v1",
+  "reviewed_on": "2026-11-10",
+  "scope": "Software / IT pilot; only source-supported name variants are included.",
+  "rows": [
+    {
+      "canonical": "Kubernetes",
+      "aliases": ["K8s"],
+      "evidence": "Official Kubernetes material explicitly describes K8s as the abbreviation for Kubernetes.",
+      "source_url": "https://kubernetes.io/docs/concepts/overview/"
+    },
+    {
+      "canonical": "Amazon Web Services",
+      "aliases": ["AWS"],
+      "evidence": "AWS's official overview spells out Amazon Web Services (AWS).",
+      "source_url": "https://docs.aws.amazon.com/whitepapers/latest/aws-overview/introduction.html"
+    },
+    {
+      "canonical": "Google Cloud Platform",
+      "aliases": ["GCP"],
+      "evidence": "Google Cloud's official document names Google Cloud Platform (GCP).",
+      "source_url": "https://cloud.google.com/files/trusting-your-data-with-google-cloud-platform.pdf"
+    },
+    {
+      "canonical": "PostgreSQL",
+      "aliases": ["Postgres"],
+      "evidence": "PostgreSQL project documentation states that PostgreSQL and Postgres are used interchangeably; current docs also use postgres for the server executable.",
+      "source_url": "https://www.postgresql.org/files/documentation/pdf/7.2/programmer-7.2-US.pdf",
+      "corroborating_source_url": "https://www.postgresql.org/docs/current/app-postgres.html"
+    }
+  ]
+}
+

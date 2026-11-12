@@ -107,6 +107,7 @@ def persist_match_result(
     cross_encoder_score: float | None = None,
     final_score: float = 0.0,
     explanation: dict[str, Any] | None = None,
+    item1_result: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> str:
     """
@@ -125,6 +126,7 @@ def persist_match_result(
             explanation = {}
 
         explanation_json = json.dumps(explanation)
+        item1_result_json = json.dumps(item1_result) if item1_result is not None else None
 
         with psycopg.connect(settings.database_url) as conn:
             with conn.transaction():
@@ -133,10 +135,11 @@ def persist_match_result(
                         """
                         INSERT INTO matches (
                             id, "resumeId", "jobId", "bm25Score", "vectorScore",
-                            "rrfScore", "crossEncoderScore", "finalScore", explanation,
+                            "rrfScore", "crossEncoderScore", "finalScore", "item1Result",
+                            explanation,
                             "createdAt", "updatedAt"
                         ) VALUES (
-                            gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s::jsonb,
+                            gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb,
                             NOW(), NOW()
                         )
                         ON CONFLICT ("resumeId", "jobId") DO UPDATE SET
@@ -145,6 +148,7 @@ def persist_match_result(
                             "rrfScore" = EXCLUDED."rrfScore",
                             "crossEncoderScore" = EXCLUDED."crossEncoderScore",
                             "finalScore" = EXCLUDED."finalScore",
+                            "item1Result" = EXCLUDED."item1Result",
                             "explanation" = EXCLUDED."explanation",
                             "updatedAt" = NOW()
                         RETURNING id;
@@ -157,6 +161,7 @@ def persist_match_result(
                             rrf_score,
                             cross_encoder_score,
                             final_score,
+                            item1_result_json,
                             explanation_json,
                         ),
                     )

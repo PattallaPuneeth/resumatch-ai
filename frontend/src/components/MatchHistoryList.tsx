@@ -181,9 +181,9 @@ export function MatchHistoryList({
 
                 <div className="flex items-center gap-3 self-end sm:self-center">
                   <div className="text-right">
-                    <span className="text-xs text-slate-500 block">Match Score</span>
+                    <span className="text-xs text-slate-500 block">Item 1 score</span>
                     <span className="text-base font-bold text-slate-900">
-                      {item.matchScore}%
+                      {item.matchScore === null ? 'No Item 1 score' : `${item.matchScore}%`}
                     </span>
                   </div>
 

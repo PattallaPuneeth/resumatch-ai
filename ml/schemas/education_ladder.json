@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://resumatch.ai/schemas/education_ladder.json",
+  "title": "ResuMatch education ladder",
+  "description": "Ordinal levels plus named qualifications on parallel tracks. Aliases are jurisdiction-aware; an ambiguous alias without jurisdiction context resolves to Confirm-only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ladder_version", "levels", "status_cues", "qualifications"],
+  "properties": {
+    "ladder_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "levels": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "label"],
+        "properties": { "level": { "type": "integer", "minimum": 0, "maximum": 5 }, "label": { "type": "string" } }
+      }
+    },
+    "status_cues": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed", "in_progress", "discontinued"],
+      "properties": {
+        "completed": { "type": "array", "items": { "type": "string" } },
+        "in_progress": { "type": "array", "items": { "type": "string" } },
+        "discontinued": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "qualifications": { "type": "array", "items": { "$ref": "#/$defs/qualification" } }
+  },
+  "$defs": {
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["qual_id", "display_name", "level", "track", "aliases", "equivalence", "provenance"],
+      "properties": {
+        "qual_id": { "type": "string", "pattern": "^[a-z0-9_.-]+$" },
+        "display_name": { "type": "string" },
+        "level": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "track": { "enum": ["school", "vocational", "academic", "professional", "medical", "legal"] },
+        "field": { "type": ["string", "null"] },
+        "aliases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text", "jurisdiction_context"],
+            "properties": {
+              "text": { "type": "string", "minLength": 1 },
+              "jurisdiction_context": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^([A-Z]{2}|\\*)$" } },
+              "ambiguous_without_context": { "type": "boolean", "default": false }
+            }
+          }
+        },
+        "equivalence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["ladder", "named_set_only", "confirm_only"] },
+            "notes": { "type": "string" }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["verified_as_of", "review_status"],
+          "properties": {
+            "source_urls": { "type": "array", "items": { "type": "string", "format": "uri" } },
+            "verified_as_of": { "type": "string", "format": "date" },
+            "review_status": { "enum": ["draft", "owner_approved", "retired"] }
+          }
+        }
+      }
+    }
+  }
+}

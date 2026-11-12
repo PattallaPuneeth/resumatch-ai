@@ -590,8 +590,6 @@ export async function handleGetResume(
         education: resume.parsedResume.education,
         certifications: resume.parsedResume.certifications,
         pageCount: resume.parsedResume.pageCount,
-        atsScore: resume.parsedResume.atsScore,
-        atsHazards: resume.parsedResume.atsHazards,
         parsingMetadata: resume.parsedResume.parsingMetadata,
         createdAt: resume.parsedResume.createdAt,
         updatedAt: resume.parsedResume.updatedAt,

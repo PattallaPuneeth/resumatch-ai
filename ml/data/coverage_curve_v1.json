@@ -1,0 +1,6 @@
+{
+  "version": "placeholder-unfitted-1",
+  "fitted": false,
+  "note": "Unfitted placeholder: coverage of 0.35 or more earns full skill credit. Replaced by a curve fitted on the owner's labeled tune data (ml/eval/item12_eval.py fit-curve). Do not treat verdicts as calibrated while fitted is false.",
+  "knots": [["0", "0"], ["7/20", "1"], ["1", "1"]]
+}

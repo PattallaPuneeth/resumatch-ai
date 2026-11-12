@@ -11,7 +11,7 @@ export const improvementsParamsSchema = z.object({
 
 /**
  * Resume-only improvements and role suggestions route (Phase 4C).
- * Stateless endpoint providing ATS hazard remediation, content findings,
+ * Stateless endpoint providing formatting tips, content findings,
  * ML-ranked role suggestions, and LLM explanation.
  */
 export const improvementsRoutes: FastifyPluginAsync = async (app) => {
@@ -99,7 +99,6 @@ export const improvementsRoutes: FastifyPluginAsync = async (app) => {
             body: JSON.stringify({
               resumeId,
               resumeRawText: parsedResume.rawText,
-              atsScore: parsedResume.atsScore,
               atsHazards: parsedResume.atsHazards || [],
               candidateSkills: parsedResume.skills || null,
             }),

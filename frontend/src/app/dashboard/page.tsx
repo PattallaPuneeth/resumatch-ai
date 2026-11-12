@@ -1,22 +1,18 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/authContext';
-import { apiClient, ResumeSummary, UserUsageResponse } from '@/lib/apiClient';
 import { UsagePanel } from '@/components/UsagePanel';
 import { ResumeUpload } from '@/components/ResumeUpload';
 import { ResumeList } from '@/components/ResumeList';
-import { BulletEditor } from '@/components/BulletEditor';
-import { ResumeExport } from '@/components/ResumeExport';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
-  const [acceptedByResume, setAcceptedByResume] = React.useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -27,42 +23,6 @@ export default function DashboardPage() {
   useEffect(() => {
     document.title = 'Dashboard | ResuMatch AI';
   }, []);
-
-  // Fetch user's resumes
-  const { data: resumesData } = useQuery<{ resumes: ResumeSummary[] }>({
-    queryKey: ['resumes'],
-    queryFn: () => apiClient.resumes.list(),
-    enabled: isAuthenticated,
-  });
-
-  const resumes = useMemo(() => resumesData?.resumes || [], [resumesData?.resumes]);
-  const firstParsed = useMemo(() => resumes.find((r) => r.status === 'PARSED'), [resumes]);
-
-  // Fetch usage meters
-  const { data: usageData, refetch: refetchUsage } = useQuery<UserUsageResponse>({
-    queryKey: ['usage'],
-    queryFn: () => apiClient.usage.get(),
-    enabled: isAuthenticated,
-  });
-
-  // Fetch active parsed resume detail to extract experience bullets
-  const { data: resumeDetailData } = useQuery({
-    queryKey: ['resume-detail', firstParsed?.id],
-    queryFn: () => apiClient.resumes.get(firstParsed!.id),
-    enabled: !!firstParsed?.id,
-  });
-
-  const resumeBullets = useMemo(() => {
-    if (!resumeDetailData?.parsedResume) return [];
-    const exp = (resumeDetailData.parsedResume as any).experience || [];
-    const bullets: string[] = [];
-    exp.forEach((job: any) => {
-      if (Array.isArray(job.bullets)) {
-        bullets.push(...job.bullets.filter(Boolean));
-      }
-    });
-    return bullets;
-  }, [resumeDetailData]);
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -93,7 +53,7 @@ export default function DashboardPage() {
             Welcome back, <span className="text-primary">{user?.username}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1">
-            Upload resumes, see how they read to an ATS, and keep an eye on your monthly usage.
+            Upload resumes, get improvement tips, and keep an eye on your monthly usage.
           </p>
         </div>
       </div>
@@ -110,29 +70,6 @@ export default function DashboardPage() {
       <section aria-label="Uploaded resumes repository">
         <ResumeList onDeleteSuccess={handleDeleteSuccess} />
       </section>
-
-      {/* Interactive Bullet Rewriter Mounted on Dashboard per Requirement A2 */}
-      {firstParsed && (
-        <section aria-label="Quick STAR bullet rewriter" className="pt-2">
-          <BulletEditor
-            resumeId={firstParsed.id}
-            bullets={resumeBullets}
-            analysesMeter={usageData?.meters?.analyses}
-            onUsageChange={refetchUsage}
-            acceptedRewrites={acceptedByResume[firstParsed.id] ?? {}}
-            onAccept={(original, rewritten) =>
-              setAcceptedByResume((prev) => ({
-                ...prev,
-                [firstParsed.id]: { ...(prev[firstParsed.id] ?? {}), [original]: rewritten },
-              }))
-            }
-          />
-          <ResumeExport
-            resumeId={firstParsed.id}
-            acceptedRewrites={acceptedByResume[firstParsed.id] ?? {}}
-          />
-        </section>
-      )}
     </div>
   );
 }

@@ -47,6 +47,7 @@ function AnalyzePageContent() {
   const [modeBAnalysis, setModeBAnalysis] = useState<AnalysisResult | null>(null);
   const [modeBMatch, setModeBMatch] = useState<MatchResult | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [bulletToEdit, setBulletToEdit] = useState<string | undefined>(undefined);
 
   // Client-tracked per-resume match history (stored by resumeId)
   const [resumeMatchHistory, setResumeMatchHistory] = useState<Record<string, MatchHistoryItem[]>>({});
@@ -146,6 +147,7 @@ function AnalyzePageContent() {
     setModeBMatch(null);
     setCurrentJobId(null);
     setErrorMessage(null);
+    setBulletToEdit(undefined);
   };
 
   // Helper: Sleep with cancellation check
@@ -288,7 +290,7 @@ function AnalyzePageContent() {
         jobId,
         title: jdData.title,
         company: jdData.company,
-        matchScore: matchResult.finalScore,
+        matchScore: matchResult.item1Result?.score ?? null,
         date: new Date().toLocaleDateString(),
       };
 
@@ -362,7 +364,7 @@ function AnalyzePageContent() {
             </h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Check how an ATS reads it, match it against a job post, or find roles that fit.
+            Get improvement tips, match it against a job post, or find roles that fit.
           </p>
         </header>
 
@@ -438,7 +440,16 @@ function AnalyzePageContent() {
             aria-label="Mode A Analysis Results"
             className="space-y-8 animate-in fade-in duration-300 focus:outline-none"
           >
-            <ModeAResults data={modeAResults} />
+            <ModeAResults
+              data={modeAResults}
+              onFixBullet={(bullet) => {
+                setBulletToEdit(bullet);
+                const el = document.getElementById('bullet-editor-heading');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            />
 
             {/* Suggestions Panel for Mode A */}
             {selectedResumeId && (
@@ -481,6 +492,7 @@ function AnalyzePageContent() {
             jobs={jobsList}
             analysesMeter={usageData?.meters?.analyses}
             onUsageChange={refetchUsage}
+            initialBullet={bulletToEdit}
             acceptedRewrites={acceptedByResume[selectedResumeId] ?? {}}
             onAccept={(original, rewritten) =>
               setAcceptedByResume((prev) => ({

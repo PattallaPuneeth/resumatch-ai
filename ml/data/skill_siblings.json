@@ -1,0 +1,47 @@
+{
+  "schema_version": "skill-siblings-v1",
+  "review_status": "draft",
+  "reviewed_on": "2026-11-12",
+  "groups": [
+    {
+      "concept": "cloud_data_warehouse",
+      "credit": 0.70,
+      "members": ["snowflake", "bigquery", "redshift", "synapse"]
+    },
+    {
+      "concept": "cloud_infrastructure",
+      "credit": 0.70,
+      "members": ["aws", "gcp", "azure"]
+    },
+    {
+      "concept": "ci_cd_tooling",
+      "credit": 0.70,
+      "members": ["jenkins", "gitlab_ci", "github_actions", "circleci", "travis_ci"]
+    },
+    {
+      "concept": "relational_database",
+      "credit": 0.50,
+      "members": ["postgresql", "mysql", "mariadb", "oracle_db", "sql_server"]
+    },
+    {
+      "concept": "frontend_spa_framework",
+      "credit": 0.50,
+      "members": ["react", "vue", "angular", "svelte"]
+    },
+    {
+      "concept": "python_web_framework",
+      "credit": 0.50,
+      "members": ["fastapi", "flask", "django"]
+    },
+    {
+      "concept": "iac_tooling",
+      "credit": 0.50,
+      "members": ["terraform", "ansible", "pulumi", "cloudformation"]
+    },
+    {
+      "concept": "nosql_store",
+      "credit": 0.25,
+      "members": ["mongodb", "cassandra", "couchbase", "dynamodb"]
+    }
+  ]
+}

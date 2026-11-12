@@ -113,3 +113,7 @@ ml/eval/datasets_local/
 
 # README screenshots (captured by frontend/scripts/screenshots.mjs) are part of the docs
 !docs/images/*.png
+
+# owner-supplied labeled pairs (real resumes) and evaluation outputs
+eval-inbox/*
+!eval-inbox/README.txt

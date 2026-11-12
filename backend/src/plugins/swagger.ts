@@ -52,7 +52,7 @@ const swaggerPlugin = fp(async (app: FastifyInstance): Promise<void> => {
         { name: 'Auth', description: 'User registration, sessions, JWT refresh and account recovery' },
         { name: 'Resumes', description: 'Resume presigned uploads, completion, metadata and downloads' },
         { name: 'Jobs', description: 'Job description intake and embeddings' },
-        { name: 'Matching', description: 'Hybrid search, cross-encoder reranking, and ATS fit scoring' },
+        { name: 'Matching', description: 'Hybrid search, cross-encoder reranking, and resume-to-job fit scoring' },
         { name: 'Analysis', description: 'In-depth resume-job gap analysis and scoring breakdown' },
         { name: 'Rewriter', description: 'Bullet point improvement suggestions and rewriting' },
         { name: 'Usage', description: 'Account rate limits and quota consumption metrics' },

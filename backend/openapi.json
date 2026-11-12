@@ -755,7 +755,7 @@
     },
     "/v1/jobs/{id}/matches/{resumeId}": {
       "get": {
-        "summary": "Retrieve match scoring results, rank breakdown, and skill gap",
+        "summary": "Retrieve the Item 1 Resume + JD assessment and separate retrieval diagnostics",
         "tags": [
           "Matching"
         ],
@@ -789,7 +789,81 @@
         ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "resumeId": {
+                      "type": "string"
+                    },
+                    "jobId": {
+                      "type": "string"
+                    },
+                    "bm25Score": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "vectorScore": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "rrfScore": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "crossEncoderScore": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "item1Result": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "nullable": true
+                    },
+                    "retrievalScore": {
+                      "type": "number"
+                    },
+                    "finalScore": {
+                      "type": "number",
+                      "deprecated": true
+                    },
+                    "explanation": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "resumeId",
+                    "jobId",
+                    "bm25Score",
+                    "vectorScore",
+                    "rrfScore",
+                    "crossEncoderScore",
+                    "item1Result",
+                    "retrievalScore",
+                    "finalScore",
+                    "explanation",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
           }
         }
       }
@@ -1228,7 +1302,7 @@
         "tags": [
           "Events"
         ],
-        "description": "Long-lived SSE connection pushing real-time asynchronous processing updates (e.g. resume parsing status, ATS score computation, match scoring) directly to the client.",
+        "description": "Long-lived SSE connection pushing real-time asynchronous processing updates (e.g. resume parsing status, match scoring) directly to the client.",
         "parameters": [
           {
             "schema": {
@@ -1280,7 +1354,7 @@
     },
     {
       "name": "Matching",
-      "description": "Hybrid search, cross-encoder reranking, and ATS fit scoring"
+      "description": "Hybrid search, cross-encoder reranking, and resume-to-job fit scoring"
     },
     {
       "name": "Analysis",

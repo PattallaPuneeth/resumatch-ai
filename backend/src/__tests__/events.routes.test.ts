@@ -125,7 +125,7 @@ describe('Server-Sent Events (SSE) Route — /v1/events/stream', () => {
     // Simulate event publish
     await eventDispatcher.publishUserEvent(userId, {
       type: 'RESUME_STATUS',
-      data: { resumeId: 'res-1', status: 'PARSED', atsScore: 88 },
+      data: { resumeId: 'res-1', status: 'PARSED' },
     });
 
     expect(receivedEvent).toBeNull();

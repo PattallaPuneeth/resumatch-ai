@@ -29,7 +29,7 @@ export interface MatchHistoryItem {
   jobId: string;
   title: string;
   company: string;
-  matchScore: number;
+  matchScore: number | null;
   date: string;
 }
 
@@ -197,7 +197,6 @@ export function AnalyzeSelector({
                   disabled={!isParsed}
                 >
                   {r.originalFilename} — [{r.status}]
-                  {r.status === 'PARSED' && r.atsScore ? ` (ATS: ${r.atsScore})` : ''}
                   {!isParsed ? ' (Processing incomplete)' : ''}
                 </option>
               );
@@ -342,7 +341,9 @@ export function AnalyzeSelector({
                       <p className="text-[11px] text-muted-foreground line-clamp-1">{m.company}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="font-mono font-bold text-xs text-primary">{m.matchScore}%</span>
+                      <span className="font-mono font-bold text-xs text-primary">
+                        {m.matchScore === null ? 'No score' : `${m.matchScore}%`}
+                      </span>
                       <span className="block text-[10px] text-muted-foreground">{m.date}</span>
                     </div>
                   </button>

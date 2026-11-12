@@ -115,24 +115,62 @@ CASE_SENSITIVE_SKILLS: frozenset[str] = frozenset(
 )
 
 EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b")
-PHONE_REGEX = re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
+PHONE_REGEX = re.compile(r"(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{2,5}\)?[-.\s]?)?\d{3,5}[-.\s]?\d{4,5}\b")
 LINKEDIN_REGEX = re.compile(
     r"(?:https?://)?(?:www\.)?linkedin\.com/in/([A-Za-z0-9_-]+)", re.IGNORECASE
 )
 GITHUB_REGEX = re.compile(r"(?:https?://)?(?:www\.)?github\.com/([A-Za-z0-9_-]+)", re.IGNORECASE)
 
 SECTION_HEADERS: dict[str, list[str]] = {
-    "summary": ["summary", "professional summary", "about me", "profile", "objective"],
-    "skills": ["skills", "technical skills", "core competencies", "technologies", "key skills"],
+    "summary": [
+        "summary",
+        "professional summary",
+        "about me",
+        "profile",
+        "objective",
+        "career objective",
+    ],
+    "skills": [
+        "skills",
+        "technical skills",
+        "core competencies",
+        "technologies",
+        "key skills",
+        "skills  technologies",
+        "technical  soft skills",
+    ],
     "experience": [
         "experience",
         "work experience",
         "professional experience",
         "employment history",
         "work history",
+        "technical experience",
+        "internships",
+        "internship experience",
+    ],
+    "projects": [
+        "projects",
+        "personal projects",
+        "academic projects",
+        "key projects",
+        "technical projects",
+        "selected projects",
     ],
     "education": ["education", "academic background", "academic history", "qualifications"],
     "certifications": ["certifications", "certificates", "licenses"],
+    # Stop-headers to bound previous sections cleanly
+    "awards": ["awards", "honors", "achievements", "accomplishments"],
+    "leadership": [
+        "leadership",
+        "extracurricular",
+        "extracurricular activities",
+        "volunteer",
+        "volunteering",
+    ],
+    "publications": ["publications", "research", "research  publications"],
+    "languages": ["languages"],
+    "interests": ["interests", "hobbies"],
 }
 
 
@@ -196,8 +234,14 @@ def extract_contact_info(raw_text: str) -> tuple[ContactInfo, str | None]:
 
     # 5. Candidate Name (heuristic: first non-empty line of the resume before contacts/sections)
     lines = [ln.strip() for ln in raw_text.split("\n") if ln.strip()]
-    for line in lines[:4]:
-        # Filter out email, phone, URLs, or section headers
+    for line in lines[:6]:
+        # Filter out email, phone, URLs, or document title lines
+        cleaned_lower = line.lower()
+        if any(
+            kw == cleaned_lower
+            for kw in ["resume", "curriculum vitae", "cv", "portfolio", "profile"]
+        ):
+            continue
         if (
             not EMAIL_REGEX.search(line)
             and not PHONE_REGEX.search(line)
@@ -279,10 +323,14 @@ def extract_skills(raw_text: str, sections: dict[str, tuple[int, int]]) -> list[
     return skills
 
 
-def extract_experience(raw_text: str, sections: dict[str, tuple[int, int]]) -> list[ExperienceItem]:
-    """Extract work experience entries from canonical text with character spans."""
+def extract_experience(
+    raw_text: str,
+    sections: dict[str, tuple[int, int]],
+    section_key: str = "experience",
+) -> list[ExperienceItem]:
+    """Extract work experience or project entries from canonical text with character spans."""
     items: list[ExperienceItem] = []
-    exp_span = sections.get("experience")
+    exp_span = sections.get(section_key)
     if not exp_span:
         return items
 
@@ -298,10 +346,13 @@ def extract_experience(raw_text: str, sections: dict[str, tuple[int, int]]) -> l
         if not current_entry_lines:
             return
         header_text = current_entry_lines[0].strip()
-        # Look for company/title separators: ' at ', ' - ', ' | ', ','
-        parts = re.split(r"\s+(?:at|-|\|)\s+", header_text)
-        title = parts[0].strip() if parts else "Role"
-        company = parts[1].strip() if len(parts) > 1 else (parts[0] if parts else "Company")
+        # Look for company/title separators: ' at ', ' | ', ' — ', or ' - '
+        # (not preceding a 4-digit date)
+        parts = re.split(r"\s+(?:at|\||—)\s+|\s+-\s+(?!\d{4})", header_text)
+        default_role = "Project" if section_key == "projects" else "Role"
+        default_company = "Project" if section_key == "projects" else "Company"
+        title = parts[0].strip() if parts else default_role
+        company = parts[1].strip() if len(parts) > 1 else default_company
 
         # Find position of entry in raw_text
         start_idx = raw_text.find(header_text, sec_start, sec_end)
@@ -327,9 +378,9 @@ def extract_experience(raw_text: str, sections: dict[str, tuple[int, int]]) -> l
         stripped = line.strip()
         if not stripped:
             continue
-        # Bullet detection
-        if stripped.startswith(("-", "*", "•", "–")) or re.match(r"^\d+\.", stripped):
-            clean_bullet = re.sub(r"^[-*•–\d.]\s*", "", stripped)
+        # Bullet detection: preserve numbers like 3.5x, 40%, etc.
+        if stripped.startswith(("-", "*", "•", "–")) or re.match(r"^\d+\.\s+", stripped):
+            clean_bullet = re.sub(r"^[-*•–]\s*|^\d+\.\s+", "", stripped)
             current_bullets.append(clean_bullet)
         elif len(stripped) < 70 and not current_bullets:
             current_entry_lines.append(stripped)

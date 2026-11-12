@@ -78,7 +78,6 @@ class StructuredAnalysisResult(BaseModel):
 
     # Deterministic metrics injected strictly by code (never editable by LLM)
     match_score: float = Field(..., description="Deterministic ML match score (0-100)")
-    ats_score: float | None = Field(default=None, description="ATS parseability score (0-100)")
     verdict_band: Literal["strong", "medium", "weak"] = Field(
         ...,
         description="Verdict band derived from 75/45 calibration thresholds",

@@ -133,8 +133,6 @@ function createMockResume(overrides: Record<string, unknown> = {}) {
       education: [{ degree: 'B.S. CS', institution: 'MIT', startChar: 0, endChar: 10 }],
       certifications: [],
       pageCount: 1,
-      atsScore: 92.5,
-      atsHazards: [],
       parsingMetadata: { parser: 'PyMuPDF' },
       createdAt: new Date('2026-01-01T00:01:00.000Z'),
       updatedAt: new Date('2026-01-01T00:01:00.000Z'),
@@ -226,7 +224,7 @@ describe('Phase 2D: Resume Lifecycle Endpoints', () => {
       expect(body.extractionMethod).toBe('TEXT_LAYER');
       expect(body.parsedResume).toBeDefined();
       expect(body.parsedResume.candidateName).toBe('Jane Doe');
-      expect(body.parsedResume.atsScore).toBe(92.5);
+      expect(body.parsedResume).not.toHaveProperty('atsScore');
       expect(body.parsedResume.skills).toHaveLength(1);
     });
 

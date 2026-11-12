@@ -72,6 +72,39 @@ STATIC_HAZARD_REMEDIATIONS: dict[str, dict[str, Any]] = {
             "maximize keyword recognition."
         ),
     },
+    "DEGRADED_TEXT_LAYER": {
+        "severity": "MEDIUM",
+        "priority": 2,
+        "issue": "Degraded text layer or font encoding corruption detected.",
+        "recommendation": (
+            "Export the document directly from modern word processors (Word, Docs, or LaTeX) with "
+            "standard Unicode character mapping to prevent character substitution errors during "
+            "ATS text extraction."
+        ),
+    },
+    "EXTRACTION_MISSED_EMAIL": {
+        "severity": "HIGH",
+        "priority": 1,
+        "issue": (
+            "Email address pattern was visible in document text, but failed to map into "
+            "contact fields."
+        ),
+        "recommendation": (
+            "Ensure your email address is placed clearly in the top contact block on its own line "
+            "or standard delimiter without special graphical icons or non-standard characters."
+        ),
+    },
+    "EXTRACTION_MISSED_PHONE": {
+        "severity": "HIGH",
+        "priority": 1,
+        "issue": (
+            "Phone number was visible in document text, but failed to map into contact fields."
+        ),
+        "recommendation": (
+            "Ensure your phone number uses standard international or national formatting "
+            "(e.g. +91 98765 43210 or (555) 123-4567) placed in the top contact section."
+        ),
+    },
     "UNUSUAL_FONTS": {
         "severity": "LOW",
         "priority": 3,
@@ -79,6 +112,87 @@ STATIC_HAZARD_REMEDIATIONS: dict[str, dict[str, Any]] = {
         "recommendation": (
             "Use clean, universally recognized ATS fonts such as Arial, Calibri, Helvetica, "
             "Times New Roman, or Georgia to avoid character encoding errors."
+        ),
+    },
+    "PROJECTS_ONLY_EXPERIENCE": {
+        "severity": "LOW",
+        "priority": 3,
+        "issue": "Projects credited as practical experience in place of formal employment.",
+        "recommendation": (
+            "Consider adding an internship or formal work experience section, or renaming "
+            "'Projects' to 'Technical Experience' to optimize recognition on strict legacy "
+            "ATS parsers."
+        ),
+    },
+    "LOW_QUANTIFICATION": {
+        "severity": "LOW",
+        "priority": 3,
+        "issue": "Bullet points lack quantified metrics or measurable outcomes.",
+        "recommendation": (
+            "Add measurable metrics (percentages, numbers, dollar figures, latency reductions, "
+            "user counts) to demonstrate the business or technical impact of your achievements."
+        ),
+    },
+    "WEAK_ACTION_VERBS": {
+        "severity": "LOW",
+        "priority": 3,
+        "issue": "Bullet points rely on passive wording or weak starting verbs.",
+        "recommendation": (
+            "Begin bullet points with decisive action verbs (e.g. Engineered, Architected, "
+            "Automated, Optimized, Deployed) rather than passive duties."
+        ),
+    },
+    "FEW_SKILLS": {
+        "severity": "LOW",
+        "priority": 3,
+        "issue": "Few technical skills recognized from the document.",
+        "recommendation": (
+            "Include a dedicated 'Technical Skills' section categorizing languages, frameworks, "
+            "databases, and tools to maximize automated keyword matching."
+        ),
+    },
+    "MISSING_CONTACT": {
+        "severity": "MEDIUM",
+        "priority": 2,
+        "issue": "Contact information is missing email, phone number, or candidate name.",
+        "recommendation": (
+            "Include your full name, email address, phone number, and location at the top of the "
+            "resume to ensure ATS engines can generate a candidate profile."
+        ),
+    },
+    "MISSING_CONTACT_EMAIL": {
+        "severity": "HIGH",
+        "priority": 1,
+        "issue": "No valid email address was identified in contact information.",
+        "recommendation": (
+            "Add a professional email address at the top of your resume so recruiters and "
+            "ATS systems can contact you."
+        ),
+    },
+    "NO_BULLETS_DETECTED": {
+        "severity": "MEDIUM",
+        "priority": 2,
+        "issue": "Experience formatted in dense paragraphs without bullet points.",
+        "recommendation": (
+            "Break long text paragraphs into clean bulleted lists for rapid ATS parsing and "
+            "recruiter scanning."
+        ),
+    },
+    "EXCESSIVE_BULLET_LENGTH": {
+        "severity": "LOW",
+        "priority": 3,
+        "issue": "One or more bullet points exceed recommended length (> 350 characters).",
+        "recommendation": (
+            "Shorten lengthy bullets to 1-2 lines (120-250 characters) focusing on action, "
+            "context, and quantified outcome."
+        ),
+    },
+    "ALL_CAPS_TEXT_WALL": {
+        "severity": "LOW",
+        "priority": 3,
+        "issue": "Extended text lines formatted in ALL CAPS detected.",
+        "recommendation": (
+            "Use standard sentence case for descriptions and reserve uppercase solely for acronyms."
         ),
     },
 }

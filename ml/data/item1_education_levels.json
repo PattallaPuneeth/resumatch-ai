@@ -1,0 +1,136 @@
+{
+  "schema_version": "item1-education-ordinal-v1",
+  "reviewed_on": "2026-11-12",
+  "scope": "Internal comparison ordinal from Item 1 V9 with Indian degree wording; not a claim of statutory equivalence or NSQF mapping. Percentages, CGPA and institution names are never read.",
+  "levels": [
+    {
+      "ordinal": 1,
+      "name": "vocational_or_iti_certificate",
+      "aliases": [
+        "ITI",
+        "Industrial Training Institute",
+        "vocational certificate",
+        "12th",
+        "HSC",
+        "10th",
+        "SSC",
+        "vocational",
+        "NCVT",
+        "NTC",
+        "Skill India certificate"
+      ],
+      "framework_level": null
+    },
+    {
+      "ordinal": 2,
+      "name": "diploma_or_polytechnic",
+      "aliases": [
+        "diploma",
+        "polytechnic",
+        "PG diploma",
+        "Post Graduate Diploma",
+        "PGDM",
+        "GNM",
+        "ANM",
+        "D.Pharm",
+        "Diploma in Engineering"
+      ],
+      "framework_level": null
+    },
+    {
+      "ordinal": 3,
+      "name": "bachelors",
+      "aliases": [
+        "bachelor",
+        "bachelor's",
+        "B.Tech",
+        "B.E.",
+        "B.Sc",
+        "BCA",
+        "BBA",
+        "B.Com",
+        "B.A.",
+        "B.S.",
+        "LLB",
+        "LL.B",
+        "B.Pharm",
+        "B.Arch",
+        "B.Sc Nursing",
+        "BSc Nursing",
+        "B.Sc (Nursing)",
+        "MBBS",
+        "BDS",
+        "B.Ed",
+        "B.Des",
+        "B.El.Ed",
+        "BTech",
+        "B Tech",
+        "B.E",
+        "BSc",
+        "BCom",
+        "B.Sc.",
+        "B.Com.",
+        "BEng"
+      ],
+      "framework_level": null
+    },
+    {
+      "ordinal": 4,
+      "name": "masters",
+      "aliases": [
+        "master",
+        "master's",
+        "M.Tech",
+        "M.E.",
+        "M.Sc",
+        "MBA",
+        "MCA",
+        "M.Com",
+        "M.A.",
+        "LLM",
+        "LL.M",
+        "M.Pharm",
+        "M.Arch",
+        "M.Ed",
+        "M.S.",
+        "PGDM (MBA)",
+        "MTech",
+        "M Tech",
+        "M.E",
+        "MSc",
+        "MCom",
+        "M.Sc.",
+        "M.Com.",
+        "MEng"
+      ],
+      "framework_level": null
+    },
+    {
+      "ordinal": 5,
+      "name": "doctorate",
+      "aliases": [
+        "doctorate",
+        "doctoral",
+        "PhD",
+        "Ph.D.",
+        "MCh",
+        "DNB",
+        "D.Litt",
+        "Doctor of Philosophy"
+      ],
+      "framework_level": null
+    }
+  ],
+  "in_progress_cues": [
+    "appearing",
+    "continuing",
+    "currently studying",
+    "expected",
+    "final year",
+    "in progress",
+    "ongoing",
+    "persuing",
+    "perusing",
+    "pursuing"
+  ]
+}

@@ -20,7 +20,7 @@ const FEATURES = [
   {
     Icon: FileSearch,
     tone: 'green',
-    title: 'Read like an ATS',
+    title: 'Clear resume tips',
     body: 'Find the layout problems that break applicant-tracking parsers: columns, tables, text in headers, scanned pages.',
   },
   {

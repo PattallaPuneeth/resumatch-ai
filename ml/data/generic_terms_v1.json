@@ -1,0 +1,23 @@
+{
+  "version": "generic_terms_v1",
+  "max_generic_mass_fraction": 0.15,
+  "idf_threshold": 1.8,
+  "terms": [
+    "git",
+    "agile",
+    "jira",
+    "scrum",
+    "linux",
+    "team player",
+    "communication",
+    "problem solving",
+    "collaboration",
+    "time management",
+    "attention to detail",
+    "analytical skills",
+    "critical thinking",
+    "multitasking",
+    "interpersonal skills",
+    "presentation skills"
+  ]
+}

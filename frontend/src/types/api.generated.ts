@@ -764,7 +764,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Retrieve match scoring results, rank breakdown, and skill gap */
+        /** Retrieve the Item 1 Resume + JD assessment and separate retrieval diagnostics */
         get: {
             parameters: {
                 query?: never;
@@ -782,7 +782,30 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            id: string;
+                            resumeId: string;
+                            jobId: string;
+                            bm25Score: number | null;
+                            vectorScore: number | null;
+                            rrfScore: number | null;
+                            crossEncoderScore: number | null;
+                            item1Result: {
+                                [key: string]: unknown;
+                            } | null;
+                            retrievalScore: number;
+                            /** @deprecated */
+                            finalScore: number;
+                            explanation: {
+                                [key: string]: unknown;
+                            } | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
                 };
             };
         };
@@ -1219,7 +1242,7 @@ export interface paths {
         };
         /**
          * Subscribe to real-time user event stream via Server-Sent Events (SSE)
-         * @description Long-lived SSE connection pushing real-time asynchronous processing updates (e.g. resume parsing status, ATS score computation, match scoring) directly to the client.
+         * @description Long-lived SSE connection pushing real-time asynchronous processing updates (e.g. resume parsing status, match scoring) directly to the client.
          */
         get: {
             parameters: {

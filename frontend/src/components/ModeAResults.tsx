@@ -2,77 +2,79 @@
 
 import React from 'react';
 import { ImprovementsResponse } from '@/lib/apiClient';
-import { ScoreGauge } from '@/components/ui/ScoreGauge';
 import {
-  Award,
   AlertTriangle,
-  CheckCircle2,
   AlertCircle,
   FileText,
   Briefcase,
   Sparkles,
   Info,
+  Wand2,
 } from 'lucide-react';
 
 interface ModeAResultsProps {
   data: ImprovementsResponse;
   className?: string;
+  onFixBullet?: (bullet: string) => void;
 }
 
-export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
-  const atsScore = data.atsScore;
+interface FindingBadgeConfig {
+  label: string;
+  className: string;
+}
 
-  // Plain-language ATS score band
-  let scoreBand = 'Needs Work';
-  let scoreBandColor = 'text-amber-800 bg-amber-50 border-amber-200';
-  if (atsScore >= 80) {
-    scoreBand = 'Strong ATS Compatibility';
-    scoreBandColor = 'text-emerald-800 bg-emerald-50 border-emerald-200';
-  } else if (atsScore >= 60) {
-    scoreBand = 'Moderate ATS Compatibility';
-    scoreBandColor = 'text-teal-800 bg-teal-50 border-teal-200';
+function getFindingBadge(type: string, message: string): FindingBadgeConfig {
+  const t = type?.toUpperCase() || '';
+  const m = message?.toLowerCase() || '';
+
+  if (t === 'NO_ACTION_VERB' || m.includes('action verb')) {
+    return {
+      label: 'Action Verb Needed',
+      className: 'bg-amber-100 text-amber-900 border-amber-200',
+    };
   }
+  if (t === 'MISSING_SECTION' || m.includes('missing standard')) {
+    return {
+      label: 'Format Warning',
+      className: 'bg-rose-100 text-rose-900 border-rose-200',
+    };
+  }
+  if (t === 'WEAK_PHRASE' || m.includes('weak phrase')) {
+    return {
+      label: 'Weak Phrase',
+      className: 'bg-orange-100 text-orange-900 border-orange-200',
+    };
+  }
+  if (t === 'OVERLY_LONG_BULLET' || m.includes('long')) {
+    return {
+      label: 'Length Warning',
+      className: 'bg-blue-100 text-blue-900 border-blue-200',
+    };
+  }
+  if (t === 'NO_METRIC_OR_NUMBER' || m.includes('metric') || m.includes('number') || m.includes('quantif')) {
+    return {
+      label: 'Impact / Metric Needed',
+      className: 'bg-purple-100 text-purple-900 border-purple-200',
+    };
+  }
+  if (t === 'REPEATED_OPENING_VERB' || m.includes('repeat')) {
+    return {
+      label: 'Repetition',
+      className: 'bg-slate-100 text-slate-800 border-slate-200',
+    };
+  }
+  return {
+    label: 'Format Warning',
+    className: 'bg-amber-100 text-amber-900 border-amber-200',
+  };
+}
+
+export function ModeAResults({ data, className = '', onFixBullet }: ModeAResultsProps) {
+
 
   return (
     <div data-testid="mode-a-results" className={`space-y-6 ${className}`}>
-      {/* 1. ATS Score Banner */}
-      <section
-        aria-labelledby="ats-score-heading"
-        className="bg-white rounded-lg border border-border p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-      >
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" aria-hidden="true" />
-            <h3 id="ats-score-heading" className="font-bold text-lg text-foreground">
-              ATS Readability & Formatting Score
-            </h3>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Evaluates standard font encoding, single-column parsing stability, section headings, and contact info visibility.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <ScoreGauge score={atsScore} maxScore={100} label="ATS Score" statusBand={scoreBand} size="sm" />
-          <div className="hidden sm:block text-right">
-            <div
-              data-testid="mode-a-ats-score"
-              className="text-3xl font-extrabold font-mono text-primary tracking-tight"
-            >
-              {atsScore}
-              <span className="text-sm font-normal text-muted-foreground ml-1">/ 100</span>
-            </div>
-            <span
-              data-testid="mode-a-score-band"
-              className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded border mt-0.5 ${scoreBandColor}`}
-            >
-              {scoreBand}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. LLM Status Notice */}
+      {/* 4. LLM Status Notice */}
       {data.llmStatus === 'UNAVAILABLE' ? (
         <aside
           data-testid="llm-unavailable-notice"
@@ -84,7 +86,7 @@ export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
               AI explanation unavailable, showing deterministic results
             </h4>
             <p className="text-muted-foreground">
-              The written AI summary is not available right now. Your ATS score, formatting checks, content
+              The written AI summary is not available right now. Your formatting checks, content
               findings and role suggestions below are complete.
             </p>
           </div>
@@ -117,21 +119,21 @@ export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
         )
       )}
 
-      {/* 3. ATS Fixes / Remediations */}
+      {/* 5. Formatting and structure tips (no score) */}
       {data.atsFixes && data.atsFixes.length > 0 && (
         <section
-          aria-labelledby="ats-hazards-heading"
-          data-testid="ats-fixes-section"
+          aria-labelledby="resume-fixes-heading"
+          data-testid="resume-fixes-section"
           className="bg-white rounded-lg border border-border p-5 space-y-4 shadow-sm"
         >
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" />
-              <h3 id="ats-hazards-heading" className="font-bold text-sm text-foreground">
-                ATS Hazards & Formatting Remediations ({data.atsFixes.length})
+              <h3 id="resume-fixes-heading" className="font-bold text-sm text-foreground">
+                Formatting & Structure Tips ({data.atsFixes.length})
               </h3>
             </div>
-            <span className="text-xs text-muted-foreground">Prioritized by parsing severity</span>
+            <span className="text-xs text-muted-foreground">Most important first</span>
           </div>
 
           <div className="space-y-3">
@@ -140,7 +142,7 @@ export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
               return (
                 <div
                   key={`${fix.hazardCode}-${idx}`}
-                  data-testid={`ats-fix-item-${idx}`}
+                  data-testid={`resume-fix-item-${idx}`}
                   className="p-3 rounded-md bg-slate-50 border border-slate-200 space-y-1 text-xs"
                 >
                   <div className="flex items-center justify-between">
@@ -164,7 +166,7 @@ export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
         </section>
       )}
 
-      {/* 4. Deterministic Content Findings */}
+      {/* 6. Deterministic Content Findings */}
       {data.contentFindings && data.contentFindings.length > 0 && (
         <section
           aria-labelledby="content-findings-heading"
@@ -178,38 +180,61 @@ export function ModeAResults({ data, className = '' }: ModeAResultsProps) {
                 Content Findings & Span Issues ({data.contentFindings.length})
               </h3>
             </div>
-            <span className="text-xs text-muted-foreground">Exact character span highlights</span>
+            <span className="text-xs text-muted-foreground">Actionable resume fixes found by automatic checks</span>
           </div>
 
           <div className="space-y-3">
-            {data.contentFindings.map((finding, idx) => (
-              <div
-                key={`finding-${idx}`}
-                data-testid={`content-finding-${idx}`}
-                className="p-3 rounded-md bg-white border border-border space-y-1.5 text-xs shadow-xs"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
-                    <span>{finding.message}</span>
-                  </span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                    chars {finding.startChar}–{finding.endChar}
-                  </span>
-                </div>
+            {data.contentFindings.map((finding, idx) => {
+              const badge = getFindingBadge(finding.type, finding.message);
+              return (
+                <div
+                  key={`finding-${idx}`}
+                  data-testid={`content-finding-${idx}`}
+                  className="p-3.5 rounded-lg bg-white border border-border space-y-2 text-xs shadow-xs"
+                >
+                  <div className="flex items-start sm:items-center justify-between gap-2 flex-wrap">
+                    <span className="font-semibold text-foreground flex items-center gap-1.5 flex-1 min-w-[200px]">
+                      <AlertCircle className="h-4 w-4 text-slate-500 shrink-0" aria-hidden="true" />
+                      <span>{finding.message}</span>
+                    </span>
 
-                {finding.quote && (
-                  <div className="p-2 bg-slate-50 border-l-2 border-primary rounded-r text-slate-700 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap">
-                    {finding.quote}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded border ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                      <span
+                        data-testid={`content-finding-span-${idx}`}
+                        className="text-[10px] font-mono text-slate-400"
+                        title={`Offset characters ${finding.startChar} to ${finding.endChar} in canonical resume text`}
+                      >
+                        chars {finding.startChar}–{finding.endChar}
+                      </span>
+                      {finding.quote && onFixBullet && (
+                        <button
+                          type="button"
+                          onClick={() => onFixBullet(finding.quote)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer"
+                        >
+                          <Wand2 className="h-3 w-3 text-emerald-700" aria-hidden="true" />
+                          <span>Fix with AI</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {finding.quote && (
+                    <div className="p-2.5 bg-slate-50 border-l-2 border-primary rounded-r text-slate-800 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap">
+                      {finding.quote}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
 
-      {/* 5. ML-Ranked Role Suggestions */}
+      {/* 7. ML-Ranked Role Suggestions */}
       {data.suggestedRoles && data.suggestedRoles.length > 0 && (
         <section
           aria-labelledby="suggested-roles-heading"

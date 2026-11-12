@@ -1,0 +1,19 @@
+{
+  "version": "context_weights_v1",
+  "section_priors": {
+    "experience": 0.85,
+    "projects": 0.75,
+    "certifications": 0.60,
+    "summary": 0.45,
+    "education": 0.40,
+    "skills": 0.35,
+    "skills_list": 0.35,
+    "other": 0.50
+  },
+  "bonuses": {
+    "action_verb": 0.10,
+    "quantified_outcome": 0.08,
+    "ownership_verb": 0.06
+  },
+  "list_only_evidence_cap": 0.35
+}

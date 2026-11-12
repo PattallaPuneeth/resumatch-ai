@@ -440,6 +440,7 @@ describe('Phase 3B: Job & Matching Routes', () => {
         {
           jobId: validJobId,
           resumeId: validResumeId,
+          userId: 'user-A',
         },
         {
           jobId: `match-${validJobId}-${validResumeId}`,
@@ -556,11 +557,21 @@ describe('Phase 3B: Job & Matching Routes', () => {
         resumeId: validResumeId,
         userId: 'user-A',
         overallScore: 84.5,
+        bm25Score: 0.72,
+        vectorScore: 0.88,
         lexicalScore: 0.72,
         semanticScore: 0.88,
         rrfScore: 0.031,
         crossEncoderScore: 84.5,
         finalScore: 84.5,
+        item1Result: {
+          version: 'item1-india-it-prototype-0.1',
+          state: 'SCORED',
+          score: 72,
+          verdict: null,
+          confidence: 'Low',
+          verdict_withheld: true,
+        },
         status: 'COMPLETED',
         explanation: {
           skillGap: {
@@ -596,6 +607,8 @@ describe('Phase 3B: Job & Matching Routes', () => {
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.payload);
       expect(body.id).toBe('match-123');
+      expect(body.item1Result.score).toBe(72);
+      expect(body.retrievalScore).toBe(84.5);
       expect(body.explanation.skillGap.matched).toContain('TypeScript');
       expect(body.explanation.skillGap.missing).toContain('PostgreSQL');
     });
@@ -808,6 +821,7 @@ describe('Phase 3B: Job & Matching Routes', () => {
           resumeId,
           jobId: 'job-1',
           finalScore: 88.5,
+          item1Result: { score: 72, confidence: 'Low', verdict: null },
           bm25Score: 0.75,
           vectorScore: 0.82,
           rrfScore: 0.035,
@@ -850,7 +864,8 @@ describe('Phase 3B: Job & Matching Routes', () => {
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.payload);
       expect(body.matches).toHaveLength(1);
-      expect(body.matches[0].matchScore).toBe(88.5);
+      expect(body.matches[0].matchScore).toBe(72);
+      expect(body.matches[0].item1Result.score).toBe(72);
       expect(body.matches[0].subScores.bm25Score).toBe(0.75);
       expect(body.matches[0].job.title).toBe('Full Stack Engineer');
       expect(body.matches[0].analysis.llmStatus).toBe('SUCCESS');

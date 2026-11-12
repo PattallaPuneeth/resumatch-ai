@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, ResumeSummary } from '@/lib/apiClient';
 import Link from 'next/link';
-import { FileText, Trash2, AlertCircle, RefreshCw, Award, Clock, Sparkles } from 'lucide-react';
+import { FileText, Trash2, AlertCircle, RefreshCw, Clock, Sparkles } from 'lucide-react';
 import { formatBytes, formatDate } from '@/components/UsagePanel';
 import { useEventStream } from '@/hooks/useEventStream';
 
@@ -19,9 +19,6 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
   const [deleteCandidate, setDeleteCandidate] = useState<ResumeSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  // Resume details cache for atsScore when status is PARSED
-  const [atsScores, setAtsScores] = useState<Record<string, number | null>>({});
 
   const [pollInterval, setPollInterval] = useState<number | false>(false);
 
@@ -55,33 +52,6 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
       setPollInterval(false);
     }
   }, [resumes]);
-
-  // For any resume with PARSED status, fetch its details to retrieve atsScore if not already loaded
-  useEffect(() => {
-    const parsedResumes = resumes.filter((r) => r.status === 'PARSED' && atsScores[r.id] === undefined);
-    if (parsedResumes.length === 0) return;
-
-    let isMounted = true;
-    parsedResumes.forEach(async (r) => {
-      try {
-        const details = await apiClient.resumes.get(r.id);
-        if (isMounted) {
-          setAtsScores((prev) => ({
-            ...prev,
-            [r.id]: details.parsedResume?.atsScore ?? null,
-          }));
-        }
-      } catch {
-        if (isMounted) {
-          setAtsScores((prev) => ({ ...prev, [r.id]: null }));
-        }
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [resumes, atsScores]);
 
   const handleDelete = async () => {
     if (!deleteCandidate) return;
@@ -226,7 +196,7 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
           </div>
           <h3 className="text-sm font-semibold text-foreground">No resumes uploaded yet</h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            Upload your resume above to extract structured skills, work history, and calculate your ATS format score.
+            Upload your resume above to extract structured skills, work history, and get improvement suggestions.
           </p>
         </div>
       ) : (
@@ -236,7 +206,6 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
               <tr className="border-b border-border text-muted-foreground font-medium">
                 <th className="py-2.5 px-2 sm:px-3">Document</th>
                 <th className="py-2.5 px-2 sm:px-3">Status</th>
-                <th className="py-2.5 px-3 hidden sm:table-cell">ATS Score</th>
                 <th className="py-2.5 px-3 hidden sm:table-cell">Size</th>
                 <th className="py-2.5 px-3 hidden sm:table-cell">Uploaded</th>
                 <th className="py-2.5 px-2 sm:px-3 text-right">Actions</th>
@@ -244,8 +213,6 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
             </thead>
             <tbody className="divide-y divide-border">
               {resumes.map((resume) => {
-                const score = atsScores[resume.id] ?? resume.atsScore;
-
                 return (
                   <tr key={resume.id} data-testid={`resume-row-${resume.id}`} className="hover:bg-slate-50/80 transition-colors stagger-item">
                     <td className="py-3 px-2 sm:px-3">
@@ -259,29 +226,6 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
 
                     <td className="py-3 px-2 sm:px-3">
                       {getStatusBadge(resume.status)}
-                      {resume.status === 'PARSED' && score !== null && score !== undefined && (
-                        <span className="sm:hidden block mt-1 text-[11px] font-semibold text-emerald-800">
-                          ATS {score} / 100
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-3 hidden sm:table-cell">
-                      {resume.status === 'PARSED' ? (
-                        score !== null && score !== undefined ? (
-                          <span
-                            data-testid={`ats-score-${resume.id}`}
-                            className="inline-flex items-center gap-1 font-bold text-xs text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"
-                          >
-                            <Award className="h-3 w-3 text-emerald-600" />
-                            {score} / 100
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-[11px]">Calculating...</span>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground text-[11px]">—</span>
-                      )}
                     </td>
 
                     {/* Size and date are hidden on phones so the actions stay on screen */}

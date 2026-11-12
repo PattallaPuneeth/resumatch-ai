@@ -58,7 +58,6 @@ class ImprovementsRequest(BaseModel):
 
     resumeId: str
     resumeRawText: str
-    atsScore: float | None = None
     atsHazards: list[dict[str, Any]] | None = None
     candidateSkills: Any | None = None
 
@@ -66,7 +65,6 @@ class ImprovementsRequest(BaseModel):
 class ImprovementsResponse(BaseModel):
     """Response returned to backend caller and user."""
 
-    atsScore: float
     atsFixes: list[AtsFix] = Field(default_factory=list)
     contentFindings: list[ContentFinding] = Field(default_factory=list)
     suggestedRoles: list[SuggestedRole] = Field(default_factory=list)

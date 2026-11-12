@@ -17,7 +17,6 @@ IMPROVEMENTS_PROMPT_VERSION = "2026-10-25-v1"
 
 def build_improvements_prompt(
     redacted_raw_text: str,
-    ats_score: float,
     ats_fixes: list[AtsFix],
     content_findings: list[ContentFinding],
     suggested_roles: list[SuggestedRole],
@@ -58,7 +57,6 @@ def build_improvements_prompt(
     )
 
     data_payload = {
-        "atsScore": ats_score,
         "atsFixes": [f.model_dump() for f in ats_fixes],
         "contentFindings": [
             {

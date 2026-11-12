@@ -24,7 +24,6 @@
     }
   ],
   "matchScore": 97.12,
-  "atsScore": 70.0,
   "verdictBand": "strong",
   "matchedSkills": ["docker", "postgresql", "rest api"],
   "missingSkills": [],

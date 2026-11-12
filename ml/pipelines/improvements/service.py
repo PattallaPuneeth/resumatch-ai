@@ -90,8 +90,8 @@ class ResumeImprovementsService:
         Deterministic findings are always computed and returned.
         If LLM tiers fail or verifier rejects, llmStatus is set to 'UNAVAILABLE'.
         """
-        # 1. Deterministic ATS hazard mapping
-        ats_score, ats_fixes = map_ats_hazards_to_fixes(req.atsScore, req.atsHazards)
+        # 1. Deterministic formatting-tip mapping (no score is produced or shown)
+        _, ats_fixes = map_ats_hazards_to_fixes(None, req.atsHazards)
 
         # 2. Deterministic Content Analyzer findings
         content_findings = analyze_content(req.resumeRawText)
@@ -113,7 +113,6 @@ class ResumeImprovementsService:
                 req.resumeId,
             )
             return ImprovementsResponse(
-                atsScore=ats_score,
                 atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,
@@ -127,7 +126,6 @@ class ResumeImprovementsService:
         # 6. Build LLM Prompts
         system_prompt, user_prompt, _, _ = build_improvements_prompt(
             redacted_raw_text=redaction.redacted_text,
-            ats_score=ats_score,
             ats_fixes=ats_fixes,
             content_findings=content_findings,
             suggested_roles=suggested_roles,
@@ -161,9 +159,7 @@ class ResumeImprovementsService:
                         )
 
             # Restore any PII placeholders in LLM summary and next steps
-            restored_summary = self._restore_pii_in_text(
-                gw_result.llm_response.summary, redaction
-            )
+            restored_summary = self._restore_pii_in_text(gw_result.llm_response.summary, redaction)
             restored_steps = [
                 self._restore_pii_in_text(step, redaction)
                 for step in gw_result.llm_response.prioritized_next_steps
@@ -180,7 +176,6 @@ class ResumeImprovementsService:
             )
 
             return ImprovementsResponse(
-                atsScore=ats_score,
                 atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,
@@ -204,7 +199,6 @@ class ResumeImprovementsService:
                 err,
             )
             return ImprovementsResponse(
-                atsScore=ats_score,
                 atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,
@@ -218,7 +212,6 @@ class ResumeImprovementsService:
                 exc_info=True,
             )
             return ImprovementsResponse(
-                atsScore=ats_score,
                 atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,

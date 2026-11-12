@@ -133,7 +133,6 @@ export interface ResumeSummary {
   errorMessage?: string | null;
   createdAt: string;
   updatedAt: string;
-  atsScore?: number | null;
 }
 
 export interface ParsedResumeDetails {
@@ -172,13 +171,6 @@ export interface ParsedResumeDetails {
     gpa?: string | null;
     startChar: number;
     endChar: number;
-  }> | null;
-  atsScore?: number | null;
-  atsHazards?: Array<{
-    type: string;
-    severity: string;
-    message: string;
-    details?: unknown;
   }> | null;
   createdAt: string;
   updatedAt: string;
@@ -273,10 +265,71 @@ export interface MatchResult {
   vectorScore: number;
   rrfScore: number;
   crossEncoderScore: number;
-  finalScore: number;
+  retrievalScore?: number;
+  /** @deprecated Retrieval/ranking score only; use item1Result.score for Resume + JD fit. */
+  finalScore?: number;
+  item1Result?: Item1AssessmentResult | null;
   explanation?: MatchExplanation | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Item1AssessmentResult {
+  version: string;
+  state: 'SCORED' | 'ABSTAIN';
+  score: number | null;
+  raw_score: string | null;
+  capped_score: string | null;
+  verdict: 'No Fit' | 'Potential Fit' | 'Good Fit' | null;
+  confidence: 'Low' | 'Medium' | 'High';
+  verdict_withheld: boolean;
+  withheld_reason: string | null;
+  score_range: [number, number] | null;
+  components: Record<string, string>;
+  coverage: {
+    assessable?: number;
+    total?: number | null;
+    total_units?: number;
+    ratio: number | null;
+    recognized_units?: number;
+    note?: string;
+  } | null;
+  confidence_reasons?: string[];
+  /** Firm and Tentative show a band; Comparison only shows a score without a band; Abstain shows neither. */
+  tier?: 'Firm' | 'Tentative' | 'Comparison only' | 'Abstain';
+  /** Bands of the low and high scenario scores, e.g. ['Potential Fit', 'Good Fit']. */
+  band_range?: [string, string] | null;
+  engine?: { extraction: string; idf_corpus: string; coverage_curve: string; curve_fitted: boolean };
+  /** How the job's role relates to the resume's recent roles (O*NET occupations). */
+  role_fit?: {
+    relation: 'same role' | 'related role' | 'same field' | 'different field' | 'unknown';
+    note: string | null;
+    source: string;
+    jd_role: { title: string; occupation: string; soc: string; field: string; confidence: number } | null;
+    resume_role: { title: string; occupation: string; soc: string; field: string; confidence: number } | null;
+  };
+  /** Soft-skill lines in the job text: shown as feedback, never scored. */
+  soft_skills_not_scored?: string[];
+  signals?: {
+    jd_level: string | null;
+    resume_level: string | null;
+    level_gap: number | null;
+    must_haves_missing: string[];
+  };
+  component_points?: Record<string, number>;
+  gate_cap?: 'none' | 'observed' | 'low_only';
+  /** Fix tips: points the score would gain if each gap were closed. */
+  gaps?: Array<{ requirement: string; kind: string; points_if_closed: number; tip: string }>;
+  /** Items the resume does not state; shown as "please confirm". */
+  confirm?: Array<{ requirement: string; reason: string }>;
+  skill_units: Array<Record<string, unknown>>;
+  gate_units: Array<Record<string, unknown>>;
+  years: Record<string, unknown>;
+  confirm_only: Array<Record<string, unknown>>;
+  public_sector_cue: string | null;
+  stuffing_guard_applied: boolean;
+  limitations: string[];
+  guidance: string;
 }
 
 export interface QueuedJobResponse {
@@ -316,8 +369,26 @@ export interface LLMExplanation {
   prioritizedNextSteps: string[];
 }
 
+export interface AtsSubscores {
+  parse_integrity?: number;
+  layout_safety?: number;
+  structure?: number;
+  contact?: number;
+  content_hygiene?: number;
+  readability_score?: number;
+  [key: string]: number | undefined;
+}
+
+export interface AtsHazardInfo {
+  id: string;
+  code: string;
+  severity: string;
+  evidence: string;
+  fix: string;
+  points_lost?: number;
+}
+
 export interface ImprovementsResponse {
-  atsScore: number;
   atsFixes: ImprovementAtsFix[];
   contentFindings: ContentFinding[];
   suggestedRoles: SuggestedRole[];
@@ -349,7 +420,6 @@ export interface StructuredAnalysisData {
   gaps: Array<{ gap: string; severity?: string; recommendation?: string } | string>;
   prioritized_improvements: Array<AnalysisImprovement | string>;
   match_score: number;
-  ats_score: number | null;
   verdict_band: 'strong' | 'medium' | 'weak';
   matched_skills: string[];
   missing_skills: string[];
@@ -404,7 +474,6 @@ export function normalizeAnalysisData(raw: unknown): StructuredAnalysisData {
     gaps,
     prioritized_improvements: improvements,
     match_score: pick('matchScore', 'match_score', undefined as unknown as number),
-    ats_score: pick('atsScore', 'ats_score', null),
     verdict_band: pick('verdictBand', 'verdict_band', undefined as unknown as 'medium'),
     matched_skills: pick('matchedSkills', 'matched_skills', []),
     missing_skills: pick('missingSkills', 'missing_skills', []),
@@ -497,7 +566,8 @@ export interface ResumeMatchHistoryItem {
     company: string;
     location?: string | null;
   };
-  matchScore: number;
+  matchScore: number | null;
+  item1Result?: Item1AssessmentResult | null;
   subScores: {
     bm25Score?: number | null;
     vectorScore?: number | null;

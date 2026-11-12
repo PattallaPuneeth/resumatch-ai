@@ -111,13 +111,6 @@ export interface ParsedResumeData {
   }> | null;
   certifications?: unknown[] | null;
   pageCount?: number | null;
-  atsScore?: number | null;
-  atsHazards?: Array<{
-    type: string;
-    severity: string;
-    message: string;
-    details?: unknown;
-  }> | null;
   parsingMetadata?: unknown;
   createdAt: string;
   updatedAt: string;

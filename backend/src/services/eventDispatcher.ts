@@ -12,7 +12,6 @@ export interface SseEvent<T = any> {
 export interface ResumeStatusEventData {
   resumeId: string;
   status: string;
-  atsScore?: number | null;
   method?: string | null;
   error?: string | null;
 }

@@ -14,6 +14,8 @@ interface BulletEditorProps {
   onAccept?: (original: string, rewritten: string) => void;
   /** Rewrites already chosen, keyed by the original bullet text */
   acceptedRewrites?: Record<string, string>;
+  /** Optional bullet pre-selected from external trigger (e.g. Content Finding Fix with AI) */
+  initialBullet?: string;
 }
 
 export function BulletEditor({
@@ -24,12 +26,23 @@ export function BulletEditor({
   onUsageChange,
   onAccept,
   acceptedRewrites = {},
+  initialBullet,
 }: BulletEditorProps) {
-  const [selectedBullet, setSelectedBullet] = useState<string>(bullets[0] || '');
+  const [selectedBullet, setSelectedBullet] = useState<string>(initialBullet || bullets[0] || '');
   // The bullets arrive after the resume loads, so the first one is selected once they do
   useEffect(() => {
-    setSelectedBullet((current) => (current && bullets.includes(current) ? current : bullets[0] || ''));
-  }, [bullets]);
+    if (initialBullet) {
+      if (bullets.includes(initialBullet)) {
+        setSelectedBullet(initialBullet);
+        setUseCustom(false);
+      } else {
+        setUseCustom(true);
+        setCustomBullet(initialBullet);
+      }
+    } else {
+      setSelectedBullet((current) => (current && bullets.includes(current) ? current : bullets[0] || ''));
+    }
+  }, [bullets, initialBullet]);
 
   const [customBullet, setCustomBullet] = useState<string>('');
   const [useCustom, setUseCustom] = useState<boolean>(false);

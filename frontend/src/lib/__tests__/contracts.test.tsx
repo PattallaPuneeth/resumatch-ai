@@ -22,7 +22,7 @@ describe('analysis result contract (ML worker -> frontend)', () => {
     const data = normalizeAnalysisData(analysisSample);
     expect(data.verdict_band).toBe('strong');
     expect(data.match_score).toBe(97.12);
-    expect(data.ats_score).toBe(70);
+    expect(data).not.toHaveProperty('ats_score');
     expect(data.matched_skills).toContain('postgresql');
     expect(data.strengths[0]).toMatchObject({ claim: 'Builds production REST APIs' });
     expect(data.gaps[0]).toMatchObject({ gap: 'Kafka or RabbitMQ', severity: 'nice' });

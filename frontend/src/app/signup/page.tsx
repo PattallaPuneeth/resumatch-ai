@@ -132,7 +132,7 @@ function SignupForm() {
           </div>
           <h1 className="font-display text-xl font-semibold text-foreground">Create an Account</h1>
           <p className="text-xs text-muted-foreground">
-            Get started with AI-powered resume analysis, ATS verification, and usage limits.
+            Get started with AI-powered resume analysis, improvement tips, and usage limits.
           </p>
         </div>
 

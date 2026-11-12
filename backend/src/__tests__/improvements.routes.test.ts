@@ -187,13 +187,10 @@ describe('Phase 4C: Resume Improvements & Role Suggestions Routes', () => {
     mockParsedResumeFindUnique.mockResolvedValueOnce({
       resumeId: validResumeId,
       rawText: sampleRawText,
-      atsScore: 92.0,
-      atsHazards: [],
       skills: ['Python', 'Docker'],
     } as any);
 
     const mockMlResponse = {
-      atsScore: 92.0,
       atsFixes: [],
       contentFindings: [
         {
@@ -240,7 +237,7 @@ describe('Phase 4C: Resume Improvements & Role Suggestions Routes', () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.atsScore).toBe(92.0);
+    expect(body).not.toHaveProperty('atsScore');
     expect(body.suggestedRoles).toHaveLength(1);
     expect(body.suggestedRoles[0].title).toBe('Backend Engineer');
     expect(body.contentFindings).toHaveLength(1);
@@ -271,8 +268,6 @@ describe('Phase 4C: Resume Improvements & Role Suggestions Routes', () => {
     mockParsedResumeFindUnique.mockResolvedValueOnce({
       resumeId: validResumeId,
       rawText: sampleRawText,
-      atsScore: 92.0,
-      atsHazards: [],
     } as any);
 
     const globalFetch = vi.fn().mockRejectedValueOnce(new Error('Connection refused'));

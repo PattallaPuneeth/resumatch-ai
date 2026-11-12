@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-san
 const fraunces = Fraunces({ subsets: ['latin'], display: 'swap', variable: '--font-display' });
 
 export const metadata: Metadata = {
-  title: 'ResuMatch AI - ATS Resume Analysis & Matching',
+  title: 'ResuMatch AI - Resume Matching & Improvement',
   description:
     'See how an applicant tracking system reads your resume, compare it with a job post, and find the skills you are missing.',
 };

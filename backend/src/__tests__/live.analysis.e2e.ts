@@ -9,7 +9,7 @@
  * 5. Validates 409 Conflict if analysis is requested before match exists (tested on dummy pair).
  * 6. Triggers analysis via POST /v1/jobs/:id/analysis -> 202 Accepted.
  * 7. Polls GET /v1/jobs/:id/analysis/:resumeId until completed.
- * 8. Validates Score Integrity: finalScore, ATS score, and skill gaps come strictly from ML code.
+ * 8. Validates Score Integrity: finalScore and skill gaps come strictly from ML code.
  * 9. Validates tenant isolation: User B receives 404 for User A's analysis.
  * 10. Validates structured analysis payload (summary, strengths, gaps, improvements, metadata).
  */

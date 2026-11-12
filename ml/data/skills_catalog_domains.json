@@ -1,0 +1,2022 @@
+{
+  "schema_version": "skills-catalog-domains-v1",
+  "review_status": "draft",
+  "reviewed_on": "2026-11-12",
+  "scope": "Plain-vocabulary skill and tool names for domains beyond the first software/IT pilot. Matching is literal (names and listed aliases only); no semantic equivalence is inferred. Entries are drafts pending owner review.",
+  "skills": [
+    {
+      "skill": "C#",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "C++",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": ".NET",
+      "domain": "software",
+      "aliases": [
+        "dotnet",
+        "ASP.NET"
+      ]
+    },
+    {
+      "skill": "Angular",
+      "domain": "software",
+      "aliases": [
+        "AngularJS"
+      ]
+    },
+    {
+      "skill": "J2EE",
+      "domain": "software",
+      "aliases": [
+        "Java EE"
+      ]
+    },
+    {
+      "skill": "Scala",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "PHP",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Ruby",
+      "domain": "software",
+      "aliases": [
+        "Ruby on Rails"
+      ]
+    },
+    {
+      "skill": "Selenium",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "JUnit",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "CI/CD",
+      "domain": "software",
+      "aliases": [
+        "continuous integration",
+        "continuous delivery"
+      ]
+    },
+    {
+      "skill": "Agile",
+      "domain": "software",
+      "aliases": [
+        "Scrum"
+      ]
+    },
+    {
+      "skill": "Jira",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Salesforce",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "ServiceNow",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Pega",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "MySQL",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Oracle Database",
+      "domain": "data",
+      "aliases": [
+        "PL/SQL"
+      ]
+    },
+    {
+      "skill": "Snowflake",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Databricks",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Spark",
+      "domain": "data",
+      "aliases": [
+        "Apache Spark",
+        "PySpark"
+      ]
+    },
+    {
+      "skill": "Hadoop",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Hive",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Airflow",
+      "domain": "data",
+      "aliases": [
+        "Apache Airflow"
+      ]
+    },
+    {
+      "skill": "ETL",
+      "domain": "data",
+      "aliases": [
+        "data pipeline",
+        "data pipelines"
+      ]
+    },
+    {
+      "skill": "Data Warehouse",
+      "domain": "data",
+      "aliases": [
+        "data warehousing"
+      ]
+    },
+    {
+      "skill": "Tableau",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Power BI",
+      "domain": "data",
+      "aliases": [
+        "PowerBI"
+      ]
+    },
+    {
+      "skill": "Machine Learning",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "TensorFlow",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "PyTorch",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Pandas",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "NumPy",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Excel",
+      "domain": "business",
+      "aliases": [
+        "Microsoft Excel",
+        "MS Excel"
+      ]
+    },
+    {
+      "skill": "Requirements Gathering",
+      "domain": "business",
+      "aliases": [
+        "requirement gathering",
+        "business requirements"
+      ]
+    },
+    {
+      "skill": "UML",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "User Stories",
+      "domain": "business",
+      "aliases": [
+        "user story"
+      ]
+    },
+    {
+      "skill": "Stakeholder Management",
+      "domain": "business",
+      "aliases": [
+        "stakeholder communication"
+      ]
+    },
+    {
+      "skill": "Project Management",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Microsoft Office",
+      "domain": "business",
+      "aliases": [
+        "MS Office",
+        "Office Suite"
+      ]
+    },
+    {
+      "skill": "Process Improvement",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "General Ledger",
+      "domain": "accounting",
+      "aliases": [
+        "GL accounting"
+      ]
+    },
+    {
+      "skill": "Accounts Payable",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Accounts Receivable",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Account Reconciliation",
+      "domain": "accounting",
+      "aliases": [
+        "reconciliations",
+        "bank reconciliation"
+      ]
+    },
+    {
+      "skill": "Month-End Close",
+      "domain": "accounting",
+      "aliases": [
+        "month end close",
+        "month-end closing"
+      ]
+    },
+    {
+      "skill": "Financial Reporting",
+      "domain": "accounting",
+      "aliases": [
+        "financial statements"
+      ]
+    },
+    {
+      "skill": "GAAP",
+      "domain": "accounting",
+      "aliases": [
+        "US GAAP"
+      ]
+    },
+    {
+      "skill": "Budgeting",
+      "domain": "accounting",
+      "aliases": [
+        "budget preparation"
+      ]
+    },
+    {
+      "skill": "Forecasting",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Variance Analysis",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Payroll",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Tax Preparation",
+      "domain": "accounting",
+      "aliases": [
+        "tax returns",
+        "tax compliance"
+      ]
+    },
+    {
+      "skill": "Auditing",
+      "domain": "accounting",
+      "aliases": [
+        "audit",
+        "internal audit"
+      ]
+    },
+    {
+      "skill": "Cost Accounting",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "QuickBooks",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "SAP",
+      "domain": "accounting",
+      "aliases": [
+        "SAP ERP"
+      ]
+    },
+    {
+      "skill": "NetSuite",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Invoice Processing",
+      "domain": "accounting",
+      "aliases": [
+        "invoicing"
+      ]
+    },
+    {
+      "skill": "AutoCAD",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "SolidWorks",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "MATLAB",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "PLC",
+      "domain": "engineering",
+      "aliases": [
+        "PLC programming"
+      ]
+    },
+    {
+      "skill": "FPGA",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "PCB Design",
+      "domain": "engineering",
+      "aliases": [
+        "PCB layout",
+        "printed circuit board"
+      ]
+    },
+    {
+      "skill": "Circuit Design",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "Schematics",
+      "domain": "engineering",
+      "aliases": [
+        "electrical schematics",
+        "wiring diagrams"
+      ]
+    },
+    {
+      "skill": "Wiring",
+      "domain": "engineering",
+      "aliases": [
+        "electrical wiring"
+      ]
+    },
+    {
+      "skill": "Power Systems",
+      "domain": "engineering",
+      "aliases": [
+        "power distribution"
+      ]
+    },
+    {
+      "skill": "Embedded Systems",
+      "domain": "engineering",
+      "aliases": [
+        "embedded software"
+      ]
+    },
+    {
+      "skill": "Patient Care",
+      "domain": "healthcare",
+      "aliases": []
+    },
+    {
+      "skill": "Electronic Health Records",
+      "domain": "healthcare",
+      "aliases": [
+        "EHR",
+        "EMR"
+      ]
+    },
+    {
+      "skill": "Medication Administration",
+      "domain": "healthcare",
+      "aliases": []
+    },
+    {
+      "skill": "HIPAA",
+      "domain": "healthcare",
+      "aliases": []
+    },
+    {
+      "skill": "Clinical Documentation",
+      "domain": "healthcare",
+      "aliases": []
+    },
+    {
+      "skill": "Legal Research",
+      "domain": "legal",
+      "aliases": []
+    },
+    {
+      "skill": "Contract Drafting",
+      "domain": "legal",
+      "aliases": [
+        "contract review",
+        "contract negotiation"
+      ]
+    },
+    {
+      "skill": "Compliance",
+      "domain": "legal",
+      "aliases": [
+        "regulatory compliance"
+      ]
+    },
+    {
+      "skill": "Litigation",
+      "domain": "legal",
+      "aliases": []
+    },
+    {
+      "skill": "Customer Service",
+      "domain": "general",
+      "aliases": [
+        "customer support"
+      ]
+    },
+    {
+      "skill": "Data Entry",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Spring Boot",
+      "domain": "software",
+      "aliases": [
+        "springboot"
+      ]
+    },
+    {
+      "skill": "SAP ABAP",
+      "domain": "software",
+      "aliases": [
+        "abap"
+      ]
+    },
+    {
+      "skill": "SAP FICO",
+      "domain": "software",
+      "aliases": [
+        "sap fi/co",
+        "sap fi co"
+      ]
+    },
+    {
+      "skill": "SAP MM",
+      "domain": "software",
+      "aliases": [
+        "sap materials management"
+      ]
+    },
+    {
+      "skill": "SAP SD",
+      "domain": "software",
+      "aliases": [
+        "sap sales and distribution"
+      ]
+    },
+    {
+      "skill": "SAP HANA",
+      "domain": "software",
+      "aliases": [
+        "hana"
+      ]
+    },
+    {
+      "skill": "SAP Basis",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Oracle EBS",
+      "domain": "software",
+      "aliases": [
+        "oracle e-business suite",
+        "oracle apps"
+      ]
+    },
+    {
+      "skill": "COBOL",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Mainframe",
+      "domain": "software",
+      "aliases": [
+        "jcl",
+        "cics"
+      ]
+    },
+    {
+      "skill": "Informatica",
+      "domain": "software",
+      "aliases": [
+        "informatica powercenter"
+      ]
+    },
+    {
+      "skill": "Talend",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Apache Kafka",
+      "domain": "software",
+      "aliases": [
+        "kafka"
+      ]
+    },
+    {
+      "skill": "Terraform",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Ansible",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Jenkins",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Linux",
+      "domain": "software",
+      "aliases": [
+        "unix"
+      ]
+    },
+    {
+      "skill": "Shell Scripting",
+      "domain": "software",
+      "aliases": [
+        "bash scripting",
+        "shell script"
+      ]
+    },
+    {
+      "skill": "REST API",
+      "domain": "software",
+      "aliases": [
+        "restful api",
+        "restful services",
+        "rest apis"
+      ]
+    },
+    {
+      "skill": "Microservices",
+      "domain": "software",
+      "aliases": [
+        "micro services"
+      ]
+    },
+    {
+      "skill": "Appium",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Cypress",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Postman",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Cucumber",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "JMeter",
+      "domain": "software",
+      "aliases": [
+        "apache jmeter"
+      ]
+    },
+    {
+      "skill": "Manual Testing",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Android Development",
+      "domain": "software",
+      "aliases": [
+        "android sdk"
+      ]
+    },
+    {
+      "skill": "Kotlin",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Swift",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Flutter",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "React Native",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Dynamics 365",
+      "domain": "software",
+      "aliases": [
+        "ms dynamics 365"
+      ]
+    },
+    {
+      "skill": "Workday",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Power Apps",
+      "domain": "software",
+      "aliases": [
+        "powerapps"
+      ]
+    },
+    {
+      "skill": "Splunk",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "CCNA",
+      "domain": "software",
+      "aliases": [
+        "cisco certified network associate"
+      ]
+    },
+    {
+      "skill": "Cyber Security",
+      "domain": "software",
+      "aliases": [
+        "cybersecurity",
+        "information security"
+      ]
+    },
+    {
+      "skill": "Hibernate",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Maven",
+      "domain": "software",
+      "aliases": []
+    },
+    {
+      "skill": "Git",
+      "domain": "software",
+      "aliases": [
+        "github",
+        "gitlab",
+        "bitbucket"
+      ]
+    },
+    {
+      "skill": "Azure DevOps",
+      "domain": "software",
+      "aliases": [
+        "ado pipelines"
+      ]
+    },
+    {
+      "skill": "Oracle Fusion",
+      "domain": "software",
+      "aliases": [
+        "oracle cloud erp"
+      ]
+    },
+    {
+      "skill": "Zoho",
+      "domain": "software",
+      "aliases": [
+        "zoho crm"
+      ]
+    },
+    {
+      "skill": "Power Query",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Alteryx",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "SAS",
+      "domain": "data",
+      "aliases": [
+        "sas programming",
+        "base sas"
+      ]
+    },
+    {
+      "skill": "Looker",
+      "domain": "data",
+      "aliases": [
+        "looker studio",
+        "google data studio"
+      ]
+    },
+    {
+      "skill": "Azure Data Factory",
+      "domain": "data",
+      "aliases": [
+        "adf pipelines"
+      ]
+    },
+    {
+      "skill": "Azure Synapse",
+      "domain": "data",
+      "aliases": [
+        "synapse analytics"
+      ]
+    },
+    {
+      "skill": "AWS Glue",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Amazon Redshift",
+      "domain": "data",
+      "aliases": [
+        "redshift"
+      ]
+    },
+    {
+      "skill": "Google BigQuery",
+      "domain": "data",
+      "aliases": [
+        "bigquery"
+      ]
+    },
+    {
+      "skill": "Generative AI",
+      "domain": "data",
+      "aliases": [
+        "genai",
+        "gen ai"
+      ]
+    },
+    {
+      "skill": "Large Language Models",
+      "domain": "data",
+      "aliases": [
+        "llm",
+        "llms"
+      ]
+    },
+    {
+      "skill": "LangChain",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Hugging Face",
+      "domain": "data",
+      "aliases": [
+        "huggingface"
+      ]
+    },
+    {
+      "skill": "Natural Language Processing",
+      "domain": "data",
+      "aliases": [
+        "nlp"
+      ]
+    },
+    {
+      "skill": "Computer Vision",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "MLOps",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "A/B Testing",
+      "domain": "data",
+      "aliases": [
+        "ab testing"
+      ]
+    },
+    {
+      "skill": "Statistical Analysis",
+      "domain": "data",
+      "aliases": [
+        "statistical modelling",
+        "statistical modeling"
+      ]
+    },
+    {
+      "skill": "dbt",
+      "domain": "data",
+      "aliases": []
+    },
+    {
+      "skill": "Voice Process",
+      "domain": "business",
+      "aliases": [
+        "voice support",
+        "inbound voice",
+        "outbound voice"
+      ]
+    },
+    {
+      "skill": "Non-Voice Process",
+      "domain": "business",
+      "aliases": [
+        "non voice process",
+        "chat support",
+        "email support"
+      ]
+    },
+    {
+      "skill": "Back Office Operations",
+      "domain": "business",
+      "aliases": [
+        "back office"
+      ]
+    },
+    {
+      "skill": "CRM Software",
+      "domain": "business",
+      "aliases": [
+        "crm tools"
+      ]
+    },
+    {
+      "skill": "Zendesk",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Freshdesk",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Lead Generation",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Business Development",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Inside Sales",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Channel Sales",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Six Sigma",
+      "domain": "business",
+      "aliases": [
+        "lean six sigma"
+      ]
+    },
+    {
+      "skill": "Digital Marketing",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "SEO",
+      "domain": "business",
+      "aliases": [
+        "search engine optimization",
+        "search engine optimisation"
+      ]
+    },
+    {
+      "skill": "Google Ads",
+      "domain": "business",
+      "aliases": [
+        "google adwords"
+      ]
+    },
+    {
+      "skill": "Talent Acquisition",
+      "domain": "business",
+      "aliases": [
+        "end to end recruitment",
+        "full cycle recruitment"
+      ]
+    },
+    {
+      "skill": "Payroll Processing",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Employee Onboarding",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Vendor Management",
+      "domain": "business",
+      "aliases": []
+    },
+    {
+      "skill": "Supply Chain Management",
+      "domain": "business",
+      "aliases": [
+        "scm"
+      ]
+    },
+    {
+      "skill": "Procurement",
+      "domain": "business",
+      "aliases": [
+        "purchase management"
+      ]
+    },
+    {
+      "skill": "Warehouse Management",
+      "domain": "business",
+      "aliases": [
+        "wms"
+      ]
+    },
+    {
+      "skill": "MIS Reporting",
+      "domain": "business",
+      "aliases": [
+        "mis reports",
+        "management information system"
+      ]
+    },
+    {
+      "skill": "Tally Prime",
+      "domain": "accounting",
+      "aliases": [
+        "tally erp 9",
+        "tally erp9",
+        "tally.erp 9",
+        "tally erp"
+      ]
+    },
+    {
+      "skill": "GST",
+      "domain": "accounting",
+      "aliases": [
+        "goods and services tax",
+        "goods & services tax"
+      ]
+    },
+    {
+      "skill": "GST Return Filing",
+      "domain": "accounting",
+      "aliases": [
+        "gstr-1",
+        "gstr-3b",
+        "gstr 1",
+        "gstr 3b",
+        "gstr-9",
+        "gstr-2b",
+        "gst returns"
+      ]
+    },
+    {
+      "skill": "TDS",
+      "domain": "accounting",
+      "aliases": [
+        "tax deducted at source",
+        "tds returns"
+      ]
+    },
+    {
+      "skill": "E-Invoicing",
+      "domain": "accounting",
+      "aliases": [
+        "e-invoice",
+        "e invoicing",
+        "e invoice"
+      ]
+    },
+    {
+      "skill": "E-Way Bill",
+      "domain": "accounting",
+      "aliases": [
+        "eway bill",
+        "e way bill"
+      ]
+    },
+    {
+      "skill": "Input Tax Credit",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Income Tax Return",
+      "domain": "accounting",
+      "aliases": [
+        "itr filing"
+      ]
+    },
+    {
+      "skill": "Provident Fund",
+      "domain": "accounting",
+      "aliases": [
+        "epf",
+        "employees provident fund"
+      ]
+    },
+    {
+      "skill": "ESIC",
+      "domain": "accounting",
+      "aliases": [
+        "employees state insurance"
+      ]
+    },
+    {
+      "skill": "Ind AS",
+      "domain": "accounting",
+      "aliases": [
+        "indian accounting standards"
+      ]
+    },
+    {
+      "skill": "IFRS",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Statutory Audit",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Tax Audit",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Transfer Pricing",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Companies Act",
+      "domain": "accounting",
+      "aliases": [
+        "companies act 2013"
+      ]
+    },
+    {
+      "skill": "Secretarial Compliance",
+      "domain": "accounting",
+      "aliases": [
+        "secretarial audit"
+      ]
+    },
+    {
+      "skill": "SEBI Regulations",
+      "domain": "accounting",
+      "aliases": [
+        "sebi lodr",
+        "sebi"
+      ]
+    },
+    {
+      "skill": "RBI Guidelines",
+      "domain": "accounting",
+      "aliases": [
+        "rbi regulations",
+        "reserve bank of india guidelines"
+      ]
+    },
+    {
+      "skill": "KYC",
+      "domain": "accounting",
+      "aliases": [
+        "know your customer"
+      ]
+    },
+    {
+      "skill": "Anti-Money Laundering",
+      "domain": "accounting",
+      "aliases": [
+        "aml"
+      ]
+    },
+    {
+      "skill": "Credit Appraisal",
+      "domain": "accounting",
+      "aliases": [
+        "credit underwriting",
+        "loan underwriting"
+      ]
+    },
+    {
+      "skill": "Loan Processing",
+      "domain": "accounting",
+      "aliases": [
+        "loan disbursement"
+      ]
+    },
+    {
+      "skill": "Financial Modelling",
+      "domain": "accounting",
+      "aliases": [
+        "financial modeling"
+      ]
+    },
+    {
+      "skill": "Treasury Management",
+      "domain": "accounting",
+      "aliases": [
+        "treasury operations"
+      ]
+    },
+    {
+      "skill": "Fixed Assets",
+      "domain": "accounting",
+      "aliases": [
+        "fixed asset accounting"
+      ]
+    },
+    {
+      "skill": "Zoho Books",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Busy Accounting",
+      "domain": "accounting",
+      "aliases": [
+        "busy accounting software"
+      ]
+    },
+    {
+      "skill": "Marg ERP",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Oracle Financials",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Working Capital Management",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Equity Research",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Mutual Funds",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Insurance Underwriting",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Claims Processing",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "NISM",
+      "domain": "accounting",
+      "aliases": []
+    },
+    {
+      "skill": "Consolidation",
+      "domain": "accounting",
+      "aliases": [
+        "consolidation of accounts",
+        "financial consolidation"
+      ]
+    },
+    {
+      "skill": "Accounts Finalisation",
+      "domain": "accounting",
+      "aliases": [
+        "finalisation of accounts",
+        "finalization of accounts",
+        "accounts finalization"
+      ]
+    },
+    {
+      "skill": "SCADA",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "HVAC",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "Refrigeration",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "Hydraulics",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "Pneumatics",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "Revit",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "STAAD Pro",
+      "domain": "engineering",
+      "aliases": [
+        "staad.pro",
+        "staad"
+      ]
+    },
+    {
+      "skill": "Primavera",
+      "domain": "engineering",
+      "aliases": [
+        "primavera p6"
+      ]
+    },
+    {
+      "skill": "MS Project",
+      "domain": "engineering",
+      "aliases": [
+        "microsoft project"
+      ]
+    },
+    {
+      "skill": "Total Station",
+      "domain": "engineering",
+      "aliases": [
+        "total station survey"
+      ]
+    },
+    {
+      "skill": "Quantity Surveying",
+      "domain": "engineering",
+      "aliases": [
+        "quantity surveyor"
+      ]
+    },
+    {
+      "skill": "Estimation and Costing",
+      "domain": "engineering",
+      "aliases": [
+        "estimating and costing"
+      ]
+    },
+    {
+      "skill": "Bar Bending Schedule",
+      "domain": "engineering",
+      "aliases": [
+        "bbs"
+      ]
+    },
+    {
+      "skill": "Preventive Maintenance",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "Breakdown Maintenance",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "TPM",
+      "domain": "engineering",
+      "aliases": [
+        "total productive maintenance"
+      ]
+    },
+    {
+      "skill": "Kaizen",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "5S",
+      "domain": "engineering",
+      "aliases": [
+        "5s methodology"
+      ]
+    },
+    {
+      "skill": "ISO 9001",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "ISO 14001",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "IATF 16949",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "PPAP",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "FMEA",
+      "domain": "engineering",
+      "aliases": []
+    },
+    {
+      "skill": "Lathe Machine",
+      "domain": "engineering",
+      "aliases": [
+        "lathe operation"
+      ]
+    },
+    {
+      "skill": "Milling Machine",
+      "domain": "engineering",
+      "aliases": [
+        "milling operation"
+      ]
+    },
+    {
+      "skill": "CNC Programming",
+      "domain": "engineering",
+      "aliases": [
+        "cnc programmer",
+        "g code",
+        "g-code"
+      ]
+    },
+    {
+      "skill": "VMC",
+      "domain": "engineering",
+      "aliases": [
+        "vertical machining center",
+        "vertical machining centre"
+      ]
+    },
+    {
+      "skill": "Blueprint Reading",
+      "domain": "engineering",
+      "aliases": [
+        "reading engineering drawings",
+        "drawing reading"
+      ]
+    },
+    {
+      "skill": "Vernier Caliper",
+      "domain": "engineering",
+      "aliases": [
+        "micrometer",
+        "measuring instruments"
+      ]
+    },
+    {
+      "skill": "Arc Welding",
+      "domain": "engineering",
+      "aliases": [
+        "smaw"
+      ]
+    },
+    {
+      "skill": "MIG Welding",
+      "domain": "engineering",
+      "aliases": [
+        "gmaw",
+        "co2 welding"
+      ]
+    },
+    {
+      "skill": "TIG Welding",
+      "domain": "engineering",
+      "aliases": [
+        "gtaw",
+        "argon welding"
+      ]
+    },
+    {
+      "skill": "Gas Cutting",
+      "domain": "engineering",
+      "aliases": [
+        "oxy-acetylene"
+      ]
+    },
+    {
+      "skill": "Pipe Fitting",
+      "domain": "engineering",
+      "aliases": [
+        "pipefitting"
+      ]
+    },
+    {
+      "skill": "Panel Wiring",
+      "domain": "engineering",
+      "aliases": [
+        "control panel wiring"
+      ]
+    },
+    {
+      "skill": "Motor Winding",
+      "domain": "engineering",
+      "aliases": [
+        "motor rewinding"
+      ]
+    },
+    {
+      "skill": "Industrial Safety",
+      "domain": "engineering",
+      "aliases": [
+        "ehs",
+        "hse",
+        "safety management"
+      ]
+    },
+    {
+      "skill": "Fire Safety",
+      "domain": "engineering",
+      "aliases": [
+        "fire fighting"
+      ]
+    },
+    {
+      "skill": "Forklift Operation",
+      "domain": "engineering",
+      "aliases": [
+        "forklift"
+      ]
+    },
+    {
+      "skill": "Boiler Operation",
+      "domain": "engineering",
+      "aliases": [
+        "boiler operator"
+      ]
+    },
+    {
+      "skill": "Solar Installation",
+      "domain": "engineering",
+      "aliases": [
+        "solar pv installation"
+      ]
+    },
+    {
+      "skill": "Electric Vehicle Maintenance",
+      "domain": "engineering",
+      "aliases": [
+        "ev maintenance"
+      ]
+    },
+    {
+      "skill": "Vehicle Servicing",
+      "domain": "engineering",
+      "aliases": [
+        "automobile servicing",
+        "two wheeler servicing"
+      ]
+    },
+    {
+      "skill": "Critical Care Nursing",
+      "domain": "healthcare",
+      "aliases": [
+        "icu nursing",
+        "intensive care"
+      ]
+    },
+    {
+      "skill": "Emergency Care",
+      "domain": "healthcare",
+      "aliases": [
+        "casualty care",
+        "emergency nursing"
+      ]
+    },
+    {
+      "skill": "Basic Life Support",
+      "domain": "healthcare",
+      "aliases": [
+        "bls"
+      ]
+    },
+    {
+      "skill": "Advanced Cardiac Life Support",
+      "domain": "healthcare",
+      "aliases": [
+        "acls"
+      ]
+    },
+    {
+      "skill": "IV Cannulation",
+      "domain": "healthcare",
+      "aliases": [
+        "intravenous cannulation",
+        "iv insertion"
+      ]
+    },
+    {
+      "skill": "Phlebotomy",
+      "domain": "healthcare",
+      "aliases": [
+        "venipuncture",
+        "blood sample collection"
+      ]
+    },
+    {
+      "skill": "Wound Care",
+      "domain": "healthcare",
+      "aliases": [
+        "wound dressing"
+      ]
+    },
+    {
+      "skill": "Infection Control",
+      "domain": "healthcare",
+      "aliases": [
+        "infection prevention",
+        "hospital infection control"
+      ]
+    },
+    {
+      "skill": "NABH",
+      "domain": "healthcare",
+      "aliases": [
+        "nabh accreditation",
+        "nabh standards"
+      ]
+    },
+    {
+      "skill": "Hospital Information System",
+      "domain": "healthcare",
+      "aliases": [
+        "his software",
+        "hms software"
+      ]
+    },
+    {
+      "skill": "Medical Coding",
+      "domain": "healthcare",
+      "aliases": [
+        "icd-10",
+        "icd 10",
+        "cpt coding"
+      ]
+    },
+    {
+      "skill": "Medical Billing",
+      "domain": "healthcare",
+      "aliases": [
+        "hospital billing",
+        "tpa billing"
+      ]
+    },
+    {
+      "skill": "Pharmacovigilance",
+      "domain": "healthcare",
+      "aliases": [
+        "drug safety"
+      ]
+    },
+    {
+      "skill": "Clinical Research",
+      "domain": "healthcare",
+      "aliases": [
+        "good clinical practice",
+        "clinical trials"
+      ]
+    },
+    {
+      "skill": "Dispensing",
+      "domain": "healthcare",
+      "aliases": [
+        "drug dispensing",
+        "dispensing medicines"
+      ]
+    },
+    {
+      "skill": "ECG",
+      "domain": "healthcare",
+      "aliases": [
+        "electrocardiogram"
+      ]
+    },
+    {
+      "skill": "Radiology",
+      "domain": "healthcare",
+      "aliases": [
+        "x-ray",
+        "ct scan",
+        "mri"
+      ]
+    },
+    {
+      "skill": "Operation Theatre",
+      "domain": "healthcare",
+      "aliases": [
+        "ot assistance",
+        "operation theater",
+        "ot technician"
+      ]
+    },
+    {
+      "skill": "Midwifery",
+      "domain": "healthcare",
+      "aliases": [
+        "labour room",
+        "labor room"
+      ]
+    },
+    {
+      "skill": "Neonatal Care",
+      "domain": "healthcare",
+      "aliases": [
+        "nicu",
+        "newborn care"
+      ]
+    },
+    {
+      "skill": "Physiotherapy",
+      "domain": "healthcare",
+      "aliases": [
+        "physical therapy"
+      ]
+    },
+    {
+      "skill": "Dialysis",
+      "domain": "healthcare",
+      "aliases": [
+        "haemodialysis",
+        "hemodialysis"
+      ]
+    },
+    {
+      "skill": "Telemedicine",
+      "domain": "healthcare",
+      "aliases": [
+        "teleconsultation"
+      ]
+    },
+    {
+      "skill": "Biomedical Equipment",
+      "domain": "healthcare",
+      "aliases": [
+        "biomedical maintenance"
+      ]
+    },
+    {
+      "skill": "Patient Counselling",
+      "domain": "healthcare",
+      "aliases": [
+        "patient counseling"
+      ]
+    },
+    {
+      "skill": "ABDM",
+      "domain": "healthcare",
+      "aliases": [
+        "abha",
+        "ayushman bharat digital mission"
+      ]
+    },
+    {
+      "skill": "Pharmacy Management",
+      "domain": "healthcare",
+      "aliases": [
+        "pharmacy inventory"
+      ]
+    },
+    {
+      "skill": "Lab Quality Control",
+      "domain": "healthcare",
+      "aliases": [
+        "nabl"
+      ]
+    },
+    {
+      "skill": "Corporate Law",
+      "domain": "legal",
+      "aliases": [
+        "corporate legal"
+      ]
+    },
+    {
+      "skill": "Civil Litigation",
+      "domain": "legal",
+      "aliases": [
+        "civil suits",
+        "civil matters"
+      ]
+    },
+    {
+      "skill": "Criminal Law",
+      "domain": "legal",
+      "aliases": [
+        "criminal matters",
+        "criminal litigation"
+      ]
+    },
+    {
+      "skill": "Arbitration",
+      "domain": "legal",
+      "aliases": [
+        "arbitration and conciliation",
+        "arbitral"
+      ]
+    },
+    {
+      "skill": "Bharatiya Nyaya Sanhita",
+      "domain": "legal",
+      "aliases": [
+        "bns",
+        "indian penal code",
+        "ipc"
+      ]
+    },
+    {
+      "skill": "Indian Contract Act",
+      "domain": "legal",
+      "aliases": [
+        "contract act 1872"
+      ]
+    },
+    {
+      "skill": "RERA",
+      "domain": "legal",
+      "aliases": [
+        "real estate regulation act"
+      ]
+    },
+    {
+      "skill": "Intellectual Property",
+      "domain": "legal",
+      "aliases": [
+        "trademark filing",
+        "patent filing",
+        "trademark registration"
+      ]
+    },
+    {
+      "skill": "Labour Law",
+      "domain": "legal",
+      "aliases": [
+        "labor law",
+        "industrial disputes act",
+        "labour codes"
+      ]
+    },
+    {
+      "skill": "POSH",
+      "domain": "legal",
+      "aliases": [
+        "posh act",
+        "prevention of sexual harassment"
+      ]
+    },
+    {
+      "skill": "Legal Notice Drafting",
+      "domain": "legal",
+      "aliases": [
+        "legal notices",
+        "drafting of notices"
+      ]
+    },
+    {
+      "skill": "Conveyancing",
+      "domain": "legal",
+      "aliases": [
+        "sale deed",
+        "title verification"
+      ]
+    },
+    {
+      "skill": "Property Law",
+      "domain": "legal",
+      "aliases": [
+        "property matters",
+        "property litigation"
+      ]
+    },
+    {
+      "skill": "Legal Due Diligence",
+      "domain": "legal",
+      "aliases": [
+        "due diligence"
+      ]
+    },
+    {
+      "skill": "NCLT",
+      "domain": "legal",
+      "aliases": [
+        "insolvency and bankruptcy code",
+        "ibc"
+      ]
+    },
+    {
+      "skill": "Negotiable Instruments Act",
+      "domain": "legal",
+      "aliases": [
+        "section 138",
+        "cheque bounce"
+      ]
+    },
+    {
+      "skill": "Consumer Protection Act",
+      "domain": "legal",
+      "aliases": [
+        "consumer court",
+        "consumer forum"
+      ]
+    },
+    {
+      "skill": "Data Protection Law",
+      "domain": "legal",
+      "aliases": [
+        "dpdp act",
+        "gdpr compliance"
+      ]
+    },
+    {
+      "skill": "Contract Management",
+      "domain": "legal",
+      "aliases": []
+    },
+    {
+      "skill": "Court Appearance",
+      "domain": "legal",
+      "aliases": [
+        "court appearances",
+        "appearing before"
+      ]
+    },
+    {
+      "skill": "Pleadings Drafting",
+      "domain": "legal",
+      "aliases": [
+        "plaint",
+        "written statement",
+        "drafting of pleadings"
+      ]
+    },
+    {
+      "skill": "Typing Speed",
+      "domain": "general",
+      "aliases": [
+        "wpm"
+      ]
+    },
+    {
+      "skill": "MS Word",
+      "domain": "general",
+      "aliases": [
+        "microsoft word"
+      ]
+    },
+    {
+      "skill": "Hindi",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "English",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Kannada",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Telugu",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Tamil",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Marathi",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Bengali",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Malayalam",
+      "domain": "general",
+      "aliases": []
+    },
+    {
+      "skill": "Gujarati",
+      "domain": "general",
+      "aliases": []
+    }
+  ]
+}

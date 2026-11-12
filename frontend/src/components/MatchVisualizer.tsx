@@ -30,7 +30,7 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
   const rrfRaw = breakdown.rrfScore ?? matchResult.rrfScore;
   const crossEncoderRaw = breakdown.crossEncoderScore ?? matchResult.crossEncoderScore;
   const skillCoverageRaw = breakdown.skillCoverage;
-  const finalScoreRaw = matchResult.finalScore;
+  const finalScoreRaw = matchResult.retrievalScore ?? matchResult.finalScore ?? null;
 
   const clampPercent = (val: number | undefined | null): number => {
     if (val === undefined || val === null || isNaN(val)) return 0;
@@ -48,14 +48,15 @@ export function MatchVisualizer({ matchResult, className = '' }: MatchVisualizer
         <div className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" aria-hidden="true" />
           <h3 className="font-bold text-base text-foreground">
-            How your score is built
+            Search and retrieval diagnostics
           </h3>
         </div>
         <span
           data-testid="visualizer-final-score"
           className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-800 border border-slate-200"
         >
-          Match score: <span className="font-mono text-primary font-bold">{finalScoreRaw}</span>
+          Retrieval rank (not Item 1):{' '}
+          <span className="font-mono text-primary font-bold">{finalScoreRaw ?? 'N/A'}</span>
         </span>
       </div>
 

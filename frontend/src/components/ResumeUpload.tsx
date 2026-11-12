@@ -156,7 +156,7 @@ export function ResumeUpload({ onUploadSuccess, className }: ResumeUploadProps) 
       <div className="mb-4">
         <h2 className="text-base font-semibold text-foreground">Upload Resume</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          PDF and DOCX formats supported. Maximum size 5 MB. Evaluated with exact character extraction and ATS compliance checks.
+          PDF and DOCX formats supported. Maximum size 5 MB. Read with exact character extraction.
         </p>
       </div>
 

@@ -25,12 +25,21 @@ interface ModeBResultsProps {
 
 export function ModeBResults({ analysis, matchResult, className = '' }: ModeBResultsProps) {
   const result = analysis.result || {};
-  const matchScore = result.match_score ?? analysis.score;
-  const atsScore = result.ats_score;
-  // Same bands as the backend; only used when a saved result carries no verdict of its own
-  const verdictBand =
-    result.verdict_band ||
-    (typeof matchScore !== 'number' ? 'medium' : matchScore >= 75 ? 'strong' : matchScore >= 45 ? 'medium' : 'weak');
+  const item1Result = matchResult?.item1Result ?? null;
+  const isNewMatch = matchResult !== null;
+  const matchScore = isNewMatch
+    ? (item1Result?.score ?? null)
+    : (result.match_score ?? analysis.score);
+  const verdictBand = isNewMatch
+    ? item1Result?.verdict ?? null
+    : result.verdict_band ||
+      (typeof matchScore !== 'number'
+        ? 'medium'
+        : matchScore >= 75
+          ? 'strong'
+          : matchScore >= 45
+            ? 'medium'
+            : 'weak');
 
   // Map verdict band for display badge
   const verdictConfig = {
@@ -49,10 +58,10 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
       color: 'text-amber-800 bg-amber-50 border-amber-200',
       description: 'Consider addressing the missing keywords and critical experience gaps below.',
     },
-  }[verdictBand] || {
-    label: verdictBand,
+  }[verdictBand as 'strong' | 'medium' | 'weak'] || {
+    label: verdictBand || (item1Result?.verdict_withheld ? 'Verdict withheld' : 'No score available'),
     color: 'text-slate-800 bg-slate-50 border-slate-200',
-    description: '',
+    description: item1Result?.withheld_reason || 'No Item 1 assessment is available for this match.',
   };
 
   return (
@@ -69,47 +78,70 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
               Overall Job Description Match
             </h3>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {verdictConfig.description}
-          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{verdictConfig.description}</p>
+          {item1Result && (
+            <p data-testid="item1-confidence" className="text-xs text-amber-800">
+              Item 1 confidence: {item1Result.confidence}
+              {item1Result.score_range && (
+                <> · Conditional range {item1Result.score_range[0]}–{item1Result.score_range[1]}</>
+              )}
+            </p>
+          )}
+          {item1Result?.tier === 'Tentative' && (
+            <p data-testid="item1-tentative" className="text-xs text-amber-800">
+              Tentative result
+              {item1Result.band_range
+                ? item1Result.band_range[0] === item1Result.band_range[1]
+                  ? `: ${item1Result.band_range[0]}`
+                  : `: ${item1Result.band_range[0]} to ${item1Result.band_range[1]}`
+                : ''}
+              {item1Result.confidence_reasons && item1Result.confidence_reasons.length > 0
+                ? ` (${item1Result.confidence_reasons[item1Result.confidence_reasons.length - 1]})`
+                : ''}
+            </p>
+          )}
+          {item1Result?.role_fit?.note && (
+            <p data-testid="item1-role-fit" className="text-xs text-slate-700">
+              {item1Result.role_fit.note}
+            </p>
+          )}
+          {item1Result?.signals && item1Result.signals.must_haves_missing.length > 0 && (
+            <p data-testid="item1-must-haves" className="text-xs text-slate-700">
+              Required items not evidenced on the resume: {item1Result.signals.must_haves_missing.join('; ')}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-6 shrink-0">
-          <ScoreGauge
-            score={matchScore}
-            maxScore={100}
-            label="Match Score"
-            statusBand={verdictConfig.label}
-            size="sm"
-          />
-
-          {/* ATS Score */}
-          {atsScore !== null && atsScore !== undefined && (
-            <div className="text-right border-l border-border pl-4">
-              <span className="text-[11px] font-semibold text-muted-foreground block">
-                ATS Score
-              </span>
-              <div
-                data-testid="mode-b-ats-score"
-                className="text-2xl font-bold font-mono text-slate-800"
-              >
-                {atsScore}
-                <span className="text-xs text-muted-foreground font-normal ml-0.5">/100</span>
-              </div>
+          {typeof matchScore === 'number' ? (
+            <ScoreGauge
+              score={matchScore}
+              maxScore={100}
+              label="Item 1 score"
+              statusBand={verdictConfig.label}
+              size="sm"
+            />
+          ) : (
+            <div data-testid="item1-no-score" className="max-w-40 text-center text-sm text-slate-600">
+              No Item 1 score
+              <span className="block text-xs">{verdictConfig.label}</span>
             </div>
           )}
 
           {/* Overall Match Score (Text representation for tests & accessibility) */}
           <div className="hidden sm:block text-right border-l border-border pl-4">
             <span className="text-[11px] font-semibold text-muted-foreground block">
-              Match Score
+                Item 1 Score
             </span>
             <div
               data-testid="mode-b-match-score"
               className="text-3xl font-extrabold font-mono text-primary"
             >
-              {matchScore}
-              <span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
+              {typeof matchScore === 'number' ? (
+                <>{matchScore}<span className="text-sm font-normal text-muted-foreground ml-0.5">%</span></>
+              ) : (
+                <span className="text-base font-semibold">Not scored</span>
+              )}
             </div>
             <span
               data-testid="mode-b-verdict-band"
@@ -132,15 +164,48 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
           <span>How to read your match analysis:</span>
         </div>
         <p className="leading-relaxed">
-          The score combines three checks: <strong>shared keywords</strong>, <strong>similar meaning</strong>, and
-          a model that reads your resume <strong>next to the job&apos;s requirements</strong>, which counts most. 75 or
-          more is a strong match, 45 to 74 a moderate one, and below 45 a low one. Scores are shown exactly as
-          calculated.
+          Item 1 is the Resume + Job Description comparison score. Search and retrieval diagnostics below are
+          separate and do not change that score. A low-confidence result may show a score while withholding its
+          verdict; unresolved gates and date uncertainty are shown as a range.
         </p>
       </aside>
 
       {/* 3. Match Visualizer Breakdown */}
       <MatchVisualizer matchResult={matchResult} />
+
+      {item1Result?.limitations && item1Result.limitations.length > 0 && (
+        <aside data-testid="item1-limitations" className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h4 className="text-sm font-semibold text-amber-900">Item 1 limitations</h4>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-900">
+            {item1Result.limitations.map((limitation, index) => <li key={index}>{limitation}</li>)}
+          </ul>
+          <p className="mt-2 text-xs text-slate-700">{item1Result.guidance}</p>
+        </aside>
+      )}
+
+      {item1Result?.gaps && item1Result.gaps.length > 0 && (
+        <section data-testid="item1-gaps" className="rounded-lg border border-slate-200 bg-white p-4">
+          <h4 className="text-sm font-semibold text-foreground">What would raise this score</h4>
+          <ul className="mt-2 space-y-1.5 text-xs text-slate-700">
+            {item1Result.gaps.map((gap, index) => (
+              <li key={index}>
+                <span className="font-medium">{gap.requirement}</span> (about +{gap.points_if_closed} points): {gap.tip}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {item1Result?.confirm && item1Result.confirm.length > 0 && (
+        <section data-testid="item1-confirm" className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <h4 className="text-sm font-semibold text-foreground">Please confirm</h4>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-700">
+            {item1Result.confirm.map((item, index) => (
+              <li key={index}>{item.requirement}: {item.reason}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* 4. LLM Status or Executive Summary */}
       {analysis.llmStatus === 'UNAVAILABLE' ? (
@@ -155,8 +220,8 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
               AI explanation unavailable, showing deterministic results
             </h4>
             <p className="mt-0.5 text-muted-foreground">
-              Your match score and skill results are complete. The written AI summary is not available right
-              now.
+              The Item 1 comparison result is shown separately. The supplemental AI summary is not available
+              right now.
             </p>
           </div>
         </aside>
@@ -170,7 +235,7 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
               <h3 id="summary-heading" className="font-bold text-sm text-foreground">
-                Analysis Summary
+                Supplemental AI summary (not Item 1)
               </h3>
             </div>
             <p className="text-xs text-slate-700 leading-relaxed">{result.summary}</p>
@@ -188,7 +253,7 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
           <div className="flex items-center gap-2 border-b border-border pb-3">
             <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
             <h3 id="strengths-heading" className="font-bold text-sm text-foreground">
-              Key Candidate Strengths ({result.strengths.length})
+              Supplemental strengths (not Item 1) ({result.strengths.length})
             </h3>
           </div>
 
@@ -230,7 +295,7 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
           <div className="flex items-center gap-2 border-b border-border pb-3">
             <TrendingUp className="h-4 w-4 text-amber-600" aria-hidden="true" />
             <h3 id="improvements-heading" className="font-bold text-sm text-foreground">
-              Prioritized Improvements & Target Gaps
+              Supplemental gaps and improvements (not Item 1)
             </h3>
           </div>
 
