@@ -65,7 +65,6 @@ PROTECTED_ROUTES: list[dict[str, Any]] = [
         "payload": {
             "resumeId": "r1",
             "resumeRawText": "Software developer with experience in Python and Docker.",
-            "atsScore": 80.0,
         },
         "expected_authorized_status": 200,
     },
@@ -133,8 +132,6 @@ def test_protected_routes_accept_valid_token(route: dict[str, Any]) -> None:
             options=[],
         )
         mock_improve.return_value = ImprovementsResponse(
-            atsScore=80.0,
-            atsFixes=[],
             contentFindings=[],
             suggestedRoles=[],
             explanation=None,

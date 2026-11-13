@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, MagicMock
 import numpy as np
 import pytest
 
-from ml.pipelines.improvements.ats_mapper import map_ats_hazards_to_fixes
 from ml.pipelines.improvements.content_analyzer import analyze_content
 from ml.pipelines.improvements.models import (
     ImprovementsRequest,
@@ -35,40 +34,6 @@ def mock_gateway() -> LLMGateway:
 @pytest.fixture
 def service(mock_gateway: LLMGateway) -> ResumeImprovementsService:
     return ResumeImprovementsService(gateway=mock_gateway)
-
-
-# ---------------------------------------------------------------------------
-# 1. ATS Hazard Mapping Tests
-# ---------------------------------------------------------------------------
-
-def test_ats_hazard_mapping_all_hazard_types() -> None:
-    hazards = [
-        {"code": "OCR_REQUIRED", "severity": "HIGH"},
-        {"code": "MULTI_COLUMN_LAYOUT", "severity": "HIGH"},
-        {"code": "TABLES_PRESENT", "severity": "MEDIUM"},
-        {"code": "HEADER_FOOTER_CONTENT", "severity": "MEDIUM"},
-        {"code": "UNUSUAL_FONTS", "severity": "LOW"},
-        {"code": "MISSING_SECTION_EXPERIENCE", "severity": "HIGH"},
-        {"code": "MISSING_SECTION_EDUCATION", "severity": "MEDIUM"},
-        {"code": "MISSING_SECTION_SKILLS", "severity": "MEDIUM"},
-    ]
-    score, fixes = map_ats_hazards_to_fixes(ats_score=50.0, ats_hazards=hazards)
-
-    assert score == 50.0
-    assert len(fixes) == 8
-    # Prioritization check: Priority 1 items must appear before Priority 2 and 3
-    priorities = [f.priority for f in fixes]
-    assert priorities == sorted(priorities)
-    # Check that recommendation text is populated
-    for fix in fixes:
-        assert len(fix.recommendation) > 10
-        assert fix.severity in ("HIGH", "MEDIUM", "LOW")
-
-
-def test_ats_hazard_mapping_clean_resume() -> None:
-    score, fixes = map_ats_hazards_to_fixes(ats_score=100.0, ats_hazards=[])
-    assert score == 100.0
-    assert fixes == []
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +166,6 @@ async def test_service_fabricated_quote_rejected_fallback_unavailable(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000001",
         resumeRawText=raw_text,
-        atsHazards=[],
     )
 
     res = await service.generate_improvements(req)
@@ -232,16 +196,12 @@ async def test_service_prompt_injection_leaves_scores_unchanged(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000002",
         resumeRawText=injection_text,
-        atsHazards=[{"code": "MISSING_SECTION_EXPERIENCE", "severity": "HIGH"}],
     )
 
     res = await service.generate_improvements(req)
 
     # Must NOT call LLM gateway
     assert mock_gateway.execute_improvements.call_count == 0
-    # Must preserve deterministic ATS score and findings
-    assert len(res.atsFixes) == 1
-    assert res.atsFixes[0].hazardCode == "MISSING_SECTION_EXPERIENCE"
     assert res.llmStatus == "UNAVAILABLE"
     assert res.explanation is None
 
@@ -283,7 +243,6 @@ async def test_service_pii_redacted_before_llm(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000003",
         resumeRawText=raw_text,
-        atsHazards=[],
     )
 
     res = await service.generate_improvements(req)
@@ -317,7 +276,6 @@ async def test_service_all_tiers_fail_returns_unavailable(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000004",
         resumeRawText=raw_text,
-        atsHazards=[],
     )
 
     res = await service.generate_improvements(req)
@@ -361,7 +319,6 @@ async def test_service_gateway_called_exactly_once(
     req = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000005",
         resumeRawText=raw_text,
-        atsHazards=[],
     )
 
     res = await service.generate_improvements(req)

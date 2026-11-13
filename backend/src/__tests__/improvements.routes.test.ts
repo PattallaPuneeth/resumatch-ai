@@ -191,7 +191,6 @@ describe('Phase 4C: Resume Improvements & Role Suggestions Routes', () => {
     } as any);
 
     const mockMlResponse = {
-      atsFixes: [],
       contentFindings: [
         {
           type: 'NO_METRIC_OR_NUMBER',

@@ -7,9 +7,9 @@ zero hallucinated metrics, unearned tools, title inflation, or scope exaggeratio
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Sequence
 
 
 class Severity(str, Enum):

@@ -7,8 +7,8 @@ content quantification saturation, geometric evidence decay, and knockout gating
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from datetime import date
-from typing import Sequence
 
 
 def clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -77,15 +77,15 @@ def diminishing_evidence(
     valid_ws = [w for w in ws if w > 0.0]
     if not valid_ws:
         return 0.0
-    
+
     # Sort descending so highest-quality context gets full weight
     sorted_ws = sorted(valid_ws, reverse=True)
     eff = sum(w * (gamma ** i) for i, w in enumerate(sorted_ws))
-    
+
     denom = 1.0 - math.exp(-2.0 / lam)
     if denom <= 0.0:
         return 0.0
-    
+
     raw = (1.0 - math.exp(-eff / lam)) / denom
     return clamp(raw, 0.0, 1.0)
 
@@ -164,10 +164,10 @@ def union_years(spans: Sequence[tuple[date, date]]) -> float:
 
     # Sort spans primarily by start date ascending, secondarily by end date descending
     sorted_spans = sorted(valid_spans, key=lambda span: (span[0], -span[1].toordinal()))
-    
+
     total_days = 0
     cur_start, cur_end = sorted_spans[0]
-    
+
     for next_start, next_end in sorted_spans[1:]:
         if next_start <= cur_end:
             # Overlapping or contiguous interval -> extend current window
@@ -177,6 +177,6 @@ def union_years(spans: Sequence[tuple[date, date]]) -> float:
             # Disjoint interval -> tally previous window and start new
             total_days += (cur_end - cur_start).days
             cur_start, cur_end = next_start, next_end
-            
+
     total_days += (cur_end - cur_start).days
     return max(0.0, total_days / 365.25)

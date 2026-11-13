@@ -7,10 +7,9 @@ seniority inflation, verb ladder scope jumps, and [X] neutralization fallback.
 from __future__ import annotations
 
 import pytest
+
 from ml.scoring.guardrails import (
     ResumeSuggestionValidator,
-    Severity,
-    ValidationResult,
     Verdict,
     parse_numeric_claims,
 )
@@ -125,7 +124,7 @@ class TestMutationCorpusBenchmark:
         )
 
         base_bullet = "Assisted with backend services using Python and PostgreSQL."
-        
+
         # 20 synthetic mutations testing various hallucination vectors
         mutations = [
             # Injected percentages

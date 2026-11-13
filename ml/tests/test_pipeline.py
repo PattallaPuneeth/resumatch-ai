@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+
 from ml.scoring.pipeline import assess_pair_v30 as assess_pair
 
 AS_OF = date(2026, 11, 11)

@@ -1,4 +1,5 @@
 from fractions import Fraction as F
+
 from ml.scoring.pipeline_v31 import assess_pair
 from ml.scoring.units import index_resume, load_idf, score_units, segment
 
@@ -6,12 +7,12 @@ from ml.scoring.units import index_resume, load_idf, score_units, segment
 def test_sibling_substitution_mysql_for_postgresql():
     resume = "Experience\nBackend Engineer\n- Developed databases in MySQL and Redis."
     jd = "Requirements:\n- Must have experience with PostgreSQL."
-    
+
     idf = load_idf()
     seg = segment(jd, idf)
     idx = index_resume(resume)
     results = score_units(seg.units, idx, idf)
-    
+
     assert len(results) == 1
     # Observed credit is 0
     assert results[0].credit == F(0)
@@ -22,12 +23,12 @@ def test_sibling_substitution_mysql_for_postgresql():
 def test_sibling_substitution_bigquery_for_snowflake():
     resume = "Experience\nData Engineer\n- Built data pipelines in BigQuery."
     jd = "Requirements:\n- Must have experience with Snowflake."
-    
+
     idf = load_idf()
     seg = segment(jd, idf)
     idx = index_resume(resume)
     results = score_units(seg.units, idx, idf)
-    
+
     assert len(results) == 1
     assert results[0].credit == F(0)
     assert results[0].high_credit == F(7, 10)

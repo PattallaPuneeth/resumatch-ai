@@ -128,6 +128,7 @@ def create_scanned_image_pdf(path: str, text: str) -> str:
     doc = fitz.open()
     page = doc.new_page(width=600, height=800)
     img_byte_arr = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    img_byte_arr.close()  # Windows cannot reopen a file that is still held open
     try:
         img.save(img_byte_arr.name)
         page.insert_image(page.rect, filename=img_byte_arr.name)
@@ -153,7 +154,6 @@ def test_valid_pdf_extraction(temp_dir: str) -> None:
     assert len(result.skills) > 0
     assert any(s.name == "Python" for s in result.skills)
     assert any(s.name == "FastAPI" for s in result.skills)
-    assert result.ats_score >= 80.0
 
     # Verify exact character offsets into canonical raw_text
     for skill in result.skills:
@@ -180,8 +180,7 @@ def test_valid_docx_extraction(temp_dir: str) -> None:
     assert "Alex Rivera" in result.raw_text
     assert result.contact.email == "alex.rivera@example.com"
     assert any(s.name == "PostgreSQL" for s in result.skills)
-    # Tables should be flagged as an ATS hazard
-    assert any(h.code == "TABLES_PRESENT" for h in result.ats_hazards)
+    assert result.parsing_metadata["has_tables"] is True
 
 
 def test_multi_column_pdf_detection(temp_dir: str) -> None:
@@ -190,8 +189,7 @@ def test_multi_column_pdf_detection(temp_dir: str) -> None:
 
     result = parse_document(pdf_path, "application/pdf")
     assert result.extraction_method == "TEXT_LAYER"
-    assert any(h.code == "MULTI_COLUMN_LAYOUT" for h in result.ats_hazards)
-    assert result.ats_score < 100.0
+    assert result.parsing_metadata["multi_column"] is True
 
 
 def test_scanned_pdf_triggers_ocr(temp_dir: str) -> None:
@@ -220,7 +218,7 @@ def test_scanned_pdf_triggers_ocr(temp_dir: str) -> None:
     assert "NEEDS_OCR" in status_transitions
     assert "OCR_PROCESSING" in status_transitions
     assert result.extraction_method == "OCR"
-    assert any(h.code == "OCR_REQUIRED" for h in result.ats_hazards)
+    assert result.parsing_metadata["is_ocr_required"] is True
     assert "Edison" in result.raw_text
 
 

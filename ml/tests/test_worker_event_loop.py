@@ -83,7 +83,7 @@ async def test_parse_jobs_never_run_parse_document_concurrently(
         time.sleep(0.2)
         with lock:
             active -= 1
-        return SimpleNamespace(extraction_method="OCR", ats_score=80.0, page_count=1)
+        return SimpleNamespace(extraction_method="OCR", page_count=1)
 
     async def no_enqueue(resume_id: str) -> None:
         return None
@@ -145,7 +145,7 @@ def _parse_job_mocks(monkeypatch: pytest.MonkeyPatch, status: str) -> dict[str, 
         if not kwargs.get("allow_ocr", True):
             kwargs["status_callback"]("NEEDS_OCR")
             raise OcrDeferredError("needs OCR")
-        return SimpleNamespace(extraction_method="OCR", ats_score=70.0, page_count=1)
+        return SimpleNamespace(extraction_method="OCR", page_count=1)
 
     async def fake_enqueue_ocr(data: dict[str, Any], resume_id: str) -> None:
         calls["ocr_enqueued"].append(resume_id)

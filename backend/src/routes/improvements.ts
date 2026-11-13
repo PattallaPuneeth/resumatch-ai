@@ -99,7 +99,6 @@ export const improvementsRoutes: FastifyPluginAsync = async (app) => {
             body: JSON.stringify({
               resumeId,
               resumeRawText: parsedResume.rawText,
-              atsHazards: parsedResume.atsHazards || [],
               candidateSkills: parsedResume.skills || null,
             }),
           });

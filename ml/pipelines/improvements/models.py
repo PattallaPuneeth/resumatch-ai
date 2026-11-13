@@ -9,16 +9,6 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-class AtsFix(BaseModel):
-    """Prioritized ATS hazard remediation advice."""
-
-    hazardCode: str
-    severity: Literal["HIGH", "MEDIUM", "LOW"]
-    issue: str
-    recommendation: str
-    priority: int
-
-
 class ContentFinding(BaseModel):
     """Deterministic resume content issue with exact character offsets."""
 
@@ -58,14 +48,12 @@ class ImprovementsRequest(BaseModel):
 
     resumeId: str
     resumeRawText: str
-    atsHazards: list[dict[str, Any]] | None = None
     candidateSkills: Any | None = None
 
 
 class ImprovementsResponse(BaseModel):
     """Response returned to backend caller and user."""
 
-    atsFixes: list[AtsFix] = Field(default_factory=list)
     contentFindings: list[ContentFinding] = Field(default_factory=list)
     suggestedRoles: list[SuggestedRole] = Field(default_factory=list)
     explanation: LLMExplanation | None = None

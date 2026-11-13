@@ -13,7 +13,6 @@ Metrics:
 - Word Error Rate (WER) = WordLevenshtein(ref, hyp) / len(ref_words)
 - Section Identification Accuracy (Precision / Recall on standard sections)
 - Skill Extraction Precision and Recall (vs ground-truth skill list)
-- ATS Hazard Detection Precision and Recall (vs injected hazards)
 
 Outputs:
 - docs/eval/parsing_accuracy.json
@@ -87,8 +86,6 @@ class TestCaseResult:
     section_accuracy: float
     skill_precision: float
     skill_recall: float
-    hazard_precision: float
-    hazard_recall: float
 
 
 SYNTHETIC_PROFILES = [
@@ -310,8 +307,6 @@ def run_parsing_accuracy_harness(output_dir: str = "docs/eval") -> dict[str, Any
                     section_accuracy=round(sec_acc_docx, 4),
                     skill_precision=round(prec_skills_docx, 4),
                     skill_recall=round(rec_skills_docx, 4),
-                    hazard_precision=1.0,
-                    hazard_recall=1.0,
                 ))
                 case_counter += 1
 
@@ -348,8 +343,6 @@ def run_parsing_accuracy_harness(output_dir: str = "docs/eval") -> dict[str, Any
                     section_accuracy=round(sec_acc_pdf, 4),
                     skill_precision=round(prec_skills_pdf, 4),
                     skill_recall=round(rec_skills_pdf, 4),
-                    hazard_precision=1.0,
-                    hazard_recall=1.0,
                 ))
                 case_counter += 1
 
@@ -386,8 +379,6 @@ def run_parsing_accuracy_harness(output_dir: str = "docs/eval") -> dict[str, Any
                     section_accuracy=round(sec_acc_scanned, 4),
                     skill_precision=round(prec_skills_scanned, 4),
                     skill_recall=round(rec_skills_scanned, 4),
-                    hazard_precision=1.0,
-                    hazard_recall=1.0,
                 ))
                 case_counter += 1
 
@@ -411,8 +402,6 @@ def run_parsing_accuracy_harness(output_dir: str = "docs/eval") -> dict[str, Any
                 "section_accuracy": round(sum(r.section_accuracy for r in subset) / len(subset), 4),
                 "skill_precision": round(sum(r.skill_precision for r in subset) / len(subset), 4),
                 "skill_recall": round(sum(r.skill_recall for r in subset) / len(subset), 4),
-                "hazard_precision": round(sum(r.hazard_precision for r in subset) / len(subset), 4),
-                "hazard_recall": round(sum(r.hazard_recall for r in subset) / len(subset), 4),
             }
 
     summary = {
@@ -442,20 +431,19 @@ def run_parsing_accuracy_harness(output_dir: str = "docs/eval") -> dict[str, Any
         f.write(f"- **Overall Mean Word Error Rate (WER):** `{mean_wer:.2%}`\n")
         f.write(f"- **Overall Mean Section Detection Accuracy:** `{mean_sec_acc:.2%}`\n\n")
         f.write("## 2. Performance Breakdown by Format\n\n")
-        f.write("| Format | Document Count | Mean CER | Mean WER | Section Accuracy | Skill Precision | Skill Recall | Hazard Prec/Recall |\n")
-        f.write("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n")
+        f.write("| Format | Document Count | Mean CER | Mean WER | Section Accuracy | Skill Precision | Skill Recall |\n")
+        f.write("| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n")
         for fmt, stats in by_format.items():
             f.write(
                 f"| **{fmt}** | {stats['count']} | `{stats['mean_cer']:.2%}` | `{stats['mean_wer']:.2%}` | "
-                f"`{stats['section_accuracy']:.2%}` | `{stats['skill_precision']:.2%}` | `{stats['skill_recall']:.2%}` | "
-                f"`{stats['hazard_precision']:.2%}` / `{stats['hazard_recall']:.2%}` |\n"
+                f"`{stats['section_accuracy']:.2%}` | `{stats['skill_precision']:.2%}` | `{stats['skill_recall']:.2%}` |\n"
             )
         f.write("\n## 3. Explanation of Section Detection & Metrics\n\n")
         f.write("- **Digital Text (DOCX & PDF_TEXT):** Digital formats achieve ~0.0% CER and 100% section accuracy because direct text-stream extraction and standard heading regexes ('EXPERIENCE', 'EDUCATION', 'SKILLS') match clean synthetic layout headers unambiguously.\n")
         f.write("- **Scanned Raster PDF (OCR):** Scanned PDFs are rendered to 200 DPI bitmap images with mild rotation (-0.3° to +0.4°) and processed via Tesseract OCR. Tesseract introduces slight whitespace variation and occasional punctuation drift, resulting in non-zero CER (~2-5%) and slight word boundary shifts while still correctly identifying primary resume sections.\n\n")
         f.write("## 4. Per-Case Evaluation Log\n\n")
         f.write("| Case ID | Format | Reference Chars | Extracted Chars | CER | WER | Section Acc | Skill Prec | Skill Rec |\n")
-        f.write("| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n")
+        f.write("| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n")
         for r in results:
             f.write(
                 f"| `{r.case_id}` | {r.format} | {r.char_count_ref} | {r.char_count_hyp} | "

@@ -120,3 +120,21 @@ only fresh owner-labeled pairs are test data; reply simply; honest counts (corre
   `ml/tests/test_india_data_v32.py`.
 - Still open: verify drafts against official pages; curve fitting needs 100+ tune pairs; LLM meaning
   matching not run live; role relation for titles outside the five domains stays "unknown".
+
+## Session 2026-11-13: ATS fully removed (Item 4 completed)
+- Removed: `ml/scoring/ats_score.py`, `ml/pipelines/intake/hazards.py`, `ml/pipelines/improvements/ats_mapper.py`,
+  `ml/scripts/verify_reparse_ats.py`, `test_ats_rubric.py`, `test_readability_hazards.py`.
+- Kept (unscored tips only): `ml/pipelines/intake/content_insights.py` (no readability grade any more).
+- Parser, repositories, worker, improvements service/prompt (version `2026-11-13-v2`), backend route, frontend
+  types and the "Formatting & Structure Tips" card no longer mention ATS hazards or fixes.
+- DB: migration `20261113000000_remove_ats_columns` drops `parsed_resumes.atsScore/atsHazards` and
+  `analyses.atsFindings`. NOT yet applied to any database; rebuild the ml worker images first, then run
+  `npm run db:deploy` (old workers still write the dropped columns).
+- Checks: ML 590 pass / 17 failed / 8 errors (same environment-only set as before); frontend tsc clean,
+  161 vitest pass; backend tsc clean, improvements/lifecycle/jobs/analysis tests pass.
+- Later 2026-11-13: ML test hygiene fixed (Windows temp-file locks, pgvector `Vector` length check); with the CI
+  Postgres/Redis up (`docker-compose.ci.yml`, use `DATABASE_URL` without `?schema=public` for Python):
+  ML 612 pass, 3 fail (scanned-PDF OCR tests need the Tesseract program, not installed on this PC).
+  Backend: all 27 files pass. Frontend 161 pass, lint clean. `ruff --fix` safe fixes applied (132 lint items remain).
+  `jspdf` upgraded to 4.x (critical advisory gone). Remaining advisories need major bumps: `next` 16 (nested
+  postcss) and `minio` 7.1.3. Dev stack rebuilt, migration applied, e2e smoke 11/11 passed.

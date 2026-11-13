@@ -112,13 +112,13 @@ def _seed_test_match_environment(
             """
             INSERT INTO parsed_resumes (
                 id, "resumeId", "rawText", "candidateName", "contactInfo",
-                skills, "atsScore", "createdAt", "updatedAt"
+                skills, "createdAt", "updatedAt"
             ) VALUES (
                 %s, %s,
                 'Summary: Senior Python & Postgres developer with Kubernetes container expertise.',
                 'Alex Candidate', '{"email": "alex@example.com"}'::jsonb,
                 '["Python", "PostgreSQL", "K8s", "Docker", "FastAPI"]'::jsonb,
-                92.0, NOW(), NOW()
+                NOW(), NOW()
             );
             """,
             (str(uuid.uuid4()), resume_id),

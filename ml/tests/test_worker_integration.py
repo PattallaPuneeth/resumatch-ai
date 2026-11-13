@@ -21,6 +21,19 @@ from ml.worker import process_parse_document
 pytestmark = pytest.mark.integration
 
 
+class _closed_temp_pdf:
+    """Temp .pdf path whose handle is closed at once (Windows cannot reopen an open temp file)."""
+
+    def __enter__(self) -> "_closed_temp_pdf":
+        fd, self.name = tempfile.mkstemp(suffix=".pdf")
+        os.close(fd)
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        if os.path.exists(self.name):
+            os.remove(self.name)
+
+
 def get_or_create_test_user() -> str:
     """Ensures a test user exists in DB and returns user ID."""
     with psycopg.connect(settings.database_url) as conn:
@@ -88,7 +101,7 @@ def test_status_transitions_and_persistence() -> None:
                 assert status == "EXTRACTING"
 
         # 2. Parse a valid sample document
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
+        with _closed_temp_pdf() as tf:
             create_sample_pdf(tf.name)
             parse_result = parse_document(tf.name, "application/pdf")
             os.remove(tf.name)
@@ -115,16 +128,15 @@ def test_status_transitions_and_persistence() -> None:
 
                 cur.execute(
                     """
-                    SELECT "rawText", "atsScore", "pageCount", skills, experience
+                    SELECT "rawText", "pageCount", skills, experience
                     FROM parsed_resumes WHERE "resumeId" = %s;
                     """,
                     (resume_id,),
                 )
                 row_parsed = cur.fetchone()
                 assert row_parsed is not None
-                raw_text, ats_score, page_count, skills, experience = row_parsed
+                raw_text, page_count, skills, experience = row_parsed
                 assert "Jane Doe" in raw_text
-                assert ats_score >= 80.0
                 assert page_count == 1
                 assert len(skills) > 0
 
@@ -272,7 +284,7 @@ async def test_worker_duplicate_job_idempotency() -> None:
     )
 
     # Generate valid PDF and upload to S3
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
+    with _closed_temp_pdf() as tf:
         create_sample_pdf(tf.name)
         with open(tf.name, "rb") as f:
             pdf_bytes = f.read()
@@ -334,7 +346,7 @@ async def test_worker_handles_resume_deleted_while_queued() -> None:
     create_test_resume(user_id, "deleted_race.pdf", "application/pdf", storage_key, resume_id=resume_id)
 
     # Put object in S3
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
+    with _closed_temp_pdf() as tf:
         create_sample_pdf(tf.name)
         with open(tf.name, "rb") as f:
             pdf_bytes = f.read()

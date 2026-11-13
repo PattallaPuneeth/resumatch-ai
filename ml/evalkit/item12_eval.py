@@ -20,7 +20,7 @@ import csv
 import hashlib
 import json
 import sys
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from ml.evalkit import metrics12 as M
@@ -153,7 +153,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
     (OUT_DIR / f"{name}_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     if args.final:
         log = json.loads(LOCK_LOG.read_text()) if LOCK_LOG.exists() else []
-        log.append({"at": datetime.now(timezone.utc).isoformat(), "input_sha256": in_sha,
+        log.append({"at": datetime.now(UTC).isoformat(), "input_sha256": in_sha,
                     "engine_digest": digest, "repeat": any(e["input_sha256"] == in_sha for e in log),
                     "accuracy": summary["accuracy"], "n": summary["n"]})
         LOCK_LOG.write_text(json.dumps(log, indent=2), encoding="utf-8")

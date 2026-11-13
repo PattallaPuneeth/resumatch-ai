@@ -114,7 +114,7 @@ async function uploadResume(headers, file) {
   for (let i = 0; i < 90; i++) {
     await sleep(1000);
     const check = await api(`/v1/resumes/${resumeId}`, { headers });
-    if (check.body?.status === 'PARSED') return { id: resumeId, file, ats: check.body.parsedResume?.atsScore };
+    if (check.body?.status === 'PARSED') return { id: resumeId, file };
     if (check.body?.status === 'FAILED') fail(`parsing ${file} failed`, check.body);
   }
   fail(`timed out waiting for ${file} to parse`);
@@ -152,7 +152,7 @@ console.log(`Signed in as ${session.username}`);
 const resumes = [];
 for (const file of RESUMES) {
   const r = await uploadResume(session.headers, file);
-  console.log(`  parsed ${file} (ATS ${r.ats ?? 'n/a'})`);
+  console.log(`  parsed ${file}`);
   resumes.push(r);
 }
 

@@ -3,7 +3,6 @@
 import React from 'react';
 import { ImprovementsResponse } from '@/lib/apiClient';
 import {
-  AlertTriangle,
   AlertCircle,
   FileText,
   Briefcase,
@@ -117,53 +116,6 @@ export function ModeAResults({ data, className = '', onFixBullet }: ModeAResults
             )}
           </section>
         )
-      )}
-
-      {/* 5. Formatting and structure tips (no score) */}
-      {data.atsFixes && data.atsFixes.length > 0 && (
-        <section
-          aria-labelledby="resume-fixes-heading"
-          data-testid="resume-fixes-section"
-          className="bg-white rounded-lg border border-border p-5 space-y-4 shadow-sm"
-        >
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" />
-              <h3 id="resume-fixes-heading" className="font-bold text-sm text-foreground">
-                Formatting & Structure Tips ({data.atsFixes.length})
-              </h3>
-            </div>
-            <span className="text-xs text-muted-foreground">Most important first</span>
-          </div>
-
-          <div className="space-y-3">
-            {data.atsFixes.map((fix, idx) => {
-              const isHigh = fix.severity === 'HIGH';
-              return (
-                <div
-                  key={`${fix.hazardCode}-${idx}`}
-                  data-testid={`resume-fix-item-${idx}`}
-                  className="p-3 rounded-md bg-slate-50 border border-slate-200 space-y-1 text-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-foreground flex items-center gap-1.5">
-                      <span className="font-mono text-slate-500">[{fix.hazardCode}]</span>
-                      <span>{fix.issue}</span>
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                        isHigh ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {fix.severity}
-                    </span>
-                  </div>
-                  <p className="text-slate-600 pl-1">{fix.recommendation}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
       )}
 
       {/* 6. Deterministic Content Findings */}

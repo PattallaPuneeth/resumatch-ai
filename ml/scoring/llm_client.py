@@ -10,7 +10,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -78,7 +78,7 @@ class OpenRouterClient:
 
     def _log(self, status: str, chars: int, n: int) -> None:
         self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
-        row = {"at": datetime.now(timezone.utc).isoformat(), "provider": "openrouter",
+        row = {"at": datetime.now(UTC).isoformat(), "provider": "openrouter",
                "endpoint": ENDPOINT, "model": self.model, "request_no": n, "prompt_chars": chars,
                "status": status}
         with self.ledger_path.open("a", encoding="utf-8") as fh:

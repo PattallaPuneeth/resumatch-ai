@@ -10,6 +10,7 @@ import math
 from datetime import date
 
 import pytest
+
 from ml.scoring.curves import (
     clamp,
     diminishing_evidence,

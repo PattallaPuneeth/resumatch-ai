@@ -3,6 +3,7 @@
 from datetime import date
 
 import pytest
+
 from ml.scoring import roles as R
 from ml.scoring import units as U
 from ml.scoring.pipeline import _education_hits, assess_pair

@@ -16,7 +16,6 @@ import re
 import sys
 import time
 import unicodedata
-from collections import Counter
 from collections.abc import Callable
 from datetime import date
 

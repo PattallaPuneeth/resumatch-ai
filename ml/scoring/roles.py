@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from enum import IntEnum
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Any
 
 from ml.scoring.item1_years import _experience_sections, _ranges_in_section, jd_title_text
 from ml.scoring.spans import canonicalize
@@ -273,8 +273,8 @@ class Span:
 class Role:
     title: str
     company: str
-    start: Optional[date]
-    end: Optional[date]
+    start: date | None
+    end: date | None
     is_internship: bool
     title_span: Span
     bullets: tuple[str, ...] = ()
@@ -282,16 +282,16 @@ class Role:
 
 @dataclass(frozen=True)
 class JDLevel:
-    level: Optional[float]
-    min_years: Optional[float]
+    level: float | None
+    min_years: float | None
     confidence: float
     evidence: tuple[Span, ...] = ()
 
 
 @dataclass(frozen=True)
 class ResumeLevel:
-    level: Optional[float]
-    effective_years: Optional[float]
+    level: float | None
+    effective_years: float | None
     n_roles: int
     evidence: tuple[Span, ...] = ()
 
@@ -312,9 +312,9 @@ class SeniorityParams:
 class SeniorityResult:
     jd: JDLevel
     resume: ResumeLevel
-    delta: Optional[float]
+    delta: float | None
     multiplier: float
-    cap: Optional[int]
+    cap: int | None
     reason_codes: tuple[str, ...]
     feedback: str = ""
 
@@ -381,7 +381,7 @@ TITLE_RULES: list[tuple[float, str]] = [
 DEFAULT_TITLE_LEVEL = 2.0
 
 
-def title_to_level(title: str) -> Optional[float]:
+def title_to_level(title: str) -> float | None:
     """Map title string to continuous float level in [0, 5]."""
     t = (title or "").strip()
     if not t:
@@ -438,7 +438,7 @@ def _subtract(a_intervals: list[tuple[date, date]], b_intervals: list[tuple[date
     return res
 
 
-def effective_years(roles: list[Role]) -> Optional[float]:
+def effective_years(roles: list[Role]) -> float | None:
     """Union of intervals; internships weight 0.5; None if no role has dates."""
     ivs = [
         (r.start, r.end, 0.5 if r.is_internship else 1.0)
@@ -502,7 +502,7 @@ def detect_jd_level(jd_text: str) -> JDLevel:
     """Detect career level and required years from job description text."""
     t = (jd_title_text(jd_text) or "").strip()
     evidence: list[Span] = []
-    t_j: Optional[float] = None
+    t_j: float | None = None
     if t:
         t_j = title_to_level(t)
         idx = jd_text.find(t)
@@ -510,8 +510,8 @@ def detect_jd_level(jd_text: str) -> JDLevel:
             evidence.append(Span("jd", idx, idx + len(t), t))
 
     # Detect required years near experience
-    y_val: Optional[float] = None
-    y_j: Optional[float] = None
+    y_val: float | None = None
+    y_j: float | None = None
     m_yr = re.search(r"(\d+)(?:\s*\+)?(?:\s*-\s*(\d+))?\s*(?:years?|yrs)\b(?:[^\n.]{0,40}?\b(?:experience|exp)\b)?", jd_text, re.I)
     if m_yr:
         y1 = float(m_yr.group(1))
@@ -529,7 +529,7 @@ def detect_jd_level(jd_text: str) -> JDLevel:
     # Detect scope verbs
     own_hits = len(set(re.findall(r"\b(own|architect|define strategy|mentor|roadmap|stakeholder|lead|drive)\b", jd_text, re.I)))
     supp_hits = len(set(re.findall(r"\b(assist|support|learn|under guidance)\b", jd_text, re.I)))
-    s_j: Optional[float] = None
+    s_j: float | None = None
     if own_hits > 0 or supp_hits > 0:
         base_scope = min(5.0, 1.5 + 0.5 * own_hits)
         if supp_hits > 0 and own_hits == 0:
@@ -590,13 +590,13 @@ def detect_resume_level(resume_text: str, today: date) -> ResumeLevel:
     return ResumeLevel(level=round(computed_lvl, 2), effective_years=y_eff, n_roles=len(roles), evidence=tuple(ev_spans))
 
 
-def seniority_multiplier(delta: Optional[float], params: SeniorityParams) -> tuple[float, Optional[int]]:
+def seniority_multiplier(delta: float | None, params: SeniorityParams) -> tuple[float, int | None]:
     """Compute score coverage multiplier and band cap from seniority delta."""
     if delta is None:
         return 1.0, None
     d_plus = max(0.0, delta - params.delta0)
     m = max(params.m_floor, round(1.0 - params.kappa * d_plus, 4))
-    cap: Optional[int] = None
+    cap: int | None = None
     if delta >= params.hard_gap_no_fit:
         cap = params.cap_no_fit
     elif delta >= params.hard_gap_potential:
@@ -626,7 +626,7 @@ _LABEL_MAP = {
 }
 
 
-def _level_label(lvl: Optional[float]) -> str:
+def _level_label(lvl: float | None) -> str:
     if lvl is None:
         return "Unknown"
     rounded = max(0, min(5, round(lvl)))
@@ -637,7 +637,7 @@ def assess_seniority(
     jd_text: str,
     resume_text: str,
     today: date,
-    params: Optional[SeniorityParams] = None,
+    params: SeniorityParams | None = None,
 ) -> SeniorityResult:
     """Full seniority assessment comparing JD demand against resume tenure."""
     p = params or load_seniority_params()

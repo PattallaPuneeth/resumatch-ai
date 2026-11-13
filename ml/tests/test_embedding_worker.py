@@ -65,9 +65,9 @@ def _create_test_user_and_resume(status: str = "PARSED") -> tuple[str, str]:
                     """
                     INSERT INTO parsed_resumes (
                         id, "resumeId", "rawText", "candidateName", "pageCount",
-                        "atsScore", "createdAt", "updatedAt"
+                        "createdAt", "updatedAt"
                     ) VALUES (
-                        gen_random_uuid(), %s, %s, 'Jane Doe', 1, 95.0, NOW(), NOW()
+                        gen_random_uuid(), %s, %s, 'Jane Doe', 1, NOW(), NOW()
                     );
                     """,
                     (resume_id, raw_text),
@@ -121,7 +121,7 @@ async def test_embedding_worker_lifecycle_and_persistence() -> None:
                     chunk_idx, sec_type, content, emb, token_count = row
                     assert sec_type in {"SUMMARY", "SKILLS", "EXPERIENCE", "EDUCATION", "OTHER"}
                     assert len(content) > 0
-                    assert len(emb) == 384
+                    assert len(emb.to_list() if hasattr(emb, "to_list") else emb) == 384
                     assert token_count > 0
 
                 # Verify metadata updated in parsed_resumes

@@ -78,8 +78,8 @@ from ml.pipelines.matching.skill_gap import (
     resolve_required_skills,
     resolve_skill_requirements,
 )
-from ml.scoring.pipeline_v31 import VERSION as ITEM1_VERSION
 from ml.scoring.pipeline import assess_pair
+from ml.scoring.pipeline_v31 import VERSION as ITEM1_VERSION
 from ml.storage.s3 import download_file
 from ml.utils.logging_setup import configure_logging
 from ml.utils.telemetry import init_telemetry, queue_carrier, record_match_metrics, stage_span
@@ -941,7 +941,6 @@ async def _process_analysis(job: Job, token: str | None = None) -> dict[str, Any
             injection_suspected=structured_result.injection_suspected,
             score=final_score,
             skill_gap=skill_gap_data,
-            ats_findings=ctx.get("ats_hazards"),
             status="COMPLETED",
         )
 

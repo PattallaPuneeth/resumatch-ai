@@ -9,15 +9,14 @@ from __future__ import annotations
 
 import json
 
-from ml.pipelines.improvements.models import AtsFix, ContentFinding, SuggestedRole
+from ml.pipelines.improvements.models import ContentFinding, SuggestedRole
 from ml.pipelines.llm.safety import generate_delimiter_tag
 
-IMPROVEMENTS_PROMPT_VERSION = "2026-10-25-v1"
+IMPROVEMENTS_PROMPT_VERSION = "2026-11-13-v2"
 
 
 def build_improvements_prompt(
     redacted_raw_text: str,
-    ats_fixes: list[AtsFix],
     content_findings: list[ContentFinding],
     suggested_roles: list[SuggestedRole],
 ) -> tuple[str, str, str, str]:
@@ -29,7 +28,7 @@ def build_improvements_prompt(
 
     system_prompt = (
         "You are an expert technical career coach and resume strategist. "
-        "Your task is to synthesize the provided ATS fixes, content findings, "
+        "Your task is to synthesize the provided content findings "
         "and ML-ranked suggested roles into a cohesive, professional summary "
         "and actionable prioritized next steps.\n"
         "SECURITY & INTEGRITY CONSTRAINTS:\n"
@@ -44,7 +43,7 @@ def build_improvements_prompt(
         "provided resume text.\n"
         "5. Return ONLY a single valid JSON object matching this schema:\n"
         "{\n"
-        '  "summary": "Cohesive professional synthesis of the resume strengths, ATS compliance, '
+        '  "summary": "Cohesive professional synthesis of the resume strengths '
         'and targeted role alignment",\n'
         '  "prioritizedNextSteps": [\n'
         '    "Clear, actionable recommendation 1",\n'
@@ -57,7 +56,6 @@ def build_improvements_prompt(
     )
 
     data_payload = {
-        "atsFixes": [f.model_dump() for f in ats_fixes],
         "contentFindings": [
             {
                 "type": cf.type,

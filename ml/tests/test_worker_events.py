@@ -19,7 +19,7 @@ async def test_publish_user_event_success():
         await publish_user_event(
             user_id="user-abc-123",
             event_type="RESUME_STATUS",
-            data={"resumeId": "res-1", "status": "PARSED", "atsScore": 90},
+            data={"resumeId": "res-1", "status": "PARSED", "extra": 90},
         )
 
         mock_redis.publish.assert_called_once()
@@ -30,7 +30,7 @@ async def test_publish_user_event_success():
         assert payload["type"] == "RESUME_STATUS"
         assert payload["data"]["resumeId"] == "res-1"
         assert payload["data"]["status"] == "PARSED"
-        assert payload["data"]["atsScore"] == 90
+        assert payload["data"]["extra"] == 90
         assert "timestamp" in payload
 
 

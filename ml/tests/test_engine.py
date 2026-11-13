@@ -3,6 +3,7 @@
 from fractions import Fraction as F
 
 import pytest
+
 from ml.scoring.engine import (
     Flags,
     GateUnit,

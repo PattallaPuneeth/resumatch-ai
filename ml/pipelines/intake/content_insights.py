@@ -1,81 +1,15 @@
+"""Unscored writing observations (content insights) for a parsed resume.
+
+These are editorial tips only (measurable outcomes, action verbs, bullet length,
+skills shown in context). They never produce a score.
+"""
+
 from __future__ import annotations
 
 import re
 from typing import Any
 
-from ml.pipelines.intake.models import AtsHazard
-from ml.scoring.ats_score import calculate_ats_v2, evaluate_resume_checks
 from ml.scoring.curves import quantification_curve
-
-STANDARD_ATS_FONTS = {
-    "arial",
-    "calibri",
-    "times new roman",
-    "times",
-    "helvetica",
-    "georgia",
-    "verdana",
-    "garamond",
-    "trebuchet",
-    "roboto",
-    "open sans",
-    "cambria",
-}
-
-# Whitelist for fast pattern matching (normalized alphanumeric lowercase)
-STANDARD_ATS_FONT_PATTERNS = [
-    # Classic ATS / System / Web
-    r"^arial",
-    r"^calibri",
-    r"^times",
-    r"^timesnewroman",
-    r"^helvetica",
-    r"^georgia",
-    r"^verdana",
-    r"^garamond",
-    r"^trebuchet",
-    r"^roboto",
-    r"^opensans",
-    r"^cambria",
-    r"^courier",
-    r"^tahoma",
-    r"^palatino",
-    r"^century",
-    r"^bookman",
-    # LaTeX / Scientific / Academic
-    r"^cm",  # Computer Modern (CMR, CMSY, CMMI, etc.)
-    r"^lm",  # Latin Modern (LMRoman, LMSans, etc.)
-    r"^latinmodern",
-    r"^computermodern",
-    r"^sfrm",
-    r"^msam",
-    r"^msbm",
-    r"^charter",  # Bitstream Charter
-    r"^bitstream",
-    # Modern UI & Developer Fonts
-    r"^inter",
-    r"^sourcesans",
-    r"^sourcecodepro",
-    r"^fira",
-    r"^firacode",
-    r"^jetbrains",
-    r"^jetbrainsmono",
-    r"^segoe",
-    r"^segoeui",
-    r"^dejavu",
-    r"^helveticaneue",
-]
-
-ICON_FONT_PATTERNS = [
-    r"^fontawesome",
-    r"^glyphicons",
-    r"^wingdings",
-    r"^webdings",
-    r"^fontello",
-    r"^icomoon",
-    r"^materialicons",
-    r"^devicons",
-]
 
 STRONG_ACTION_VERBS = {
     "accelerated",
@@ -340,20 +274,6 @@ WEAK_OPENER_PATTERNS = [
     re.compile(r"^[^a-zA-Z]*duties\s+(?:included|were)\b", re.IGNORECASE),
 ]
 
-
-def compute_coleman_liau(bullets: list[str]) -> float:
-    """Computes Coleman-Liau grade level for a list of bullet points."""
-    if not bullets:
-        return 0.0
-    total_words = sum(len(b.split()) for b in bullets)
-    if total_words == 0:
-        return 0.0
-    total_letters = sum(sum(1 for c in b if c.isalpha()) for b in bullets)
-    num_sentences = len(bullets)  # Each bullet is treated as a sentence unit
-    L = 100.0 * (total_letters / total_words)
-    S = 100.0 * (num_sentences / total_words)
-    return round(0.0588 * L - 0.296 * S - 15.8, 1)
-
 METRIC_REGEX = re.compile(
     r"(?:"
     r"\b\d+(?:\.\d+)?%\b|"  # 40%, 1.9%
@@ -367,25 +287,6 @@ METRIC_REGEX = re.compile(
     re.IGNORECASE,
 )
 
-RAW_EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-RAW_PHONE_REGEX = re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3,5}\)?[-.\s]?\d{3}[-.\s]?\d{3,4}\b")
-
-
-def is_ats_compliant_font(font_name: str) -> bool:
-    """Checks if font matches known ATS or academic/LaTeX font families or is an icon font."""
-    clean = re.sub(r"^[A-Z]{6}\+", "", font_name)
-    clean = re.sub(
-        r"[,\-_](Bold|Regular|Italic|Light|Medium|Black|Roman|Oblique|MT|PS).*",
-        "",
-        clean,
-        flags=re.IGNORECASE,
-    )
-    norm = re.sub(r"[^a-z0-9]", "", clean.lower())
-    if not norm:
-        return True
-    if any(re.search(pat, norm) for pat in ICON_FONT_PATTERNS):
-        return True
-    return any(re.search(pat, norm) for pat in STANDARD_ATS_FONT_PATTERNS)
 
 
 def has_quantified_metric(text: str) -> bool:
@@ -409,43 +310,6 @@ def starts_with_action_verb(text: str) -> bool:
     return first_word in STRONG_ACTION_VERBS
 
 
-class AtsAnalysisResult(tuple[float, list[AtsHazard]]):
-    """
-    A 2-tuple (ats_score, ats_hazards) that also exposes subscores,
-    content_insights, rubric_version, and coverage.
-    """
-
-    def __new__(
-        cls,
-        ats_score: float,
-        ats_hazards: list[AtsHazard],
-        subscores: dict[str, float],
-        content_insights: dict[str, Any] | None = None,
-        rubric_version: str = "ats-v2",
-        coverage: float = 1.0,
-        unknown_checks: list[str] | None = None,
-    ) -> AtsAnalysisResult:
-        return super().__new__(cls, (ats_score, ats_hazards))
-
-    def __init__(
-        self,
-        ats_score: float,
-        ats_hazards: list[AtsHazard],
-        subscores: dict[str, float],
-        content_insights: dict[str, Any] | None = None,
-        rubric_version: str = "ats-v2",
-        coverage: float = 1.0,
-        unknown_checks: list[str] | None = None,
-    ) -> None:
-        self.ats_score = ats_score
-        self.ats_hazards = ats_hazards
-        self.subscores = subscores
-        self.content_insights = content_insights or {}
-        self.rubric_version = rubric_version
-        self.coverage = coverage
-        self.unknown_checks = unknown_checks or []
-
-
 def extract_content_insights(
     experience_items: list[Any] | None,
     skills: list[Any] | None,
@@ -454,7 +318,7 @@ def extract_content_insights(
     """
     Generates unscored editorial writing observations (Content Insights).
     These are purely qualitative tips for the candidate, completely separated
-    from the ATS Readability parser diagnostic.
+    from any score.
     """
     bullets: list[str] = []
     for item in experience_items or []:
@@ -517,7 +381,6 @@ def extract_content_insights(
     word_counts = [len(b.split()) for b in bullets]
     micro_bullets = [b for b, wc in zip(bullets, word_counts) if wc < 5]
     run_on_bullets = [b for b, wc in zip(bullets, word_counts) if wc > 35 or len(b) > 300]
-    cli_grade = compute_coleman_liau(bullets)
 
     # Contextual skills in bullets
     skills_declared = [getattr(s, "name", str(s)).lower() for s in (skills or [])]
@@ -566,7 +429,6 @@ def extract_content_insights(
             "concise_count": total_bullets - len(run_on_bullets),
             "long_bullets_count": len(run_on_bullets),
             "micro_bullets_count": len(micro_bullets),
-            "coleman_liau_grade": cli_grade,
             "observation": (
                 f"{len(run_on_bullets)} bullets exceed standard length (>35 words). Aim for concise 12-28 word "
                 "accomplishment statements."
@@ -590,107 +452,3 @@ def extract_content_insights(
         },
     }
 
-
-def detect_ast_encoding_hazards(text: str) -> tuple[int, int, int]:
-    """
-    Scans text for AST encoding defects:
-    - unmapped CID tokens: '(cid:123)'
-    - Private Use Area (PUA) characters: 0xE000-0xF8FF, 0xF0000-0xFFFFD
-    - Unexpanded ligature codepoints: 0xFB00-0xFB06
-    """
-    if not text:
-        return 0, 0, 0
-    cid_count = len(re.findall(r"\(cid:\d+\)", text))
-    pua_count = sum(
-        1 for c in text if 0xE000 <= ord(c) <= 0xF8FF or 0xF0000 <= ord(c) <= 0xFFFFD
-    )
-    ligature_count = sum(1 for c in text if 0xFB00 <= ord(c) <= 0xFB06)
-    return cid_count, pua_count, ligature_count
-
-
-def analyze_ats_hazards(
-    is_ocr_required: bool,
-    has_multi_column: bool,
-    has_tables: bool,
-    has_header_footer: bool,
-    fonts_detected: set[str],
-    sections_found: set[str],
-    extractability_ratio: float = 1.0,
-    contact: Any | None = None,
-    skills: list[Any] | None = None,
-    experience_items: list[Any] | None = None,
-    education_items: list[Any] | None = None,
-    experience_source: str = "experience",
-    raw_text: str = "",
-    is_contact_in_header_only: bool = False,
-    extractor_agreement_ratio: float = 1.0,
-    font_encoding_issues: list[str] | None = None,
-) -> AtsAnalysisResult:
-    """
-    Evaluates document readability, layout safety, structure, contact, and hygiene
-    according to the ResuMatch ATS Score Specification (ats-v2).
-    """
-    bullets: list[str] = []
-    if experience_items:
-        for item in experience_items:
-            bullets.extend(getattr(item, "bullets", []))
-
-    c_email = getattr(contact, "email", None) if contact else None
-    c_phone = getattr(contact, "phone", None) if contact else None
-
-    cid_count, pua_count, lig_count = detect_ast_encoding_hazards(raw_text)
-
-    checks = evaluate_resume_checks(
-        is_ocr_required=is_ocr_required,
-        extractability_ratio=extractability_ratio,
-        has_multi_column=has_multi_column,
-        has_tables=has_tables,
-        has_header_footer=has_header_footer,
-        fonts_detected=fonts_detected,
-        contact_email=c_email,
-        contact_phone=c_phone,
-        raw_text=raw_text,
-        sections_found=sections_found,
-        experience_count=len(experience_items or []),
-        projects_count=1 if experience_source == "projects" else 0,
-        education_count=len(education_items or []),
-        skills_count=len(skills or []),
-        bullets=bullets,
-        pua_chars_count=pua_count,
-        ligature_chars_count=lig_count,
-        cid_tokens_count=cid_count,
-        is_contact_in_header_only=is_contact_in_header_only,
-        extractor_agreement_ratio=extractor_agreement_ratio,
-        font_encoding_issues=font_encoding_issues,
-    )
-
-    ats_res = calculate_ats_v2(checks)
-
-    hazards: list[AtsHazard] = []
-    for h in ats_res.hazards:
-        title_str = h["code"].replace("_", " ").title()
-        desc_str = f"{h['evidence']} Remediation: {h['fix']}"
-        hazards.append(
-            AtsHazard(
-                code=h["code"],
-                title=title_str,
-                description=desc_str,
-                severity=h["severity"].upper(),
-            )
-        )
-
-    content_insights = extract_content_insights(
-        experience_items=experience_items,
-        skills=skills,
-        raw_text=raw_text,
-    )
-
-    return AtsAnalysisResult(
-        ats_score=float(ats_res.score),
-        ats_hazards=hazards,
-        subscores=ats_res.subscores,
-        content_insights=content_insights,
-        rubric_version=ats_res.rubric_version,
-        coverage=ats_res.coverage,
-        unknown_checks=ats_res.unknown_checks,
-    )

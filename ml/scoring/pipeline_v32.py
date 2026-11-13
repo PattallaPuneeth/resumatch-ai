@@ -17,14 +17,14 @@ from datetime import date
 from fractions import Fraction as F
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ml.scoring import curve as curve_mod
 from ml.scoring import gates as gates_mod
 from ml.scoring import roles as roles_mod
 from ml.scoring import units as U
-from ml.scoring.item1_assessment import _CONFIRM_ONLY, _PUBLIC_SECTOR
-from ml.scoring.item1_years import assess_years, jd_title_text
+from ml.scoring.item1_assessment import _PUBLIC_SECTOR
+from ml.scoring.item1_years import assess_years
 from ml.scoring.pipeline import _alias_regex, _education_hits, _registry
 
 VERSION = "unified-3.2"
@@ -78,9 +78,9 @@ def assess_pair(
     resume_text: str,
     jd_text: str,
     *,
-    as_of: Optional[date] = None,
+    as_of: date | None = None,
     parse_failed: bool = False,
-    curve: Optional[curve_mod.Curve] = None,
+    curve: curve_mod.Curve | None = None,
     matcher: Any = None,
 ) -> dict[str, Any]:
     """Score a resume-job pair using the v3.2 deterministic scoring engine."""

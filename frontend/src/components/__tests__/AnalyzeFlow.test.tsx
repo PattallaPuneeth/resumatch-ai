@@ -188,19 +188,10 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
   });
 
   // =========================================================================
-  // 2. MODE A (RESUME ONLY) & EXACT ATS SCORE DISPLAY TESTS
+  // 2. MODE A (RESUME ONLY) DISPLAY TESTS
   // =========================================================================
   describe('ModeAResults Component', () => {
     const mockModeAData: ImprovementsResponse = {
-      atsFixes: [
-        {
-          hazardCode: 'TWO_COLUMN_LAYOUT',
-          severity: 'HIGH',
-          issue: 'Multi-column layout detected',
-          recommendation: 'Convert to a clean single-column layout for ATS parser stability.',
-          priority: 1,
-        },
-      ],
       contentFindings: [
         {
           type: 'NO_METRIC_OR_NUMBER',
@@ -239,10 +230,10 @@ describe('Phase 8B: Analyze Flow & Results Components', () => {
       expect(notice.textContent).toMatch(/AI explanation unavailable, showing deterministic results/i);
     });
 
-    it('renders formatting tips, character span content findings, and suggested roles', () => {
+    it('renders character span content findings, and suggested roles', () => {
       render(<ModeAResults data={mockModeAData} />);
 
-      expect(screen.getByTestId('resume-fix-item-0').textContent).toContain('TWO_COLUMN_LAYOUT');
+      expect(screen.queryByTestId('resume-fixes-section')).toBeNull();
       expect(screen.getByTestId('content-finding-0').textContent).toContain('chars 140–210');
       expect(screen.getByTestId('content-finding-0').textContent).toContain(
         'Optimized internal databases and reduced application load times.'

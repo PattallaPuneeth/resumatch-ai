@@ -172,7 +172,7 @@ async function runSmokeSuite() {
 
     if (checkRes.status === 200 && checkRes.body?.status === 'PARSED') {
       parsed = true;
-      log(5, `✓ Resume parsed by worker in attempt ${attempt} (ATS score: ${checkRes.body.parsedResume?.atsScore || 0})`);
+      log(5, `✓ Resume parsed by worker in attempt ${attempt}`);
       break;
     }
     if (checkRes.body?.status === 'FAILED') {

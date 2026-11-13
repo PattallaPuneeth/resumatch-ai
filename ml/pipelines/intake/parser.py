@@ -8,6 +8,7 @@ import docx
 import fitz  # PyMuPDF
 import pytesseract
 from ml.config import settings
+from ml.pipelines.intake.content_insights import extract_content_insights
 from ml.pipelines.intake.entities import (
     _find_sections,
     extract_contact_info,
@@ -23,7 +24,6 @@ from ml.pipelines.intake.exceptions import (
     TooManyPagesError,
     UnsupportedTypeError,
 )
-from ml.pipelines.intake.hazards import analyze_ats_hazards
 from ml.pipelines.intake.models import DocumentParseResult
 from PIL import Image
 
@@ -262,7 +262,7 @@ def parse_document(
 ) -> DocumentParseResult:
     """
     Parses a PDF or DOCX resume document according to Section 6 Phase 2C.
-    Executes text extraction, quality gating, OCR fallback, ATS hazard detection,
+    Executes text extraction, quality gating, OCR fallback, content insights,
     and entity extraction with exact canonical character offsets.
     """
     if not os.path.exists(file_path):
@@ -383,25 +383,12 @@ def parse_document(
         if experience:
             experience_source = "projects"
 
-    # ATS Hazard Analysis and Scoring using 4-pillar engine
-    analysis_res = analyze_ats_hazards(
-        is_ocr_required=is_ocr_required,
-        has_multi_column=has_multi_column,
-        has_tables=has_tables,
-        has_header_footer=has_header_footer,
-        fonts_detected=fonts_detected,
-        sections_found=sections_found,
-        extractability_ratio=extractability_ratio,
-        contact=contact,
-        skills=skills,
+    # Unscored writing observations (never a score)
+    content_insights = extract_content_insights(
         experience_items=experience,
-        education_items=education,
-        experience_source=experience_source,
+        skills=skills,
         raw_text=canonical_text,
     )
-    ats_score = analysis_res.ats_score
-    ats_hazards = analysis_res.ats_hazards
-    ats_subscores = analysis_res.subscores
 
     # Extract summary if present
     summary_text = None
@@ -423,8 +410,6 @@ def parse_document(
         skills=skills,
         experience=experience,
         education=education,
-        ats_score=ats_score,
-        ats_hazards=ats_hazards,
         parsing_metadata={
             "fonts": list(fonts_detected),
             "multi_column": has_multi_column,
@@ -434,9 +419,6 @@ def parse_document(
             "ocr_dpi": settings.ocr_dpi if is_ocr_required else None,
             "extractability_ratio": round(extractability_ratio, 3),
             "experience_source": experience_source,
-            "ats_rubric_version": getattr(analysis_res, "rubric_version", "ats-v2"),
-            "ats_readability_coverage": getattr(analysis_res, "coverage", 1.0),
-            "ats_subscores": ats_subscores,
-            "content_insights": getattr(analysis_res, "content_insights", {}),
+            "content_insights": content_insights,
         },
     )

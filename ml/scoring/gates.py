@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Literal
 
 from ml.scoring.roles import Span
 
@@ -130,7 +130,7 @@ class CredentialEntry:
     equivalents: tuple[str, ...]
     scope: tuple[str, ...]
     action_on_missing: Literal["cap", "flag", "none"]
-    cap_on_missing: Optional[int]
+    cap_on_missing: int | None
     action_on_unverifiable: str = "flag"
 
 
@@ -141,9 +141,9 @@ class GateResult:
     kind: str
     status: GateStatus
     action: Literal["cap", "flag", "none"]
-    cap: Optional[int]
+    cap: int | None
     jd_span: Span
-    resume_span: Optional[Span]
+    resume_span: Span | None
     reason_code: str
     reason_text: str
 
@@ -166,7 +166,7 @@ class CredentialRegistry:
         return self._entries
 
     @classmethod
-    def load(cls, path: Optional[Path | str] = None) -> CredentialRegistry:
+    def load(cls, path: Path | str | None = None) -> CredentialRegistry:
         p = Path(path) if path else REGISTRY_V1_PATH
         if not p.exists():
             return cls([], (), ())
@@ -248,7 +248,7 @@ def classify_strength(
 def evaluate_gates(
     jd_text: str,
     resume_sections: dict[str, str] | str,
-    registry: Optional[CredentialRegistry] = None,
+    registry: CredentialRegistry | None = None,
     parse_ok: bool = True,
 ) -> list[GateResult]:
     """Evaluate all credential and degree gates against the job description and resume."""
@@ -361,8 +361,8 @@ def evaluate_gates(
 
 def effective_cap(
     gates: list[GateResult],
-    extra_caps: Optional[list[int]] = None,
-) -> Optional[tuple[int, list[str]]]:
+    extra_caps: list[int] | None = None,
+) -> tuple[int, list[str]] | None:
     """Compute the lowest active cap and return (lowest_cap, triggering_reasons)."""
     caps: list[tuple[int, str]] = []
 

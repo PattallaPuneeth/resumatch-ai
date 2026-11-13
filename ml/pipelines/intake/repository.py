@@ -136,7 +136,6 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> boo
     skills_list = [s.model_dump(exclude_none=True) for s in parse_result.skills]
     experience_list = [e.model_dump(exclude_none=True) for e in parse_result.experience]
     education_list = [ed.model_dump(exclude_none=True) for ed in parse_result.education]
-    hazards_list = [h.model_dump() for h in parse_result.ats_hazards]
 
     try:
         with psycopg.connect(settings.database_url) as conn:
@@ -176,15 +175,11 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> boo
                         education,
                         certifications,
                         "pageCount",
-                        "atsScore",
-                        "atsHazards",
                         "parsingMetadata",
                         "createdAt",
                         "updatedAt"
                     ) VALUES (
                         gen_random_uuid(),
-                        %s,
-                        %s,
                         %s,
                         %s,
                         %s,
@@ -209,8 +204,6 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> boo
                         education = EXCLUDED.education,
                         certifications = EXCLUDED.certifications,
                         "pageCount" = EXCLUDED."pageCount",
-                        "atsScore" = EXCLUDED."atsScore",
-                        "atsHazards" = EXCLUDED."atsHazards",
                         "parsingMetadata" = EXCLUDED."parsingMetadata",
                         "updatedAt" = NOW();
                     """,
@@ -225,17 +218,14 @@ def save_parsed_resume(resume_id: str, parse_result: DocumentParseResult) -> boo
                         json.dumps(education_list),
                         json.dumps([]),  # certifications
                         parse_result.page_count,
-                        parse_result.ats_score,
-                        json.dumps(hazards_list),
                         json.dumps(parse_result.parsing_metadata),
                     ),
                 )
                 conn.commit()
         logger.info(
-            "Successfully saved parsed resume for %s (method=%s, ats_score=%.1f)",
+            "Successfully saved parsed resume for %s (method=%s)",
             resume_id,
             parse_result.extraction_method,
-            parse_result.ats_score,
         )
         return True
     except Exception as e:

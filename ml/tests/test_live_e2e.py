@@ -227,24 +227,22 @@ async def test_live_pdf_pipeline_e2e() -> None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT "pageCount", "rawText", "atsScore", "candidateName", "contactInfo", "skills"
+                SELECT "pageCount", "rawText", "candidateName", "contactInfo", "skills"
                 FROM parsed_resumes WHERE "resumeId" = %s
                 """,
                 (resume_id,),
             )
             row = cur.fetchone()
             assert row is not None, "parsed_resumes record not found in PostgreSQL"
-            page_count, raw_text, ats_score, candidate_name, contact_info, skills = (
+            page_count, raw_text, candidate_name, contact_info, skills = (
                 row[0],
                 row[1],
                 row[2],
                 row[3],
                 row[4],
-                row[5],
             )
             assert page_count >= 1
             assert "Jane Doe" in raw_text
-            assert 0.0 <= ats_score <= 100.0
             assert candidate_name == "Jane Doe"
             assert "jane.doe@example.com" in contact_info.get("email", "")
             skill_names = [s.get("name") for s in skills]
@@ -376,14 +374,13 @@ async def test_live_scanned_pdf_ocr_pipeline_e2e() -> None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT "pageCount", "rawText", "atsScore"
+                SELECT "pageCount", "rawText"
                 FROM parsed_resumes WHERE "resumeId" = %s
                 """,
                 (resume_id,),
             )
             row = cur.fetchone()
             assert row is not None
-            page_count, raw_text, ats_score = row[0], row[1], row[2]
+            page_count, raw_text = row[0], row[1]
             assert page_count >= 1
             assert len(raw_text) > 50
-            assert 0.0 <= ats_score <= 100.0

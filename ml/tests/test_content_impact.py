@@ -1,17 +1,15 @@
 """
-Unit tests for Step 3: Content Impact, Voice & Readability.
+Unit tests for Step 3: Content Impact and Voice.
 Verifies calibrated quantification saturation, separation of passive voice
-and weak openers, role-scoped verb repetition, and Coleman-Liau grade level.
+and weak openers, role-scoped verb repetition.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from ml.pipelines.intake.hazards import (
-    compute_coleman_liau,
+
+from ml.pipelines.intake.content_insights import (
     extract_content_insights,
-    has_quantified_metric,
-    starts_with_action_verb,
 )
 
 
@@ -85,7 +83,7 @@ class TestContentImpactSuite:
 
         assert "Developed" in action_verbs["role_repeated_verbs"]
 
-    def test_coleman_liau_and_brevity(self) -> None:
+    def test_bullet_brevity_has_no_readability_grade(self) -> None:
         bullets = [
             "Micro.",  # micro-bullet (< 5 words)
             "Built distributed tracing infrastructure for high-scale Kubernetes clusters across three cloud environments.",  # ideal
@@ -97,4 +95,4 @@ class TestContentImpactSuite:
         brevity = insights["bullet_brevity"]
         assert brevity["micro_bullets_count"] == 1
         assert brevity["long_bullets_count"] == 1
-        assert brevity["coleman_liau_grade"] > 0.0
+        assert "coleman_liau_grade" not in brevity

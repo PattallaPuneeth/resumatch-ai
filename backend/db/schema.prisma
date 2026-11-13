@@ -86,8 +86,6 @@ model ParsedResume {
   education       Json?
   certifications  Json?
   pageCount       Int?
-  atsScore        Float?
-  atsHazards      Json?
   parsingMetadata Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -162,7 +160,6 @@ model Analysis {
   job                    Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
   score                  Float?
   skillGap               Json?
-  atsFindings            Json?
   bulletRewrites         Json?
   status                 String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
   result                 Json?

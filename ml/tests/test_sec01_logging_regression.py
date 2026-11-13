@@ -142,8 +142,6 @@ async def test_sec01_improvements_logs_no_sentinel_strings(caplog: pytest.LogCap
     request = ImprovementsRequest(
         resumeId="00000000-0000-0000-0000-000000000001",
         resumeRawText=raw_text,
-        atsScore=85.0,
-        atsHazards=[],
         candidateSkills=["python", "redis"],
     )
 

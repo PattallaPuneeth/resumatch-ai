@@ -31,7 +31,7 @@ def get_analysis_context(resume_id: str, job_id: str) -> dict[str, Any] | None:
                 cur.execute(
                     """
                     SELECT r.status::text, p."rawText", p."candidateName",
-                           p.skills, p."atsScore", p."atsHazards"
+                           p.skills
                     FROM resumes r
                     LEFT JOIN parsed_resumes p ON p."resumeId" = r.id
                     WHERE r.id = %s;
@@ -73,8 +73,6 @@ def get_analysis_context(resume_id: str, job_id: str) -> dict[str, Any] | None:
                     "raw_text": r_row[1] or "",
                     "candidate_name": r_row[2],
                     "resume_skills": r_row[3],
-                    "ats_score": r_row[4],
-                    "ats_hazards": r_row[5],
                     "job_id": j_row[0],
                     "job_title": j_row[1],
                     "job_company": j_row[2],
@@ -112,7 +110,6 @@ def persist_analysis_result(
     injection_suspected: bool = False,
     score: float | None = None,
     skill_gap: dict[str, Any] | None = None,
-    ats_findings: dict[str, Any] | None = None,
     status: str = "COMPLETED",
 ) -> str:
     """
@@ -125,7 +122,6 @@ def persist_analysis_result(
     try:
         result_json = json.dumps(result)
         skill_gap_json = json.dumps(skill_gap) if skill_gap is not None else None
-        ats_findings_json = json.dumps(ats_findings) if ats_findings is not None else None
 
         with psycopg.connect(settings.database_url) as conn:
             with conn.transaction():
@@ -133,13 +129,13 @@ def persist_analysis_result(
                     cur.execute(
                         """
                         INSERT INTO analyses (
-                            id, "resumeId", "jobId", score, "skillGap", "atsFindings",
+                            id, "resumeId", "jobId", score, "skillGap",
                             status, result, "llmStatus", provider,
                             model, "promptVersion", "tokensPrompt", "tokensCompletion",
                             "latencyMs", "fabricatedEvidenceRate", "injectionSuspected",
                             "createdAt", "updatedAt"
                         ) VALUES (
-                            gen_random_uuid(), %s, %s, %s, %s::jsonb, %s::jsonb,
+                            gen_random_uuid(), %s, %s, %s, %s::jsonb,
                             %s, %s::jsonb, %s, %s,
                             %s, %s, %s, %s,
                             %s, %s, %s,
@@ -148,7 +144,6 @@ def persist_analysis_result(
                         ON CONFLICT ("resumeId", "jobId") DO UPDATE SET
                             score = EXCLUDED.score,
                             "skillGap" = EXCLUDED."skillGap",
-                            "atsFindings" = EXCLUDED."atsFindings",
                             status = EXCLUDED.status,
                             result = EXCLUDED.result,
                             "llmStatus" = EXCLUDED."llmStatus",
@@ -168,7 +163,6 @@ def persist_analysis_result(
                             job_id,
                             score,
                             skill_gap_json,
-                            ats_findings_json,
                             status,
                             result_json,
                             llm_status,

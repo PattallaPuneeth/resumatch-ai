@@ -5,6 +5,7 @@ import os
 from datetime import date
 
 import pytest
+
 from ml.scoring.pipeline import assess_pair
 from ml.scoring.pipeline_v31 import unsupported_fraction
 

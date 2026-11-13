@@ -51,7 +51,7 @@ export function ResumeList({ onDeleteSuccess, className }: ResumeListProps) {
     } else {
       setPollInterval(false);
     }
-  }, [resumes]);
+  }, [resumes, isSseConnected]);
 
   const handleDelete = async () => {
     if (!deleteCandidate) return;

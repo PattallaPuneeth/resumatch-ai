@@ -340,14 +340,6 @@ export interface QueuedJobResponse {
   status: 'QUEUED';
 }
 
-export interface ImprovementAtsFix {
-  hazardCode: string;
-  severity: 'HIGH' | 'MEDIUM' | 'LOW';
-  issue: string;
-  recommendation: string;
-  priority: number;
-}
-
 export interface ContentFinding {
   type: string;
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -369,27 +361,7 @@ export interface LLMExplanation {
   prioritizedNextSteps: string[];
 }
 
-export interface AtsSubscores {
-  parse_integrity?: number;
-  layout_safety?: number;
-  structure?: number;
-  contact?: number;
-  content_hygiene?: number;
-  readability_score?: number;
-  [key: string]: number | undefined;
-}
-
-export interface AtsHazardInfo {
-  id: string;
-  code: string;
-  severity: string;
-  evidence: string;
-  fix: string;
-  points_lost?: number;
-}
-
 export interface ImprovementsResponse {
-  atsFixes: ImprovementAtsFix[];
   contentFindings: ContentFinding[];
   suggestedRoles: SuggestedRole[];
   explanation: LLMExplanation | null;

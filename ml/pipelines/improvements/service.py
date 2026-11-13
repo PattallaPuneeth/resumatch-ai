@@ -1,6 +1,6 @@
 """
 Phase 4C: Resume Improvements Service.
-Coordinates deterministic ATS hazard remediation, content findings analysis,
+Coordinates content findings analysis,
 ML-ranked role suggestions, and LLM explanation generation with fail-open fallback.
 """
 
@@ -13,7 +13,6 @@ import numpy as np
 import psycopg
 from ml.config import settings
 from ml.pipelines.embeddings.embedder import generate_embeddings
-from ml.pipelines.improvements.ats_mapper import map_ats_hazards_to_fixes
 from ml.pipelines.improvements.content_analyzer import analyze_content
 from ml.pipelines.improvements.models import (
     ImprovementsRequest,
@@ -90,9 +89,6 @@ class ResumeImprovementsService:
         Deterministic findings are always computed and returned.
         If LLM tiers fail or verifier rejects, llmStatus is set to 'UNAVAILABLE'.
         """
-        # 1. Deterministic formatting-tip mapping (no score is produced or shown)
-        _, ats_fixes = map_ats_hazards_to_fixes(None, req.atsHazards)
-
         # 2. Deterministic Content Analyzer findings
         content_findings = analyze_content(req.resumeRawText)
 
@@ -113,7 +109,6 @@ class ResumeImprovementsService:
                 req.resumeId,
             )
             return ImprovementsResponse(
-                atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,
                 explanation=None,
@@ -126,7 +121,6 @@ class ResumeImprovementsService:
         # 6. Build LLM Prompts
         system_prompt, user_prompt, _, _ = build_improvements_prompt(
             redacted_raw_text=redaction.redacted_text,
-            ats_fixes=ats_fixes,
             content_findings=content_findings,
             suggested_roles=suggested_roles,
         )
@@ -176,7 +170,6 @@ class ResumeImprovementsService:
             )
 
             return ImprovementsResponse(
-                atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,
                 explanation=LLMExplanation(
@@ -199,7 +192,6 @@ class ResumeImprovementsService:
                 err,
             )
             return ImprovementsResponse(
-                atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,
                 explanation=None,
@@ -212,7 +204,6 @@ class ResumeImprovementsService:
                 exc_info=True,
             )
             return ImprovementsResponse(
-                atsFixes=ats_fixes,
                 contentFindings=content_findings,
                 suggestedRoles=suggested_roles,
                 explanation=None,

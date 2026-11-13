@@ -5,7 +5,7 @@ Tests score integrity, prompt injection resistance, worker idempotency, and grac
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -112,8 +112,6 @@ class TestAnalysisWorkerIntegrity:
             "raw_text": SAMPLE_RESUME_TEXT,
             "candidate_name": "Jane Doe",
             "resume_skills": ["Python", "PostgreSQL", "Redis", "Docker"],
-            "ats_score": 88.0,
-            "ats_hazards": cast(list[dict[str, Any]], []),
             "job_id": "test-job-id",
             "job_title": "Backend Platform Engineer",
             "job_company": "CloudCorp",
@@ -180,8 +178,6 @@ class TestAnalysisWorkerIntegrity:
             "raw_text": SAMPLE_RESUME_TEXT,
             "candidate_name": "Jane Doe",
             "resume_skills": ["Python", "PostgreSQL", "Redis"],
-            "ats_score": 85.0,
-            "ats_hazards": cast(list[dict[str, Any]], []),
             "job_id": "test-job-id",
             "job_title": "Backend Platform Engineer",
             "job_company": "CloudCorp",
