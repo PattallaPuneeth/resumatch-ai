@@ -134,8 +134,8 @@ export function matchAndWait(headers, jobId, resumeId) {
     const res = http.get(`${BASE_URL}/v1/jobs/${jobId}/matches/${resumeId}`, {
       headers,
       tags: { name: 'match_poll' },
-      // 404 just means "not scored yet"; don't count it in http_req_failed.
-      responseCallback: http.expectedStatuses(200, 404),
+      // 202 (or 404 on older builds) just means "not scored yet"; not a failure.
+      responseCallback: http.expectedStatuses(200, 202, 404),
     });
     if (res.status === 200 && res.json('finalScore') !== undefined && res.json('finalScore') !== null) {
       return res.json('finalScore');
@@ -164,8 +164,8 @@ export function analyzeAndWait(headers, jobId, resumeId, idempotencyKey) {
     const res = http.get(`${BASE_URL}/v1/jobs/${jobId}/analysis/${resumeId}`, {
       headers,
       tags: { name: 'analysis_poll' },
-      // 404 just means "not ready yet"; don't count it in http_req_failed.
-      responseCallback: http.expectedStatuses(200, 404),
+      // 202 (or 404 on older builds) just means "not ready yet"; not a failure.
+      responseCallback: http.expectedStatuses(200, 202, 404),
     });
     return res.status === 200 ? res.json() : undefined;
   }, 'analysis');
