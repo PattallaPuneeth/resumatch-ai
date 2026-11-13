@@ -81,7 +81,7 @@ $$m_{\text{sen}} = \max(m_{\text{floor}}, 1 - \kappa \cdot \Delta^+), \quad \kap
 *Application:* Pre-curve coverage scaling: $C_{\text{final}} = C_{\text{shrunk}} \cdot m_{\text{sen}}$.  
 *Hard Band Ceilings (Applied Post-Curve via $\min$):*
 - If $\Delta \ge 2.0$: Hard cap at **69** (*Potential Fit ceiling*).
-- If $\Delta \ge 3.0$: Hard cap at **44** (*No Fit ceiling*).
+- If $\Delta \ge 3.0$: Hard cap at **39** (*No Fit ceiling*).
 - If $\Delta < 0$ (Over-qualified): **No penalty**. Informational flag `OVERQUALIFIED` emitted only if $\Delta \le -2.0$.
 
 ### 1.7 Explainable Feedback Templates

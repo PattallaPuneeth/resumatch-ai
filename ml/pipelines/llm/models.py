@@ -80,7 +80,7 @@ class StructuredAnalysisResult(BaseModel):
     match_score: float = Field(..., description="Deterministic ML match score (0-100)")
     verdict_band: Literal["strong", "medium", "weak"] = Field(
         ...,
-        description="Verdict band derived from 75/45 calibration thresholds",
+        description="Verdict band derived from the 70/40 score bands",
     )
     matched_skills: list[str] = Field(default_factory=list)
     missing_skills: list[str] = Field(default_factory=list)

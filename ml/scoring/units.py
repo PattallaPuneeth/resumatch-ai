@@ -778,7 +778,7 @@ class Evidence:
     span: tuple[int, int]
 
 
-def passage_weight(section: str, text: str, unit_text: str, cfg: Optional[ContextCfg] = None) -> float:
+def passage_weight(section: str, text: str, unit_text: str, cfg: ContextCfg | None = None) -> float:
     """Compute context weight w(p) from section prior and bonuses."""
     c = cfg or load_context_cfg()
     sec_key = section.lower()
@@ -796,14 +796,14 @@ def passage_weight(section: str, text: str, unit_text: str, cfg: Optional[Contex
 def unit_evidence(
     unit: RequirementUnit,
     cands: list[RerankedPassage],
-    cfg: Optional[ContextCfg] = None,
-) -> Optional[Evidence]:
+    cfg: ContextCfg | None = None,
+) -> Evidence | None:
     """Find the best supporting passage for a requirement unit."""
     c = cfg or load_context_cfg()
     if not cands:
         return None
 
-    best_ev: Optional[Evidence] = None
+    best_ev: Evidence | None = None
     best_val = -1.0
     for cand in cands:
         w_p = passage_weight(cand.section, cand.text, unit.text, c)

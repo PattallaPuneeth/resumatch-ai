@@ -72,8 +72,8 @@ def test_injected_today_controls_all_date_math() -> None:
         (1.0, 0.89, None),
         (1.99, 0.6722, None),
         (2.0, 0.67, 69),
-        (3.0, 0.45, 44),
-        (5.0, 0.40, 44),
+        (3.0, 0.45, 39),
+        (5.0, 0.40, 39),
     ],
 )
 def test_seniority_multiplier_and_cap_boundaries(delta: float, expected_mult: float, expected_cap: int | None) -> None:
@@ -292,7 +292,7 @@ def test_work_auth_absence_flags_but_never_caps() -> None:
 @pytest.mark.parametrize("cov1,cov2,cap", [
     (0.10, 0.25, 69),
     (0.20, 0.50, 69),
-    (0.40, 0.80, 44),
+    (0.40, 0.80, 39),
 ])
 def test_capped_curve_preserves_monotonicity(cov1: float, cov2: float, cap: int) -> None:
     curve = P32._curve()

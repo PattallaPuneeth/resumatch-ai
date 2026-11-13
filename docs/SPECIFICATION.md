@@ -2,6 +2,11 @@ ResuMatch AI --- Hybrid Engineering Specification & Execution Directive
 Version: Hybrid v1.0
 Purpose: Single source of truth for architecture, implementation
 order, contracts, testing, and deployment across Phases 1--5.
+
+> **Update 2026-11-13 (Item 4):** ATS scores, ATS hazards, readability grades and
+> layout penalties were removed from the database, worker, API and UI. Older
+> sections below that mention them are historical; the code no longer does this.
+> Verdict bands in the UI are `No Fit` / `Potential Fit` / `Good Fit`.
 Operating rule: Read this document fully before changing code.
 Implement sequentially, verify each step, and commit each completed
 step separately. Do not silently change architecture or contracts.
@@ -263,8 +268,7 @@ Resume:
 Add to ParsedResume if not already present:
 - rawText --- canonical extracted text
 - pageCount
-- atsScore
-- atsHazards Json
+- ~~atsScore~~, ~~atsHazards~~ (removed, Item 4)
 All entity offsets must reference the exact canonical rawText string
 persisted in ParsedResume.
 5.2 Resume status state machine
@@ -388,7 +392,7 @@ remove the temporary file in a finally block. 2. Set status to
 EXTRACTING. 3. PDF: use PyMuPDF (fitz) to extract text blocks,
 bounding boxes, page count, and available font/layout metadata. 4.
 DOCX: use python-docx to extract paragraphs, tables, headers, and
-footers. Record tables and header/footer content as ATS hazards. 5.
+footers. Record tables and header/footer flags in parsing metadata (no ATS hazards, Item 4). 5.
 Quality gate: if stripped text is under approximately 200 characters
 or the alphanumeric ratio is abnormally low, transition to NEEDS_OCR.
 6. OCR fallback: set status to OCR_PROCESSING; render pages with
@@ -404,9 +408,8 @@ order. For multi-column layouts, attempt column-aware ordering rather
 than blindly sorting all blocks by vertical position. 9. Detect ATS
 hazards: multi-column layouts, tables, header/footer content, unusual
 fonts, missing standard sections, and OCR-required/image-only resumes.
-OCR requirement must be explicitly reported as a finding and may reduce
-the ATS score. 10. Calculate and persist an ATS compliance score from
-0--100 and structured atsHazards. 11. Extract contact details (email,
+OCR requirement must be explicitly reported as a finding and is reported in
+parsing metadata. 10. (Removed, Item 4: no ATS score is calculated.) 11. Extract contact details (email,
 phone, LinkedIn, GitHub, location), categorized skills (languages,
 frameworks, tools, soft_skills), work experience, and education.
 Include confidence scores and exact start_char/end_char offsets into
@@ -561,9 +564,7 @@ Phase 4C --- Resume-only improvements and role suggestions (IMPLEMENTED)
   - Vector Representation: Computes mean of existing 384-dimensional pgvector chunk vectors for `resumeId` from `resume_chunks`. Does not re-embed the resume.
   - Role Vectors: Embedded lazily with the singleton `SentenceTransformer` (`sentence-transformers/all-MiniLM-L6-v2`) and cached in memory.
   - Ranking: Cosine similarity against role vectors; returns top 5 with ML similarity score (0.0..1.0), `matchedSkills`, and `missingSkills`.
-- Deterministic ATS Hazard Remediation:
-  - Transforms stored Phase 2C hazards (`ParsedResume.atsHazards`) and ATS score (`ParsedResume.atsScore`) into prioritized, plain-language `AtsFix` items.
-  - Always returns `atsScore` (float 0.0..100.0).
+- (Removed, Item 4) ATS hazard remediation and `atsScore`/`atsFixes` no longer exist.
 - Deterministic Content Findings:
   - Scans `rawText` and produces findings with exact character spans (`startChar`, `endChar`, `quote` where `rawText[start:end] == quote`):
     - `MISSING_SECTION`: Missing standard Experience, Education, or Skills headers.
@@ -854,7 +855,7 @@ Failover & Cooldown Rules:
 
 14.3 Score Integrity Guarantee
 Under no circumstance does an LLM generate, edit, adjust, or view-as-editable any score.
-All scores (matchScore, atsScore, sub-scores, verdict band, skill gap lists) are injected exclusively by deterministic Python ML code from the existing Match and Parse models. The LLM only explains, highlights strengths/gaps, and suggests fixes.
+All scores (matchScore, sub-scores, verdict band, skill gap lists) are injected exclusively by deterministic Python ML code from the existing Match and Parse models. The LLM only explains, highlights strengths/gaps, and suggests fixes.
 
 14.4 API & Queue Contracts
 - Queue: `analysis-queue` (prefix `bull`, 3 retries with exponential backoff). Job payload: `{ resumeId, jobId }`.
@@ -1359,7 +1360,7 @@ Flow:
    - Username policy helper (3–32 alphanumeric, underscores, hyphens, periods).
    - One-time 10 recovery codes display with copy-to-clipboard functionality.
 3. **`/dashboard`:**
-   - Resumes list: Status badges (`Uploading`, `Processing`, `Parsed`, `Failed`), ATS score badge when available, formatted upload date, per-resume delete with confirmation modal.
+   - Resumes list: Status badges (`Uploading`, `Processing`, `Parsed`, `Failed`), formatted upload date, per-resume delete with confirmation modal.
    - Auto-polling with bounded exponential backoff (2s up to 10s) when resumes are in `PROCESSING` or `UPLOAD_PENDING` status.
    - Resume Upload: Drag-and-drop zone and file picker, client-side type/size pre-check (PDF/DOCX, <= 5 MB), presigned storage PUT with progress bar and cancel support, 429 storage quota banner.
 4. **`/account`:**
@@ -1374,7 +1375,7 @@ Flow:
 
 ---
 
-## 20. Phase 8B: Analyze Flow, ATS Score, Match Visualizer, Suggestions UI & Source Metadata
+## 20. Phase 8B: Analyze Flow, Match Visualizer, Suggestions UI & Source Metadata
 
 ### 20.1 Architecture & Route Map
 1. **`/analyze` Route (`frontend/src/app/analyze/page.tsx`):**
@@ -1383,14 +1384,14 @@ Flow:
    - Embeds top `UsagePanel` tracking meters (`analyses`, `job_suggestions`) and triggering quota banners.
 2. **Component Hierarchy:**
    - `AnalyzeSelector`: Resume dropdown picker (only allows `PARSED` resumes), Mode A vs Mode B selector tabs, JD paste form with live character count (20–200 characters), and per-resume JD history list.
-   - `ModeAResults`: Displays verbatim ATS score (0–100) with plain-language status band (`Poor ATS Compatibility`, `Fair ATS Compatibility`, `Good ATS Compatibility`, `Strong ATS Compatibility`), deterministic content findings with exact character spans highlighted, ATS hazard fixes, ML-ranked suggested roles, and neutral "AI explanation unavailable, showing deterministic results" banner when `llmStatus: UNAVAILABLE`. Pre-run quota notice for `analyses` meter.
-   - `ModeBResults`: Overall match score (ML hybrid), ATS score, verdict band (`Strong Match`, `Moderate Match`, `Low Match`), verified strengths with exact evidence quotes, identified skill gaps, prioritized fixes, and "How to read this score" helper card. Integrates `MatchVisualizer`.
+   - `ModeAResults`: Shows no score (Item 4). Displays deterministic content findings with exact character spans highlighted, ML-ranked suggested roles, and neutral "AI explanation unavailable, showing deterministic results" banner when `llmStatus: UNAVAILABLE`. Pre-run quota notice for `analyses` meter.
+   - `ModeBResults`: Overall match score (ML hybrid), verdict band (`Good Fit`, `Potential Fit`, `No Fit`), verified strengths with exact evidence quotes, identified skill gaps, prioritized fixes, and "How to read this score" helper card. Integrates `MatchVisualizer`.
    - `MatchVisualizer`: Breakdown bars for Lexical (BM25), Semantic Vector, Cross-Encoder, Skill Coverage, Final Blend, and missing keywords list. Displays exact returned scores without re-computation.
    - `JobSuggestionsList`: Suggestions cards displaying title, company, location, match score, matched and missing skills, fetched date, and validated external links (`rel="noopener noreferrer nofollow"`, `target="_blank"`, hostname badge). When `isSample: true`, displays prominent accessible "Sample data" badge and disclaimer. Includes remaining quota indicator for `job_suggestions` and handles 429 usage limits and 5xx failures (refunded).
 
 ### 20.2 Score Integrity & Display Policy
 1. **Verbatim Score Display:**
-   - Every score displayed (overall match score, ATS score, sub-scores, suggestion match scores) is rendered exactly as returned by the API.
+   - Every score displayed (overall match score, sub-scores, suggestion match scores) is rendered exactly as returned by the API.
    - The frontend never computes, blends, rounds-to-improve, or alters any score.
    - If an API response omits a sub-score, the UI indicates it as omitted rather than fabricating a default value.
 2. **Untrusted String Sanitization:**

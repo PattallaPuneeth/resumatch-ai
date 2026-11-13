@@ -379,8 +379,8 @@ def extract_content_insights(
 
     # Bullets length check: micro-bullets (< 5 words), run-on bullets (> 35 words or > 300 chars)
     word_counts = [len(b.split()) for b in bullets]
-    micro_bullets = [b for b, wc in zip(bullets, word_counts) if wc < 5]
-    run_on_bullets = [b for b, wc in zip(bullets, word_counts) if wc > 35 or len(b) > 300]
+    micro_bullets = [b for b, wc in zip(bullets, word_counts, strict=True) if wc < 5]
+    run_on_bullets = [b for b, wc in zip(bullets, word_counts, strict=True) if wc > 35 or len(b) > 300]
 
     # Contextual skills in bullets
     skills_declared = [getattr(s, "name", str(s)).lower() for s in (skills or [])]

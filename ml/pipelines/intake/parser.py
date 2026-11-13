@@ -368,7 +368,6 @@ def parse_document(
 
     # Section mapping on canonical text
     sections = _find_sections(canonical_text)
-    sections_found = set(sections.keys())
 
     # Extract Entities with exact offsets referencing canonical_text BEFORE scoring
     contact, candidate_name = extract_contact_info(canonical_text)

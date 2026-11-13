@@ -138,3 +138,10 @@ only fresh owner-labeled pairs are test data; reply simply; honest counts (corre
   Backend: all 27 files pass. Frontend 161 pass, lint clean. `ruff --fix` safe fixes applied (132 lint items remain).
   `jspdf` upgraded to 4.x (critical advisory gone). Remaining advisories need major bumps: `next` 16 (nested
   postcss) and `minio` 7.1.3. Dev stack rebuilt, migration applied, e2e smoke 11/11 passed.
+- Follow-up 2026-11-13: Playwright e2e 10/10 (match-flow test updated to Good/Potential/No Fit labels);
+  stale ATS text removed from SPECIFICATION.md/RELIABILITY.md; undefined-name lint bugs fixed in `units.py`.
+  DECIDED (Claude, owner approved the call): one band rule everywhere in the v3.2 path: No Fit 0-39, Potential Fit
+  40-69, Good Fit 70-100 (matches ITEM12_UNIFIED_RULES). `pipeline_v32.band_for` 75/45 -> 70/40, thin-JD floor 45 -> 40,
+  seniority No Fit cap 44 -> 39 (`roles.py`, `seniority_params_v1.json`, design doc, tests), UI fallback 75/45 -> 70/40.
+  The older retrieval benchmark under `ml/eval/` still uses strong/medium/weak 75/45 (legacy, not Item 12).
+  Not run: k6 load tests (k6 not installed), Tesseract OCR tests (Tesseract not installed).

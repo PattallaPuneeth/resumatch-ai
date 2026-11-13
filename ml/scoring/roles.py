@@ -304,7 +304,7 @@ class SeniorityParams:
     hard_gap_potential: float = 2.0
     cap_potential: int = 69
     hard_gap_no_fit: float = 3.0
-    cap_no_fit: int = 44
+    cap_no_fit: int = 39
     overqualified_threshold: float = -2.0
 
 
@@ -335,7 +335,7 @@ def load_seniority_params() -> SeniorityParams:
                 hard_gap_potential=float(d.get("hard_gap_potential", 2.0)),
                 cap_potential=int(d.get("cap_potential", 69)),
                 hard_gap_no_fit=float(d.get("hard_gap_no_fit", 3.0)),
-                cap_no_fit=int(d.get("cap_no_fit", 44)),
+                cap_no_fit=int(d.get("cap_no_fit", 39)),
                 overqualified_threshold=float(d.get("overqualified_threshold", -2.0)),
             )
         except Exception:

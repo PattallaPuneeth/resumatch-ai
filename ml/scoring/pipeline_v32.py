@@ -62,9 +62,9 @@ def _is_gate_line(text: str) -> bool:
 
 
 def band_for(score: int) -> str:
-    if score >= 75:
+    if score >= 70:
         return "Good Fit"
-    if score >= 45:
+    if score >= 40:
         return "Potential Fit"
     return "No Fit"
 
@@ -208,8 +208,8 @@ def assess_pair(
     thin_jd_triggered = False
     if len(capped_units) < 4:
         # Forbid No Fit unless a hard gate failed or seniority delta >= 3.0
-        if final_score < 45 and not hard_gate_failed and not (sen_res.delta and sen_res.delta >= 3.0):
-            final_score = 45
+        if final_score < 40 and not hard_gate_failed and not (sen_res.delta and sen_res.delta >= 3.0):
+            final_score = 40
             thin_jd_triggered = True
 
     # 11. Final Band & Confidence

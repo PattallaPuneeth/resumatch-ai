@@ -47,11 +47,12 @@ test('upload, live status, match: the verdict agrees with the score and history 
   const verdict = page.getByTestId('mode-b-verdict-band');
   await expect(verdict).toBeVisible({ timeout: 90_000 });
 
-  // 3. The verdict must follow the score's band (regression: it always said "Moderate")
+  // 3. The verdict must follow the score's band (regression: it always said the middle band)
   const scoreText = (await page.getByTestId('mode-b-match-score').innerText()).replace(/[^0-9.]/g, '');
   const score = Number(scoreText);
   expect(score).toBeGreaterThan(0);
-  const expected = score >= 75 ? 'Strong Match' : score >= 45 ? 'Moderate Match' : 'Low Match';
+  // v3.2 engine bands: Good Fit 70+, Potential Fit 40-69, No Fit below 40
+  const expected = score >= 70 ? 'Good Fit' : score >= 40 ? 'Potential Fit' : 'No Fit';
   await expect(verdict).toContainText(expected);
 
   // Regression: matching right after upload ran before the resume was embedded, so every

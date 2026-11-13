@@ -35,9 +35,9 @@ export function ModeBResults({ analysis, matchResult, className = '' }: ModeBRes
     : result.verdict_band ||
       (typeof matchScore !== 'number'
         ? 'medium'
-        : matchScore >= 75
+        : matchScore >= 70
           ? 'strong'
-          : matchScore >= 45
+          : matchScore >= 40
             ? 'medium'
             : 'weak');
 

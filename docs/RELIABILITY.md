@@ -49,7 +49,7 @@ stateDiagram-v2
     [*] --> PENDING: Queued by User
     PENDING --> PROCESSING: Worker Evaluates Match
     PENDING --> FAILED: Aborted / Missing Resume
-    PROCESSING --> COMPLETED: Match & ATS Scored
+    PROCESSING --> COMPLETED: Match Scored
     PROCESSING --> FAILED: Downstream Execution Error
     COMPLETED --> [*]
     FAILED --> [*]
